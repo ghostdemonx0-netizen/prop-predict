@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Secrets / environment
+.env
+.env*.local
+
+# Build output
+.next/
+out/
+dist/
+build/
+
+# Vercel
+.vercel
+
+# Brainstorming companion (ephemeral mockups)
+.superpowers/
+
+# OS / editor
+.DS_Store
+*.log
