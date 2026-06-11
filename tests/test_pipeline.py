@@ -56,3 +56,14 @@ def test_build_hr_rows_skips_started_games():
     started = [dict(SAMPLE_SLATE[0], started=True)]
     rows = build_hr_rows(started, fake_batters_fn, fake_weather_fn)
     assert rows == []
+
+
+def test_format_hr_table_renders_rows():
+    from model.cli import format_table
+    rows = [
+        {"player": "Big Bopper", "team": "LAD", "park": "COL",
+         "probability": 0.21, "wind_out_mph": 10.0},
+    ]
+    text = format_table(rows, columns=["player", "team", "park", "probability"])
+    assert "Big Bopper" in text
+    assert "21.0%" in text  # probability formatted as a percentage

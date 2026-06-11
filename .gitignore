@@ -29,3 +29,6 @@ build/
 # OS / editor
 .DS_Store
 *.log
+
+# CLI projection output
+projections-*.json

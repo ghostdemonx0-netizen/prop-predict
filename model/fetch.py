@@ -6,6 +6,8 @@ pure modules stay testable offline.
 import datetime as dt
 import statsapi
 import requests
+import pandas as pd
+from pybaseball import statcast_batter, statcast_pitcher
 
 # MLB Stats API team-id -> our park abbreviation
 _TEAM_ABBR = {
@@ -73,10 +75,6 @@ def get_weather(lat: float, lon: float, when_iso: str) -> dict:
     }
 
 
-import pandas as pd
-from pybaseball import statcast_batter, statcast_pitcher
-
-
 def _date_window(season: int) -> tuple[str, str]:
     return f"{season}-03-01", f"{season}-11-01"
 
@@ -136,3 +134,19 @@ def build_pitcher_profile(player_id: int, season: int, name: str = "", team: str
         "opponent_k_mult": 1.0,
         "k_line": k_line,
     }
+
+
+def get_lineup_batter_ids(game_id: int) -> list[int]:
+    """Confirmed batting-order player ids for both teams from the boxscore.
+
+    Falls back to an empty list if lineups aren't posted yet.
+    """
+    try:
+        box = statsapi.boxscore_data(game_id)
+    except Exception:
+        return []
+    ids: list[int] = []
+    for side in ("home", "away"):
+        order = box.get(side, {}).get("battingOrder", []) or []
+        ids.extend(int(pid) for pid in order)
+    return ids
