@@ -57,15 +57,20 @@ def _weather_fn(game: dict) -> dict:
 def main(date_str: str) -> None:
     slate = fetch.get_schedule(date_str)
 
-    def batters_fn(game_id: int) -> list[dict]:
-        ids = fetch.get_lineup_batter_ids(game_id)
-        return [fetch.build_batter_profile(pid, int(date_str[:4])) for pid in ids]
+    def lineups_fn(game: dict) -> dict:
+        lns = fetch.get_lineups(game["game_id"])
+        meta = fetch.get_player_meta(lns["home"] + lns["away"])
+        def prof(pid):
+            m = meta.get(pid, {})
+            return fetch.build_batter_profile(pid, int(date_str[:4]), name=m.get("name", str(pid)), bats=m.get("bats", "R"))
+        return {"home": [prof(p) for p in lns["home"]], "away": [prof(p) for p in lns["away"]]}
 
     def pitcher_fn(pid: int) -> dict:
-        return fetch.build_pitcher_profile(pid, int(date_str[:4]))
+        m = fetch.get_player_meta([pid]).get(pid, {})
+        return fetch.build_pitcher_profile(pid, int(date_str[:4]), name=m.get("name", str(pid)), throws=m.get("throws", "R"))
 
-    hr_rows = build_hr_rows(slate, batters_fn, _weather_fn)
-    k_rows = build_strikeout_rows(slate, pitcher_fn, _weather_fn)
+    hr_rows = build_hr_rows(slate, lineups_fn, pitcher_fn, _weather_fn)
+    k_rows = build_strikeout_rows(slate, pitcher_fn, lineups_fn, _weather_fn)
 
     print("\n=== HOME RUNS ===")
     print(format_table(hr_rows, ["player", "team", "park", "probability", "wind_out_mph"]))

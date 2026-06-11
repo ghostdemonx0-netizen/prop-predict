@@ -1,8 +1,9 @@
-"""Generate the website's data file from the live engine.
+"""Generate the website's data file from the live engine (cached).
 
 Usage:
-    uv run python -m model.export_web 2026-06-10
-Writes web/public/data/latest.json. Slow (live Statcast per player).
+    uv run python -m model.export_web 2026-06-11 [max_games]
+Writes web/public/data/latest.json. Player Statcast pulls are cached under
+.cache/ so reruns are fast; pass an optional max_games to limit a slow first run.
 """
 
 import datetime as dt
@@ -11,27 +12,53 @@ import sys
 from pathlib import Path
 
 from model import fetch
+from model.cache import get_or_compute
 from model.cli import _weather_fn
 from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 
 OUT = Path(__file__).resolve().parent.parent / "web" / "public" / "data" / "latest.json"
 
 
-def main(date_str: str) -> None:
-    slate = fetch.get_schedule(date_str)
+def main(date_str: str, max_games: int | None = None) -> None:
     season = int(date_str[:4])
+    slate = fetch.get_schedule(date_str)
+    if max_games is not None:
+        slate = slate[:max_games]
 
-    def batters_fn(game_id: int) -> list[dict]:
-        ids = fetch.get_lineup_batter_ids(game_id)
-        names = fetch.get_player_names(ids)
-        return [fetch.build_batter_profile(pid, season, name=names.get(pid, str(pid))) for pid in ids]
+    # resolve handedness once for every player on the slate
+    pids: set[int] = set()
+    lineup_cache: dict[int, dict] = {}
+    for g in slate:
+        lineup_cache[g["game_id"]] = fetch.get_lineups(g["game_id"])
+        pids.update(lineup_cache[g["game_id"]]["home"] + lineup_cache[g["game_id"]]["away"])
+        for k in ("home_pitcher_id", "away_pitcher_id"):
+            if g.get(k):
+                pids.add(g[k])
+    meta = fetch.get_player_meta(list(pids))
 
-    def pitcher_fn(pid: int) -> dict:
-        name = fetch.get_player_names([pid]).get(pid, str(pid))
-        return fetch.build_pitcher_profile(pid, season, name=name)
+    def batter_profile(pid: int) -> dict:
+        m = meta.get(pid, {})
+        return get_or_compute(
+            f"batter-{pid}-{season}",
+            lambda: fetch.build_batter_profile(pid, season, name=m.get("name", str(pid)), bats=m.get("bats", "R")),
+        )
 
-    hr_rows = build_hr_rows(slate, batters_fn, _weather_fn)
-    k_rows = build_strikeout_rows(slate, pitcher_fn, _weather_fn)
+    def pitcher_profile(pid: int) -> dict:
+        m = meta.get(pid, {})
+        return get_or_compute(
+            f"pitcher-{pid}-{season}",
+            lambda: fetch.build_pitcher_profile(pid, season, name=m.get("name", str(pid)), throws=m.get("throws", "R")),
+        )
+
+    def lineups_fn(game: dict) -> dict:
+        lns = lineup_cache[game["game_id"]]
+        return {
+            "home": [batter_profile(pid) for pid in lns["home"]],
+            "away": [batter_profile(pid) for pid in lns["away"]],
+        }
+
+    hr_rows = build_hr_rows(slate, lineups_fn, pitcher_profile, _weather_fn)
+    k_rows = build_strikeout_rows(slate, pitcher_profile, lineups_fn, _weather_fn)
 
     payload = {
         "date": date_str,
@@ -42,8 +69,10 @@ def main(date_str: str) -> None:
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, indent=2))
-    print(f"Wrote {OUT} ({len(hr_rows)} HR rows, {len(k_rows)} K rows)")
+    print(f"Wrote {OUT} ({len(hr_rows)} HR rows, {len(k_rows)} K rows, {len(payload['games'])} games)")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "2026-06-10")
+    date = sys.argv[1] if len(sys.argv) > 1 else "2026-06-11"
+    limit = int(sys.argv[2]) if len(sys.argv) > 2 else None
+    main(date, limit)
