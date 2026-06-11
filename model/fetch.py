@@ -167,3 +167,25 @@ def get_player_names(player_ids: list[int]) -> dict[int, str]:
     for person in data.get("people", []):
         out[int(person["id"])] = person.get("fullName", str(person["id"]))
     return out
+
+
+def get_player_meta(player_ids: list[int]) -> dict[int, dict]:
+    """Map MLBAM ids to {"name", "bats", "throws"} via the MLB Stats API.
+
+    bats/throws are single letters L/R/S (S = switch). Unknown ids omitted.
+    """
+    ids = [pid for pid in player_ids if pid]
+    if not ids:
+        return {}
+    try:
+        data = statsapi.get("people", {"personIds": ",".join(str(i) for i in ids)})
+    except Exception:
+        return {}
+    out: dict[int, dict] = {}
+    for person in data.get("people", []):
+        out[int(person["id"])] = {
+            "name": person.get("fullName", str(person["id"])),
+            "bats": (person.get("batSide") or {}).get("code", "R"),
+            "throws": (person.get("pitchHand") or {}).get("code", "R"),
+        }
+    return out

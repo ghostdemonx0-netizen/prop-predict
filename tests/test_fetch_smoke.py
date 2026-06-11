@@ -46,3 +46,11 @@ def test_get_player_names_smoke():
     names = get_player_names([592450, 669373])  # Judge, Skubal
     assert names[592450] == "Aaron Judge"
     assert names[669373] == "Tarik Skubal"
+
+
+def test_get_player_meta_smoke():
+    from model.fetch import get_player_meta
+    meta = get_player_meta([592450, 669373])  # Judge (R bats), Skubal (L throws)
+    assert meta[592450]["name"] == "Aaron Judge"
+    assert meta[592450]["bats"] in {"L", "R", "S"}
+    assert meta[669373]["throws"] in {"L", "R"}
