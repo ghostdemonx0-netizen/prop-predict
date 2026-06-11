@@ -20,7 +20,8 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
 
 def _update_index(date_str: str) -> None:
     """Maintain web/public/data/index.json: a newest-first list of dates that
-    have a data file, limited to the most recent 14."""
+    have a data file, capped at a strict rolling 7. Date files that fall out
+    of the window are deleted (latest.json/index.json are never touched)."""
     index_path = DATA_DIR / "index.json"
     dates: list[str] = []
     if index_path.exists():
@@ -28,8 +29,12 @@ def _update_index(date_str: str) -> None:
             dates = json.loads(index_path.read_text()).get("dates", [])
         except (json.JSONDecodeError, OSError):
             dates = []
-    dates = sorted(set(dates) | {date_str}, reverse=True)[:14]
+    dates = sorted(set(dates) | {date_str}, reverse=True)[:7]
     index_path.write_text(json.dumps({"dates": dates}, indent=2))
+    keep = {f"{d}.json" for d in dates} | {"latest.json", "index.json"}
+    for f in DATA_DIR.glob("*.json"):
+        if f.name not in keep:
+            f.unlink()
 
 
 def _ensure_starters(slate: list[dict]) -> None:

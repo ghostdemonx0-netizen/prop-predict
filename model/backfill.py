@@ -15,7 +15,9 @@ from model import export_web
 
 def main(end_date: str, days: int = 7, max_games: int | None = None) -> None:
     end = dt.date.fromisoformat(end_date)
-    for i in range(days):
+    # oldest first, so the newest day is written LAST and latest.json +
+    # index.json finish pointing at the most recent date
+    for i in reversed(range(days)):
         d = (end - dt.timedelta(days=i)).isoformat()
         print(f"=== backfilling {d} ===")
         try:
