@@ -1,3 +1,4 @@
+import math
 import pytest
 from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 from tests.fixtures import (
@@ -97,3 +98,21 @@ def test_strikeout_rows_fall_back_when_no_lineup_posted():
     # pitcher-only estimate: k_per_bf 0.27 * 24 BF * opponent_k_mult 1.04
     assert ace["expected_ks"] == pytest.approx(0.27 * 24 * 1.04)
     assert ace["matchups"] == []
+
+
+def test_hr_rows_wire_pitcher_platoon_slot_and_park():
+    from model.projections import pitcher_hr_mult
+    rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    home = next(r for r in rows if r["team"] == "COL")
+    # COL R batter vs LAD L starter -> platoon advantage
+    assert home["matchup_mult"] == pytest.approx(1.06)
+    # pitcher quality from Dodger Arm's HR-allowed profile
+    assert home["pitcher_mult"] == pytest.approx(pitcher_hr_mult(0.040, 460))
+    # game park (COL 1.22) divided by sqrt of the batter's home park (COL)
+    assert home["park_mult"] == pytest.approx(1.22 / math.sqrt(1.22))
+    assert home["player_id"] == 101
+
+
+def test_k_rows_carry_player_id():
+    rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_lineups_fn, fake_weather_fn)
+    assert {r["player_id"] for r in rows} == {201, 202}

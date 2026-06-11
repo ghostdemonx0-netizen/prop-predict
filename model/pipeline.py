@@ -12,10 +12,15 @@ Fetcher contracts:
   weather_fn(game) -> {wind_speed_mph, wind_from_deg, temp_f, precip_pct}
 """
 
+from math import sqrt
+
 from model.parks import get_park, hr_park_factor
 from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf
-from model.projections import hr_probability, expected_strikeouts, poisson_over_prob, lineup_expected_ks
-from model.matchup import matchup
+from model.projections import (
+    hr_probability, expected_strikeouts, poisson_over_prob,
+    lineup_expected_ks, expected_pa_for_slot, pitcher_hr_mult,
+)
+from model.matchup import matchup, hr_platoon_mult
 
 
 def _game_weather(game: dict, weather_fn) -> dict:
@@ -49,13 +54,18 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn) -> list
         # home batters face the away starter; away batters face the home starter
         for side, opp in (("home", away_p), ("away", home_p)):
             team = game.get(side, "?")
-            for b in lineups.get(side, []):
+            # the game park factor, with the half already baked into the
+            # batter's own season rate (his home park) divided back out
+            eff_park = park_mult / sqrt(hr_park_factor(team))
+            for slot, b in enumerate(lineups.get(side, [])):
+                platoon = hr_platoon_mult(b.get("bats", "R"), opp.get("throws", "R")) if opp else 1.0
+                p_mult = pitcher_hr_mult(opp.get("hr_allowed_rate", 0.033), opp.get("bf", 0)) if opp else 1.0
                 prob = hr_probability(
                     season_hr=b["season_hr"], season_pa=b["season_pa"],
                     recent_form_mult=b.get("recent_form_mult", 1.0),
-                    matchup_mult=b.get("matchup_mult", 1.0),
-                    park_mult=park_mult, weather_mult=weather_mult,
-                    expected_pa=b.get("expected_pa", 4.0),
+                    matchup_mult=platoon, pitcher_mult=p_mult,
+                    park_mult=eff_park, weather_mult=weather_mult,
+                    expected_pa=expected_pa_for_slot(slot),
                 )
                 vs = None
                 if opp:
@@ -67,10 +77,12 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn) -> list
                     vs = {"name": opp["name"], "throws": opp.get("throws", "R"), **m}
                 rows.append({
                     "prop": "HR", "game_id": game["game_id"],
+                    "player_id": b.get("player_id"),
                     "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                     "player": b["name"], "team": team, "park": game["park_team"],
                     "probability": prob, "wind_out_mph": w["wind_out_mph"],
-                    "weather_mult": weather_mult, "park_mult": park_mult,
+                    "weather_mult": weather_mult, "park_mult": eff_park,
+                    "matchup_mult": platoon, "pitcher_mult": p_mult,
                     "recent_form_mult": b.get("recent_form_mult", 1.0),
                     "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
                     "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
@@ -111,6 +123,7 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn) 
             line = p.get("k_line", 5.5)
             rows.append({
                 "prop": "K", "game_id": game["game_id"],
+                "player_id": p.get("player_id"),
                 "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                 "player": p["name"], "team": team,
                 "expected_ks": lam, "line": line, "over_prob": poisson_over_prob(lam, line),
