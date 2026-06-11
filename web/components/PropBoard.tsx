@@ -11,7 +11,9 @@ export type BoardRow = {
   detail: string; // e.g. "@ COL" or "5.5 Ks"
   href: string;
   matchup?: string; // "AWAY @ HOME" — game grouping for the List view
-  hand?: string; // batter (RHB/LHB/SW) or pitcher (RHP/LHP) handedness
+  hand?: string; // combined card chip, e.g. "RHB vs LHP"
+  playerHand?: string; // this player's own handedness (RHB/LHB/SW or RHP/LHP)
+  opponent?: { name: string; hand?: string }; // opposing pitcher (+hand) for hitters, or opposing team for pitchers
   windOut?: number; // mph toward center field (+out / -in) — fallback if no direction
   windMph?: number; // true wind speed
   windDir?: number; // direction of travel rel. to CF: 0=out to CF, 90=to RF, 180=in, 270=to LF
@@ -133,7 +135,7 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
         <tr>
           <th>Player</th>
           <th>Team</th>
-          <th>Detail</th>
+          <th>Opponent</th>
           <th style={{ textAlign: "right" }}>Probability</th>
         </tr>
       </thead>
@@ -142,9 +144,19 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
           <tr key={r.player}>
             <td>
               <Link href={r.href} className="linklike">{r.player}</Link>
+              {r.playerHand && <span className="hand" style={{ marginLeft: 6 }}>{r.playerHand}</span>}
             </td>
             <td style={{ color: "var(--muted)" }}>{r.team}</td>
-            <td style={{ color: "var(--muted)" }}>{r.detail}</td>
+            <td style={{ color: "var(--muted)" }}>
+              {r.opponent ? (
+                <>
+                  {r.opponent.name}
+                  {r.opponent.hand && <span className="hand" style={{ marginLeft: 6 }}>{r.opponent.hand}</span>}
+                </>
+              ) : (
+                "—"
+              )}
+            </td>
             <td style={{ textAlign: "right" }}>
               <HeatSphere prob={r.prob} />
             </td>

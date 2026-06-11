@@ -13,6 +13,12 @@ function batHand(b?: string) {
 function pitchHand(t?: string) {
   return t === "L" ? "LHP" : t ? "RHP" : undefined;
 }
+function oppTeam(matchup?: string, team?: string) {
+  const parts = matchup?.split(" @ ");
+  if (!parts || parts.length !== 2) return undefined;
+  const [away, home] = parts;
+  return team === home ? away : home;
+}
 
 export default function Home() {
   const [data, setData] = useState<Projections | null>(null);
@@ -41,6 +47,8 @@ export default function Home() {
     href: `/player/hr/${encodeURIComponent(r.player)}`,
     matchup: r.matchup,
     hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
+    playerHand: batHand(r.bats),
+    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
     windDir: r.wind_dir,
@@ -55,6 +63,8 @@ export default function Home() {
     href: `/player/k/${encodeURIComponent(r.player)}`,
     matchup: r.matchup,
     hand: pitchHand(r.throws),
+    playerHand: pitchHand(r.throws),
+    opponent: oppTeam(r.matchup, r.team) ? { name: oppTeam(r.matchup, r.team)! } : undefined,
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
     windDir: r.wind_dir,
