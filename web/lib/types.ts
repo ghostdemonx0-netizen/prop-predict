@@ -42,9 +42,24 @@ export type KRow = {
   matchups?: Matchup[]; // the opposing lineup this pitcher faces
 };
 
+export type Game = {
+  game_id: number;
+  matchup: string;
+  park: string;
+  park_mult: number;
+  weather_mult: number;
+  env: number; // park_mult * weather_mult (1.0 = neutral)
+  wind_out_mph?: number;
+  wind_mph?: number;
+  wind_dir?: number;
+  temp_f?: number;
+  precip_pct?: number;
+};
+
 export type Projections = {
   date: string;
   updated: string;
   hr: HrRow[];
   strikeouts: KRow[];
+  games?: Game[];
 };

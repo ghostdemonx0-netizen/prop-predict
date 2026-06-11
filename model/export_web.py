@@ -12,7 +12,7 @@ from pathlib import Path
 
 from model import fetch
 from model.cli import _weather_fn
-from model.pipeline import build_hr_rows, build_strikeout_rows
+from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 
 OUT = Path(__file__).resolve().parent.parent / "web" / "public" / "data" / "latest.json"
 
@@ -38,6 +38,7 @@ def main(date_str: str) -> None:
         "updated": dt.datetime.now(dt.timezone.utc).isoformat(),
         "hr": hr_rows,
         "strikeouts": k_rows,
+        "games": build_games(slate, _weather_fn),
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, indent=2))

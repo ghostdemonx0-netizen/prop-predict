@@ -5,6 +5,7 @@ import { loadProjections } from "../lib/data";
 import type { Projections } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
+import { ParksBoard } from "../components/ParksBoard";
 import { FlamingBall, ElectricBat } from "../components/Marks";
 
 function batHand(b?: string) {
@@ -90,17 +91,25 @@ export default function Home() {
       </header>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rise" style={{ animationDelay: "60ms" }}>
-        <div className="pillbar">
-          {(["hr", "k"] as const).map((p) => (
-            <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
-              {p === "hr" ? "Home Runs" : "Strikeouts"}
-            </button>
-          ))}
-        </div>
+        {mode === "parks" ? (
+          <span />
+        ) : (
+          <div className="pillbar">
+            {(["hr", "k"] as const).map((p) => (
+              <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
+                {p === "hr" ? "Home Runs" : "Strikeouts"}
+              </button>
+            ))}
+          </div>
+        )}
         <ViewSwitcher mode={mode} onChange={setMode} />
       </div>
 
-      <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={mode} />
+      {mode === "parks" ? (
+        <ParksBoard games={data.games ?? []} />
+      ) : (
+        <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={mode} />
+      )}
 
       <footer className="mt-12" style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
         Projections are model estimates, not guarantees · Built on Historical and Current Data

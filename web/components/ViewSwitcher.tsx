@@ -1,12 +1,13 @@
 "use client";
 
-export type ViewMode = "cards" | "table" | "hybrid" | "list";
-const MODES: ViewMode[] = ["hybrid", "cards", "table", "list"];
+export type ViewMode = "cards" | "table" | "hybrid" | "list" | "parks";
+const MODES: ViewMode[] = ["hybrid", "cards", "table", "list", "parks"];
 const LABELS: Record<ViewMode, string> = {
   hybrid: "Hybrid",
   cards: "Cards",
   table: "Table",
   list: "Matchups",
+  parks: "Parks",
 };
 
 export function ViewSwitcher({

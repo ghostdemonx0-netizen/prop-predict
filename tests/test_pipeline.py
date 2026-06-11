@@ -1,5 +1,5 @@
 import pytest
-from model.pipeline import build_hr_rows, build_strikeout_rows
+from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 from tests.fixtures import (
     SAMPLE_SLATE, SAMPLE_BATTERS, SAMPLE_PITCHERS, SAMPLE_WEATHER,
 )
@@ -62,6 +62,17 @@ def test_build_strikeout_rows():
         assert r["wind_dir"] == pytest.approx(0)
         assert r["temp_f"] == pytest.approx(80.0)
         assert r["precip_pct"] == 30
+
+
+def test_build_games_environment():
+    games = build_games(SAMPLE_SLATE, fake_weather_fn)
+    assert len(games) == 1
+    g = games[0]
+    assert g["matchup"] == "LAD @ COL"
+    assert g["park"] == "COL"
+    # COL park 1.22 x weather (10mph out, 80F -> 1.25) = 1.525
+    assert g["env"] == pytest.approx(1.525, abs=1e-3)
+    assert g["wind_dir"] == pytest.approx(0)
 
 
 def test_build_hr_rows_skips_started_games():

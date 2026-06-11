@@ -112,3 +112,29 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, weather_fn) -> list[dict
             })
     rows.sort(key=lambda r: r["over_prob"], reverse=True)
     return rows
+
+
+def build_games(slate: list[dict], weather_fn) -> list[dict]:
+    """Per-game hitting environment (park x weather), sorted most-favorable first."""
+    out: list[dict] = []
+    for game in slate:
+        if game.get("started"):
+            continue
+        w = _game_weather(game, weather_fn)
+        park_mult = hr_park_factor(game["park_team"])
+        weather_mult = weather_hr_multiplier(w["wind_out_mph"], w["temp_f"], w["park"]["dome"])
+        out.append({
+            "game_id": game["game_id"],
+            "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
+            "park": game["park_team"],
+            "park_mult": park_mult,
+            "weather_mult": weather_mult,
+            "env": round(park_mult * weather_mult, 3),
+            "wind_out_mph": w["wind_out_mph"],
+            "wind_mph": w["wind_mph"],
+            "wind_dir": w["wind_dir"],
+            "temp_f": w["temp_f"],
+            "precip_pct": w["precip_pct"],
+        })
+    out.sort(key=lambda g: g["env"], reverse=True)
+    return out
