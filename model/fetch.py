@@ -169,6 +169,22 @@ def get_player_names(player_ids: list[int]) -> dict[int, str]:
     return out
 
 
+def get_lineups(game_id: int) -> dict[str, list[int]]:
+    """Batting-order MLBAM ids split by side: {"home": [...], "away": [...]}.
+
+    Empty lists if lineups are not posted yet.
+    """
+    try:
+        box = statsapi.boxscore_data(game_id)
+    except Exception:
+        return {"home": [], "away": []}
+    out: dict[str, list[int]] = {"home": [], "away": []}
+    for side in ("home", "away"):
+        order = box.get(side, {}).get("battingOrder", []) or []
+        out[side] = [int(pid) for pid in order]
+    return out
+
+
 def get_player_meta(player_ids: list[int]) -> dict[int, dict]:
     """Map MLBAM ids to {"name", "bats", "throws"} via the MLB Stats API.
 

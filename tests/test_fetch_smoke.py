@@ -54,3 +54,15 @@ def test_get_player_meta_smoke():
     assert meta[592450]["name"] == "Aaron Judge"
     assert meta[592450]["bats"] in {"L", "R", "S"}
     assert meta[669373]["throws"] in {"L", "R"}
+
+
+def test_get_lineups_smoke():
+    from model.fetch import get_schedule, get_lineups
+    games = get_schedule("2026-06-10")
+    started = [g for g in games if g["started"]]
+    assert started, "need a finished game to guarantee posted lineups"
+    lns = get_lineups(started[0]["game_id"])
+    assert set(lns) == {"home", "away"}
+    assert isinstance(lns["home"], list) and isinstance(lns["away"], list)
+    assert len(lns["home"]) >= 1 and len(lns["away"]) >= 1
+    assert all(isinstance(pid, int) for pid in lns["home"] + lns["away"])
