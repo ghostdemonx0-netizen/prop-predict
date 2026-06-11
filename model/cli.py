@@ -9,21 +9,8 @@ import json
 import sys
 
 from model import fetch
+from model.export_web import make_profile_fns
 from model.pipeline import build_hr_rows, build_strikeout_rows
-
-# Stadium coordinates for weather lookups, keyed by park abbreviation.
-PARK_COORDS = {
-    "ARI": (33.445, -112.067), "ATL": (33.890, -84.468), "BAL": (39.284, -76.622),
-    "BOS": (42.346, -71.097), "CHC": (41.948, -87.655), "CWS": (41.830, -87.634),
-    "CIN": (39.097, -84.507), "CLE": (41.496, -81.685), "COL": (39.756, -104.994),
-    "DET": (42.339, -83.049), "HOU": (29.757, -95.355), "KC": (39.051, -94.480),
-    "LAA": (33.800, -117.883), "LAD": (34.074, -118.240), "MIA": (25.778, -80.220),
-    "MIL": (43.028, -87.971), "MIN": (44.982, -93.278), "NYM": (40.757, -73.846),
-    "NYY": (40.829, -73.926), "OAK": (38.580, -121.513), "PHI": (39.906, -75.166),
-    "PIT": (40.447, -80.006), "SD": (32.707, -117.157), "SF": (37.778, -122.389),
-    "SEA": (47.591, -122.332), "STL": (38.622, -90.193), "TB": (27.768, -82.653),
-    "TEX": (32.747, -97.083), "TOR": (43.641, -79.389), "WSH": (38.873, -77.007),
-}
 
 
 def format_table(rows: list[dict], columns: list[str]) -> str:
@@ -46,31 +33,13 @@ def format_table(rows: list[dict], columns: list[str]) -> str:
     return "\n".join(lines)
 
 
-def _weather_fn(game: dict) -> dict:
-    lat, lon = PARK_COORDS.get(game["park_team"], (39.0, -98.0))
-    if not game.get("game_time"):
-        # Lineups/time not posted yet -> neutral weather rather than crashing.
-        return {"wind_speed_mph": 0.0, "wind_from_deg": 0.0, "temp_f": 70.0}
-    return fetch.get_weather(lat, lon, game["game_time"])
-
-
 def main(date_str: str) -> None:
     slate = fetch.get_schedule(date_str)
+    lineups_fn, pitcher_fn = make_profile_fns(slate, int(date_str[:4]), date_str)
+    weather_fn = fetch.make_weather_fn()
 
-    def lineups_fn(game: dict) -> dict:
-        lns = fetch.get_lineups(game["game_id"])
-        meta = fetch.get_player_meta(lns["home"] + lns["away"])
-        def prof(pid):
-            m = meta.get(pid, {})
-            return fetch.build_batter_profile(pid, int(date_str[:4]), name=m.get("name", str(pid)), bats=m.get("bats", "R"))
-        return {"home": [prof(p) for p in lns["home"]], "away": [prof(p) for p in lns["away"]]}
-
-    def pitcher_fn(pid: int) -> dict:
-        m = fetch.get_player_meta([pid]).get(pid, {})
-        return fetch.build_pitcher_profile(pid, int(date_str[:4]), name=m.get("name", str(pid)), throws=m.get("throws", "R"))
-
-    hr_rows = build_hr_rows(slate, lineups_fn, pitcher_fn, _weather_fn)
-    k_rows = build_strikeout_rows(slate, pitcher_fn, lineups_fn, _weather_fn)
+    hr_rows = build_hr_rows(slate, lineups_fn, pitcher_fn, weather_fn)
+    k_rows = build_strikeout_rows(slate, pitcher_fn, lineups_fn, weather_fn)
 
     print("\n=== HOME RUNS ===")
     print(format_table(hr_rows, ["player", "team", "park", "probability", "wind_out_mph"]))

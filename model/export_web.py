@@ -11,9 +11,8 @@ import json
 import sys
 from pathlib import Path
 
-from model import fetch
+from model import fetch, profiles
 from model.cache import get_or_compute
-from model.cli import _weather_fn
 from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
@@ -44,20 +43,13 @@ def _ensure_starters(slate: list[dict]) -> None:
         g["away_pitcher_id"] = g.get("away_pitcher_id") or s["away"]
 
 
-def main(date_str: str, max_games: int | None = None, include_started: bool = False) -> None:
-    season = int(date_str[:4])
-    slate = fetch.get_schedule(date_str)
-    if max_games is not None:
-        slate = slate[:max_games]
-    if include_started:
-        # demo/backfill mode: process finished games too (so a past date with
-        # posted lineups produces a full board to preview the site with real data)
-        for g in slate:
-            g["started"] = False
+def make_profile_fns(slate: list[dict], season: int, as_of: str):
+    """(lineups_fn, pitcher_fn) backed by the on-disk events cache.
 
-    _ensure_starters(slate)
-
-    # resolve handedness once for every player on the slate
+    Raw per-player Statcast events are cached once per season; profiles are
+    computed fresh per slate date so a regenerated past day only sees games
+    played before it.
+    """
     pids: set[int] = set()
     lineup_cache: dict[int, dict] = {}
     for g in slate:
@@ -70,17 +62,15 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
 
     def batter_profile(pid: int) -> dict:
         m = meta.get(pid, {})
-        return get_or_compute(
-            f"batter-{pid}-{season}",
-            lambda: fetch.build_batter_profile(pid, season, name=m.get("name", str(pid)), bats=m.get("bats", "R")),
-        )
+        events = get_or_compute(f"bat-events-{pid}-{season}", lambda: fetch.batter_events(pid, season))
+        return profiles.batter_profile_from_events(
+            events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)), bats=m.get("bats", "R"))
 
-    def pitcher_profile(pid: int) -> dict:
+    def pitcher_fn(pid: int) -> dict:
         m = meta.get(pid, {})
-        return get_or_compute(
-            f"pitcher-{pid}-{season}",
-            lambda: fetch.build_pitcher_profile(pid, season, name=m.get("name", str(pid)), throws=m.get("throws", "R")),
-        )
+        events = get_or_compute(f"pit-events-{pid}-{season}", lambda: fetch.pitcher_events(pid, season))
+        return profiles.pitcher_profile_from_events(
+            events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)), throws=m.get("throws", "R"))
 
     def lineups_fn(game: dict) -> dict:
         lns = lineup_cache[game["game_id"]]
@@ -89,15 +79,33 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
             "away": [batter_profile(pid) for pid in lns["away"]],
         }
 
-    hr_rows = build_hr_rows(slate, lineups_fn, pitcher_profile, _weather_fn)
-    k_rows = build_strikeout_rows(slate, pitcher_profile, lineups_fn, _weather_fn)
+    return lineups_fn, pitcher_fn
+
+
+def main(date_str: str, max_games: int | None = None, include_started: bool = False) -> None:
+    season = int(date_str[:4])
+    slate = fetch.get_schedule(date_str)
+    if max_games is not None:
+        slate = slate[:max_games]
+    if include_started:
+        # demo/backfill mode: process finished games too (so a past date with
+        # posted lineups produces a full board to preview the site with real data)
+        for g in slate:
+            g["started"] = False
+
+    _ensure_starters(slate)
+    lineups_fn, pitcher_fn = make_profile_fns(slate, season, date_str)
+    weather_fn = fetch.make_weather_fn()
+
+    hr_rows = build_hr_rows(slate, lineups_fn, pitcher_fn, weather_fn)
+    k_rows = build_strikeout_rows(slate, pitcher_fn, lineups_fn, weather_fn)
 
     payload = {
         "date": date_str,
         "updated": dt.datetime.now(dt.timezone.utc).isoformat(),
         "hr": hr_rows,
         "strikeouts": k_rows,
-        "games": build_games(slate, _weather_fn),
+        "games": build_games(slate, weather_fn),
     }
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     (DATA_DIR / f"{date_str}.json").write_text(json.dumps(payload, indent=2))

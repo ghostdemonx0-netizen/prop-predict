@@ -18,6 +18,40 @@ _TEAM_ABBR = {
     136: "SEA", 138: "STL", 139: "TB", 140: "TEX", 141: "TOR", 120: "WSH",
 }
 
+# Stadium coordinates for weather lookups, keyed by park abbreviation.
+PARK_COORDS = {
+    "ARI": (33.445, -112.067), "ATL": (33.890, -84.468), "BAL": (39.284, -76.622),
+    "BOS": (42.346, -71.097), "CHC": (41.948, -87.655), "CWS": (41.830, -87.634),
+    "CIN": (39.097, -84.507), "CLE": (41.496, -81.685), "COL": (39.756, -104.994),
+    "DET": (42.339, -83.049), "HOU": (29.757, -95.355), "KC": (39.051, -94.480),
+    "LAA": (33.800, -117.883), "LAD": (34.074, -118.240), "MIA": (25.778, -80.220),
+    "MIL": (43.028, -87.971), "MIN": (44.982, -93.278), "NYM": (40.757, -73.846),
+    "NYY": (40.829, -73.926), "OAK": (38.580, -121.513), "PHI": (39.906, -75.166),
+    "PIT": (40.447, -80.006), "SD": (32.707, -117.157), "SF": (37.778, -122.389),
+    "SEA": (47.591, -122.332), "STL": (38.622, -90.193), "TB": (27.768, -82.653),
+    "TEX": (32.747, -97.083), "TOR": (43.641, -79.389), "WSH": (38.873, -77.007),
+}
+
+
+def make_weather_fn():
+    """Per-run memoized game-weather fetcher (one Open-Meteo call per game,
+    shared by the HR, K, and games builders)."""
+    seen: dict[int, dict] = {}
+
+    def weather_fn(game: dict) -> dict:
+        gid = game["game_id"]
+        if gid not in seen:
+            lat, lon = PARK_COORDS.get(game["park_team"], (39.0, -98.0))
+            if not game.get("game_time"):
+                # game time not posted yet -> neutral weather rather than crashing
+                seen[gid] = {"wind_speed_mph": 0.0, "wind_from_deg": 0.0,
+                             "temp_f": 70.0, "precip_pct": 0}
+            else:
+                seen[gid] = get_weather(lat, lon, game["game_time"])
+        return seen[gid]
+
+    return weather_fn
+
 
 def _abbr(team_id: int) -> str:
     return _TEAM_ABBR.get(team_id, "ZZZ")
@@ -106,103 +140,6 @@ def pitcher_events(player_id: int, season: int) -> list[dict]:
     """One pitcher-season of slim Statcast rows: game_date, events, game_pk."""
     start, end = _date_window(season)
     return _slim_records(statcast_pitcher(start, end, player_id), _PITCHER_EVENT_COLS)
-
-
-def build_batter_profile(player_id: int, season: int, name: str = "", team: str = "",
-                         bats: str = "") -> dict:
-    """Season HR/PA + a recent-form multiplier from Statcast batted-ball data.
-
-    recent_form_mult compares last-15-days hard-hit rate to the season hard-hit
-    rate, scaled gently and clamped to [0.8, 1.25].
-    """
-    start, end = _date_window(season)
-    df = statcast_batter(start, end, player_id)
-    bip = df[df["launch_speed"].notna()]
-    season_hard = (bip["launch_speed"] >= 95).mean() if len(bip) else 0.0
-    pa = int((df["events"].notna()).sum())
-    hr = int((df["events"] == "home_run").sum())
-    ks = int(df["events"].isin(["strikeout", "strikeout_double_play"]).sum())
-    hits = int(df["events"].isin(["single", "double", "triple", "home_run"]).sum())
-    k_rate = (ks / pa) if pa else 0.0
-    hit_rate = (hits / pa) if pa else 0.0
-
-    cutoff = pd.to_datetime(df["game_date"]).max() - pd.Timedelta(days=15)
-    recent = bip[pd.to_datetime(bip["game_date"]) >= cutoff]
-    recent_hard = (recent["launch_speed"] >= 95).mean() if len(recent) else season_hard
-    recent_form_mult = 1.0 + (recent_hard - season_hard) * 1.5
-    recent_form_mult = max(0.8, min(1.25, recent_form_mult))
-
-    return {
-        "player_id": player_id,
-        "name": name or str(player_id),
-        "team": team,
-        "bats": bats,
-        "season_hr": hr,
-        "season_pa": pa,
-        "expected_pa": 4.0,
-        "recent_form_mult": recent_form_mult,
-        "matchup_mult": 1.0,
-        "k_rate": k_rate,
-        "hit_rate": hit_rate,
-    }
-
-
-def build_pitcher_profile(player_id: int, season: int, name: str = "", team: str = "",
-                          throws: str = "", k_line: float = 5.5) -> dict:
-    """Per-batter K rate and an expected batters-faced estimate from Statcast."""
-    start, end = _date_window(season)
-    df = statcast_pitcher(start, end, player_id)
-    pa = int((df["events"].notna()).sum())
-    ks = int(df["events"].isin(["strikeout", "strikeout_double_play"]).sum())
-    k_per_bf = (ks / pa) if pa else 0.0
-    hits_allowed = int(df["events"].isin(["single", "double", "triple", "home_run"]).sum())
-    hit_allowed_rate = (hits_allowed / pa) if pa else 0.0
-
-    games = df["game_pk"].nunique() if "game_pk" in df else 0
-    expected_bf = (pa / games) if games else 24.0
-
-    return {
-        "player_id": player_id,
-        "name": name or str(player_id),
-        "team": team,
-        "throws": throws,
-        "k_per_bf": k_per_bf,
-        "expected_bf": expected_bf,
-        "opponent_k_mult": 1.0,
-        "k_line": k_line,
-        "hit_allowed_rate": hit_allowed_rate,
-    }
-
-
-def get_lineup_batter_ids(game_id: int) -> list[int]:
-    """Confirmed batting-order player ids for both teams from the boxscore.
-
-    Falls back to an empty list if lineups aren't posted yet.
-    """
-    try:
-        box = statsapi.boxscore_data(game_id)
-    except Exception:
-        return []
-    ids: list[int] = []
-    for side in ("home", "away"):
-        order = box.get(side, {}).get("battingOrder", []) or []
-        ids.extend(int(pid) for pid in order)
-    return ids
-
-
-def get_player_names(player_ids: list[int]) -> dict[int, str]:
-    """Map MLBAM player ids to 'First Last' names via the MLB Stats API.
-
-    Unknown ids are omitted from the returned dict. One batched request.
-    """
-    ids = [pid for pid in player_ids if pid]
-    if not ids:
-        return {}
-    data = statsapi.get("people", {"personIds": ",".join(str(i) for i in ids)})
-    out: dict[int, str] = {}
-    for person in data.get("people", []):
-        out[int(person["id"])] = person.get("fullName", str(person["id"]))
-    return out
 
 
 def get_lineups(game_id: int) -> dict[str, list[int]]:
