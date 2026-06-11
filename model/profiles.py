@@ -10,7 +10,6 @@ import datetime as dt
 
 _K_EVENTS = ("strikeout", "strikeout_double_play")
 _HIT_EVENTS = ("single", "double", "triple", "home_run")
-_NON_HR_HIT_EVENTS = ("single", "double", "triple")
 
 
 def _hard_hit_rate(rows: list[dict]) -> float:
@@ -57,7 +56,7 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
     pa_rows = [e for e in past if e["events"]]
     pa = len(pa_rows)
     ks = sum(1 for e in pa_rows if e["events"] in _K_EVENTS)
-    hits = sum(1 for e in pa_rows if e["events"] in _NON_HR_HIT_EVENTS)
+    hits = sum(1 for e in pa_rows if e["events"] in _HIT_EVENTS)
     hr = sum(1 for e in pa_rows if e["events"] == "home_run")
     games = len({e["game_pk"] for e in past})
 

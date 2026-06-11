@@ -45,7 +45,7 @@ def test_pitcher_profile_from_events():
     ]
     p = pitcher_profile_from_events(events, as_of="2026-06-10", player_id=2, throws="L")
     assert p["k_per_bf"] == pytest.approx(0.5)
-    assert p["hit_allowed_rate"] == pytest.approx(0.25)
+    assert p["hit_allowed_rate"] == pytest.approx(0.5)  # single + HR are both hits
     assert p["hr_allowed_rate"] == pytest.approx(0.25)
     assert p["expected_bf"] == pytest.approx(2.0)  # 4 PA over 2 games
     assert p["bf"] == 4
