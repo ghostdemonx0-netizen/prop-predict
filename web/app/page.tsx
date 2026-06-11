@@ -47,7 +47,7 @@ export default function Home() {
       <header className="mb-9 rise">
         <p className="eyebrow mb-2">MLB player props · model-driven</p>
         <h1 className="wordmark">
-          <span className="lo">prop-</span><span className="hi">predict</span>
+          <span className="lo">Prop </span><span className="hi">Predict</span>
         </h1>
         <p className="mt-3 flex items-center gap-2" style={{ color: "var(--muted)", fontSize: "0.82rem" }}>
           <span className="live-dot" />

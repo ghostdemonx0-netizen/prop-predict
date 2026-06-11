@@ -21,7 +21,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "prop-predict",
+  title: "Prop Predict",
   description: "MLB player prop projections",
 };
 
