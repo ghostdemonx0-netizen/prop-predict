@@ -8,6 +8,7 @@ Writes web/public/data/latest.json. Player Statcast pulls are cached under
 
 import datetime as dt
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -16,12 +17,14 @@ from model.cache import get_or_compute
 from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
+_DATE_FILE = re.compile(r"^\d{4}-\d{2}-\d{2}\.json$")
 
 
 def _update_index(date_str: str) -> None:
     """Maintain web/public/data/index.json: a newest-first list of dates that
     have a data file, capped at a strict rolling 7. Date files that fall out
-    of the window are deleted (latest.json/index.json are never touched)."""
+    of the window are deleted (only YYYY-MM-DD.json files are ever deleted;
+    latest.json/index.json are never touched)."""
     index_path = DATA_DIR / "index.json"
     dates: list[str] = []
     if index_path.exists():
@@ -29,11 +32,13 @@ def _update_index(date_str: str) -> None:
             dates = json.loads(index_path.read_text()).get("dates", [])
         except (json.JSONDecodeError, OSError):
             dates = []
+            print(f"warning: {index_path} unreadable - index reset to this run's date",
+                  file=sys.stderr)
     dates = sorted(set(dates) | {date_str}, reverse=True)[:7]
     index_path.write_text(json.dumps({"dates": dates}, indent=2))
-    keep = {f"{d}.json" for d in dates} | {"latest.json", "index.json"}
+    keep = {f"{d}.json" for d in dates}
     for f in DATA_DIR.glob("*.json"):
-        if f.name not in keep:
+        if _DATE_FILE.match(f.name) and f.name not in keep:
             f.unlink()
 
 
