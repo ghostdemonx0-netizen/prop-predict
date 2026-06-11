@@ -19,11 +19,16 @@ from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 OUT = Path(__file__).resolve().parent.parent / "web" / "public" / "data" / "latest.json"
 
 
-def main(date_str: str, max_games: int | None = None) -> None:
+def main(date_str: str, max_games: int | None = None, include_started: bool = False) -> None:
     season = int(date_str[:4])
     slate = fetch.get_schedule(date_str)
     if max_games is not None:
         slate = slate[:max_games]
+    if include_started:
+        # demo/backfill mode: process finished games too (so a past date with
+        # posted lineups produces a full board to preview the site with real data)
+        for g in slate:
+            g["started"] = False
 
     # resolve handedness once for every player on the slate
     pids: set[int] = set()
@@ -73,6 +78,9 @@ def main(date_str: str, max_games: int | None = None) -> None:
 
 
 if __name__ == "__main__":
-    date = sys.argv[1] if len(sys.argv) > 1 else "2026-06-11"
-    limit = int(sys.argv[2]) if len(sys.argv) > 2 else None
-    main(date, limit)
+    args = sys.argv[1:]
+    include_started = "--include-started" in args
+    args = [a for a in args if a != "--include-started"]
+    date = args[0] if args else "2026-06-11"
+    limit = int(args[1]) if len(args) > 1 else None
+    main(date, limit, include_started)
