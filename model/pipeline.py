@@ -6,9 +6,10 @@ and is fully unit-testable. cli.py / export_web.py supply the real fetchers.
 Fetcher contracts:
   lineups_fn(game) -> {"home": [batter_profile, ...], "away": [batter_profile, ...]}
       batter_profile: {player_id, name, team, bats, season_hr, season_pa,
-                       expected_pa, recent_form_mult, matchup_mult, k_rate, hit_rate}
+                       recent_form_mult, k_rate, hit_rate}
   pitcher_fn(pitcher_id) -> {player_id, name, team, throws, k_per_bf, expected_bf,
-                             opponent_k_mult, k_line, hit_allowed_rate}
+                             opponent_k_mult, k_line, hit_allowed_rate,
+                             hr_allowed_rate, bf}
   weather_fn(game) -> {wind_speed_mph, wind_from_deg, temp_f, precip_pct}
 """
 

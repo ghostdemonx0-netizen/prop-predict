@@ -111,6 +111,11 @@ def test_hr_rows_wire_pitcher_platoon_slot_and_park():
     # game park (COL 1.22) divided by sqrt of the batter's home park (COL)
     assert home["park_mult"] == pytest.approx(1.22 / math.sqrt(1.22))
     assert home["player_id"] == 101
+    away = next(r for r in rows if r["team"] == "LAD")
+    # away batter's own park (LAD 1.06) divided out of the game park (COL)
+    assert away["park_mult"] == pytest.approx(1.22 / math.sqrt(1.06))
+    assert away["pitcher_mult"] == pytest.approx(pitcher_hr_mult(0.030, 430))
+    assert away["player_id"] == 111
 
 
 def test_k_rows_carry_player_id():
