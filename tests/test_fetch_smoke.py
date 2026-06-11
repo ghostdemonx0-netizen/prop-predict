@@ -21,3 +21,21 @@ def test_get_weather_returns_conditions():
     assert "wind_from_deg" in wx
     assert "temp_f" in wx
     assert 0 <= wx["wind_from_deg"] <= 360
+
+
+def test_build_batter_profile_smoke():
+    from model.fetch import build_batter_profile
+    # Aaron Judge MLBAM id 592450; season 2026
+    prof = build_batter_profile(player_id=592450, season=2026)
+    assert prof["season_pa"] > 0
+    assert prof["season_hr"] >= 0
+    assert "recent_form_mult" in prof
+    assert prof["recent_form_mult"] > 0
+
+
+def test_build_pitcher_profile_smoke():
+    from model.fetch import build_pitcher_profile
+    # Tarik Skubal MLBAM id 669373; season 2026
+    prof = build_pitcher_profile(player_id=669373, season=2026)
+    assert prof["k_per_bf"] > 0
+    assert prof["expected_bf"] > 0

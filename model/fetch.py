@@ -71,3 +71,68 @@ def get_weather(lat: float, lon: float, when_iso: str) -> dict:
         "wind_speed_mph": h["wind_speed_10m"][idx],
         "wind_from_deg": h["wind_direction_10m"][idx],
     }
+
+
+import pandas as pd
+from pybaseball import statcast_batter, statcast_pitcher
+
+
+def _date_window(season: int) -> tuple[str, str]:
+    return f"{season}-03-01", f"{season}-11-01"
+
+
+def build_batter_profile(player_id: int, season: int, name: str = "", team: str = "",
+                         bats: str = "") -> dict:
+    """Season HR/PA + a recent-form multiplier from Statcast batted-ball data.
+
+    recent_form_mult compares last-15-days hard-hit rate to the season hard-hit
+    rate, scaled gently and clamped to [0.8, 1.25].
+    """
+    start, end = _date_window(season)
+    df = statcast_batter(start, end, player_id)
+    bip = df[df["launch_speed"].notna()]
+    season_hard = (bip["launch_speed"] >= 95).mean() if len(bip) else 0.0
+    pa = int((df["events"].notna()).sum())
+    hr = int((df["events"] == "home_run").sum())
+
+    cutoff = pd.to_datetime(df["game_date"]).max() - pd.Timedelta(days=15)
+    recent = bip[pd.to_datetime(bip["game_date"]) >= cutoff]
+    recent_hard = (recent["launch_speed"] >= 95).mean() if len(recent) else season_hard
+    recent_form_mult = 1.0 + (recent_hard - season_hard) * 1.5
+    recent_form_mult = max(0.8, min(1.25, recent_form_mult))
+
+    return {
+        "player_id": player_id,
+        "name": name or str(player_id),
+        "team": team,
+        "bats": bats,
+        "season_hr": hr,
+        "season_pa": pa,
+        "expected_pa": 4.0,
+        "recent_form_mult": recent_form_mult,
+        "matchup_mult": 1.0,
+    }
+
+
+def build_pitcher_profile(player_id: int, season: int, name: str = "", team: str = "",
+                          throws: str = "", k_line: float = 5.5) -> dict:
+    """Per-batter K rate and an expected batters-faced estimate from Statcast."""
+    start, end = _date_window(season)
+    df = statcast_pitcher(start, end, player_id)
+    pa = int((df["events"].notna()).sum())
+    ks = int(df["events"].isin(["strikeout", "strikeout_double_play"]).sum())
+    k_per_bf = (ks / pa) if pa else 0.0
+
+    games = df["game_pk"].nunique() if "game_pk" in df else 0
+    expected_bf = (pa / games) if games else 24.0
+
+    return {
+        "player_id": player_id,
+        "name": name or str(player_id),
+        "team": team,
+        "throws": throws,
+        "k_per_bf": k_per_bf,
+        "expected_bf": expected_bf,
+        "opponent_k_mult": 1.0,
+        "k_line": k_line,
+    }
