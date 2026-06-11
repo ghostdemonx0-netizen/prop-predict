@@ -198,3 +198,24 @@ table.board { width: 100%; border-collapse: collapse; }
 .rise { animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 
 a { color: var(--green); }
+
+/* ---- logo marks (flaming ball + electric bat) ---- */
+.mark { display: block; flex: 0 0 auto; }
+.mark-ball { filter: drop-shadow(0 0 8px rgba(255, 70, 40, 0.65)); }
+.mark-bat { filter: drop-shadow(0 0 8px rgba(255, 225, 77, 0.6)); }
+.flame { transform-origin: 32px 27px; animation: flicker 1.05s ease-in-out infinite; }
+.bolt { animation: zap 1.5s steps(1, end) infinite; }
+.bolt.b2 { animation-delay: 0.35s; }
+@keyframes flicker {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.14) translateY(-1px); }
+}
+@keyframes zap {
+  0%, 40%, 100% { opacity: 0.35; }
+  45% { opacity: 1; }
+  60% { opacity: 0.2; }
+  70% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flame, .bolt, .live-dot { animation: none; }
+}

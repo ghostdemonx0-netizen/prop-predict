@@ -6,6 +6,7 @@ import type { Projections } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
 import { windLabel } from "../lib/format";
+import { FlamingBall, ElectricBat } from "../components/Marks";
 
 export default function Home() {
   const [data, setData] = useState<Projections | null>(null);
@@ -46,9 +47,13 @@ export default function Home() {
     <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">
       <header className="mb-9 rise">
         <p className="eyebrow mb-2">MLB player props · model-driven</p>
-        <h1 className="wordmark">
-          <span className="lo">Prop </span><span className="hi">Predict</span>
-        </h1>
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+          <ElectricBat />
+          <h1 className="wordmark">
+            <span className="lo">Prop </span><span className="hi">Predict</span>
+          </h1>
+          <FlamingBall />
+        </div>
         <p className="mt-3 flex items-center gap-2" style={{ color: "var(--muted)", fontSize: "0.82rem" }}>
           <span className="live-dot" />
           <span className="num">{data.date}</span>
