@@ -123,8 +123,18 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
       <div className="mt-1.5 flex items-center gap-2" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
         <span className={badgeClass(r.prob)}>{strengthLabel(r.prob)}</span>
         <span>{r.detail}</span>
-        {r.hand && <span className="hand">{r.hand}</span>}
       </div>
+      {(r.playerHand || r.opponent) && (
+        <div className="mt-1 flex flex-wrap items-center gap-1.5" style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
+          {r.playerHand && <span className="hand">{r.playerHand}</span>}
+          {r.opponent && (
+            <span className="inline-flex items-center gap-1.5">
+              vs {r.opponent.name}
+              {r.opponent.hand && <span className="hand">{r.opponent.hand}</span>}
+            </span>
+          )}
+        </div>
+      )}
       <WeatherChips r={r} />
     </Link>
   );
@@ -180,8 +190,14 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
         textDecoration: "none",
       }}
     >
-      <span style={{ fontWeight: 600 }}>
-        {r.player} <span style={{ color: "var(--muted)", fontWeight: 400 }}>{r.detail}</span>
+      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap" }}>
+        {r.player}
+        {r.playerHand && <span className="hand">{r.playerHand}</span>}
+        {r.opponent?.hand && (
+          <span style={{ color: "var(--muted)", fontWeight: 400 }}>
+            vs {r.opponent.name} <span className="hand">{r.opponent.hand}</span>
+          </span>
+        )}
       </span>
       <HeatSphere prob={r.prob} />
     </Link>
