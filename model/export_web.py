@@ -94,7 +94,11 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
 
 def _attach_bvp(hr_rows: list[dict], k_rows: list[dict]) -> None:
     """Annotate matchup entries with career batter-vs-pitcher history (display
-    context only; cached per pair, one API call each)."""
+    context only; cached per pair, one API call each).
+
+    A transient API failure caches the same {} sentinel as genuine no-history,
+    so the pair shows "no history" until the next .cache/ clear — acceptable
+    for display context."""
     def bvp(batter_id, pitcher_id):
         if not batter_id or not pitcher_id:
             return None
