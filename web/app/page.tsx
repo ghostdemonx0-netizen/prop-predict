@@ -7,6 +7,13 @@ import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
 import { FlamingBall, ElectricBat } from "../components/Marks";
 
+function batHand(b?: string) {
+  return b === "L" ? "LHB" : b === "S" ? "SW" : b ? "RHB" : undefined;
+}
+function pitchHand(t?: string) {
+  return t === "L" ? "LHP" : t ? "RHP" : undefined;
+}
+
 export default function Home() {
   const [data, setData] = useState<Projections | null>(null);
   const [mode, setMode] = useState<ViewMode>("hybrid");
@@ -32,6 +39,7 @@ export default function Home() {
     prob: r.probability,
     detail: `@ ${r.park}`,
     href: `/player/hr/${encodeURIComponent(r.player)}`,
+    hand: batHand(r.bats),
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
     windDir: r.wind_dir,
@@ -44,6 +52,7 @@ export default function Home() {
     prob: r.over_prob,
     detail: `${r.line} Ks`,
     href: `/player/k/${encodeURIComponent(r.player)}`,
+    hand: pitchHand(r.throws),
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
     windDir: r.wind_dir,

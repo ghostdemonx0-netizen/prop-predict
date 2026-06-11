@@ -10,6 +10,7 @@ export type BoardRow = {
   prob: number; // probability or over_prob
   detail: string; // e.g. "@ COL" or "5.5 Ks"
   href: string;
+  hand?: string; // batter (RHB/LHB/SW) or pitcher (RHP/LHP) handedness
   windOut?: number; // mph toward center field (+out / -in) — fallback if no direction
   windMph?: number; // true wind speed
   windDir?: number; // direction of travel rel. to CF: 0=out to CF, 90=to RF, 180=in, 270=to LF
@@ -93,6 +94,7 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
       <div className="mt-1.5 flex items-center gap-2" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
         <span className={badgeClass(r.prob)}>{strengthLabel(r.prob)}</span>
         <span>{r.detail}</span>
+        {r.hand && <span className="hand">{r.hand}</span>}
       </div>
       <WeatherChips r={r} />
     </Link>

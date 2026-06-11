@@ -18,6 +18,23 @@ function arrowColor(dir: number) {
   return c > 0.2 ? "var(--green)" : c < -0.2 ? "var(--red)" : "var(--amber)";
 }
 
+function batLabel(b?: string) {
+  return b === "L" ? "LHB" : b === "S" ? "Switch" : b ? "RHB" : "";
+}
+function pitLabel(t?: string) {
+  return t === "L" ? "LHP" : t ? "RHP" : "";
+}
+
+function MatchupSphere({ lean, prob }: { lean: string; prob: number }) {
+  const cls = lean === "K" ? "k" : lean === "H" ? "h" : "neu";
+  return (
+    <span className={`msphere ${cls}`} title="model matchup read (not head-to-head history)">
+      <span className="mp">{Math.round(prob * 100)}%</span>
+      <span className="ml">{lean === "NEU" ? "—" : lean}</span>
+    </span>
+  );
+}
+
 function Back() {
   return (
     <Link href="/" className="eyebrow" style={{ textDecoration: "none" }}>
@@ -130,7 +147,7 @@ export default function PlayerPage({ params }: { params: Promise<{ prop: string;
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
         <Back />
         <div className="rise">
-          <p className="eyebrow mb-1">{r.team} · Home Run</p>
+          <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Home Run</p>
           <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
             <span className="lo">{r.player}</span>
           </h1>
@@ -170,6 +187,21 @@ export default function PlayerPage({ params }: { params: Promise<{ prop: string;
           <div className="eyebrow mb-3">Conditions</div>
           <WeatherStrip tempF={r.temp_f} windMph={r.wind_mph} windDir={r.wind_dir} precipPct={r.precip_pct} />
         </div>
+
+        {r.vs && (
+          <div className="panel rise" style={{ animationDelay: "240ms" }}>
+            <div className="eyebrow mb-1">Pitcher matchup</div>
+            <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
+              Model read from both players&apos; rates + handedness — not head-to-head history.
+            </p>
+            <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
+              <span className="bname">
+                {r.vs.name} <span className="hand">{pitLabel(r.vs.throws)}</span>
+              </span>
+              <MatchupSphere lean={r.vs.lean} prob={r.vs.prob} />
+            </div>
+          </div>
+        )}
       </main>
     );
   }
@@ -182,7 +214,7 @@ export default function PlayerPage({ params }: { params: Promise<{ prop: string;
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
       <Back />
       <div className="rise">
-        <p className="eyebrow mb-1">{r.team} · Strikeouts</p>
+        <p className="eyebrow mb-1">{r.team}{r.throws ? ` · ${pitLabel(r.throws)}` : ""} · Strikeouts</p>
         <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
           <span className="lo">{r.player}</span>
         </h1>
@@ -211,6 +243,28 @@ export default function PlayerPage({ params }: { params: Promise<{ prop: string;
         <WeatherStrip tempF={r.temp_f} windMph={r.wind_mph} windDir={r.wind_dir} precipPct={r.precip_pct} />
         <p className="factor-note">Weather barely affects strikeouts — shown for game context.</p>
       </div>
+
+      {r.matchups && r.matchups.length > 0 && (
+        <div className="panel rise" style={{ animationDelay: "240ms" }}>
+          <div className="eyebrow mb-1">Opposing lineup — matchup read</div>
+          <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
+            <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
+            <strong style={{ color: "#bff3d2" }}>H</strong> = likely hit · — = no edge. Model-derived
+            from rates + handedness, not head-to-head history.
+          </p>
+          <div className="lineup">
+            {r.matchups.map((m, i) => (
+              <div className="lineup-row" key={m.name}>
+                <span className="ord">{i + 1}</span>
+                <span className="bname">
+                  {m.name} <span className="hand">{batLabel(m.bats)}</span>
+                </span>
+                <MatchupSphere lean={m.lean} prob={m.prob} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

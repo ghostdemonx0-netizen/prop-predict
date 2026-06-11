@@ -1,3 +1,13 @@
+export type Matchup = {
+  name: string;
+  bats?: string; // batter handedness (on a pitcher's lineup entry)
+  throws?: string; // pitcher handedness (on a batter's vs entry)
+  lean: "K" | "H" | "NEU";
+  prob: number; // headline probability for the lean
+  k_prob: number;
+  hit_prob: number;
+};
+
 export type HrRow = {
   player: string;
   team: string;
@@ -11,6 +21,8 @@ export type HrRow = {
   precip_pct?: number;
   wind_mph?: number; // true wind speed
   wind_dir?: number; // direction of travel relative to center field (0=out to CF, 90=to RF, 180=in, 270=to LF)
+  bats?: string; // L / R / S
+  vs?: Matchup; // the pitcher this batter faces
 };
 
 export type KRow = {
@@ -24,6 +36,8 @@ export type KRow = {
   precip_pct?: number;
   wind_mph?: number;
   wind_dir?: number;
+  throws?: string; // L / R
+  matchups?: Matchup[]; // the opposing lineup this pitcher faces
 };
 
 export type Projections = {

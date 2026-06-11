@@ -261,6 +261,46 @@ a { color: var(--green); }
 }
 .wx-chip .num { font-weight: 700; }
 
+/* ---- handedness + matchup spheres + lineup ---- */
+.hand {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0.06rem 0.32rem;
+}
+.lineup { display: flex; flex-direction: column; }
+.lineup-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.lineup-row:last-child { border-bottom: 0; }
+.lineup-row .ord { width: 1.1rem; color: var(--muted); font-family: var(--font-mono), monospace; font-size: 0.75rem; }
+.lineup-row .bname { flex: 1; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.92rem; }
+.msphere {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-mono), monospace;
+  line-height: 1.05;
+  flex: 0 0 auto;
+}
+.msphere .mp { font-weight: 700; font-size: 0.74rem; }
+.msphere .ml { font-size: 0.52rem; letter-spacing: 0.08em; opacity: 0.85; margin-top: 1px; }
+.msphere.k { background: radial-gradient(circle at 34% 28%, rgba(240, 116, 110, 0.3), rgba(10, 16, 13, 0.25)); color: #ffd9d6; border-color: rgba(240, 116, 110, 0.5); }
+.msphere.h { background: radial-gradient(circle at 34% 28%, rgba(62, 224, 127, 0.28), rgba(10, 16, 13, 0.25)); color: #bff3d2; border-color: rgba(62, 224, 127, 0.5); }
+.msphere.neu { background: rgba(138, 163, 153, 0.1); color: var(--muted); }
+
 /* ---- logo marks (flaming ball + electric bat) ---- */
 .mark { display: block; flex: 0 0 auto; }
 .mark-ball { filter: drop-shadow(0 0 8px rgba(255, 70, 40, 0.65)); }
