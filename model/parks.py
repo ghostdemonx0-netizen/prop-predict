@@ -44,8 +44,8 @@ _NEUTRAL = {"name": "Unknown Park", "hr_factor": 1.0, "cf_bearing_deg": 0, "dome
 
 
 def get_park(team_abbr: str) -> dict:
-    """Return the park dict for a home-team abbreviation, or a neutral default."""
-    return PARKS.get(team_abbr, _NEUTRAL)
+    """Return a copy of the park dict for a home-team abbreviation, or a neutral default."""
+    return dict(PARKS.get(team_abbr, _NEUTRAL))
 
 
 def hr_park_factor(team_abbr: str) -> float:

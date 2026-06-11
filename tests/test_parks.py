@@ -12,6 +12,7 @@ def test_known_park_has_required_fields():
 
 def test_hr_park_factor_returns_float():
     assert hr_park_factor("COL") == pytest.approx(1.22)
+    assert isinstance(hr_park_factor("COL"), float)
 
 
 def test_unknown_team_defaults_to_neutral():
@@ -27,3 +28,10 @@ def test_every_park_entry_is_well_formed():
         assert isinstance(p["hr_factor"], float)
         assert 0 <= p["cf_bearing_deg"] < 360
         assert isinstance(p["dome"], bool)
+
+
+def test_get_park_returns_independent_copy():
+    a = get_park("ZZZ")
+    a["dome"] = True
+    b = get_park("ZZZ")
+    assert b["dome"] is False  # mutating one result must not affect later calls
