@@ -4,19 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { loadProjections } from "../../../../lib/data";
 import type { Projections } from "../../../../lib/types";
-import { pct, strengthLabel } from "../../../../lib/format";
-
-const DIRS = [
-  "out to center", "out to right-center", "out to right field", "blowing in (right)",
-  "blowing in", "blowing in (left)", "out to left field", "out to left-center",
-];
-function windText(dir: number) {
-  return DIRS[Math.round((((dir % 360) + 360) % 360) / 45) % 8];
-}
-function arrowColor(dir: number) {
-  const c = Math.cos((dir * Math.PI) / 180);
-  return c > 0.2 ? "var(--green)" : c < -0.2 ? "var(--red)" : "var(--amber)";
-}
+import { pct, strengthLabel, windText, arrowColor } from "../../../../lib/format";
 
 function batLabel(b?: string) {
   return b === "L" ? "LHB" : b === "S" ? "Switch" : b ? "RHB" : "";

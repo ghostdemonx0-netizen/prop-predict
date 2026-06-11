@@ -134,7 +134,7 @@ export default function Home() {
       {mode === "parks" ? (
         <ParksBoard games={data.games ?? []} />
       ) : (
-        <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={mode} />
+        <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={mode} kind={prop === "hr" ? "hr" : "k"} />
       )}
 
       <footer className="mt-12" style={{ color: "var(--muted)", fontSize: "0.72rem" }}>

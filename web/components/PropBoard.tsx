@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ViewMode } from "./ViewSwitcher";
-import { pct, strengthLabel } from "../lib/format";
+import { pct, strengthLabel, strengthTier, heatColor, type PropKind } from "../lib/format";
 
 export type BoardRow = {
   player: string;
@@ -58,28 +58,8 @@ function WeatherChips({ r }: { r: BoardRow }) {
   );
 }
 
-function strengthClass(prob: number): string {
-  if (prob >= 0.25) return "s-strong";
-  if (prob >= 0.12) return "s-lean";
-  return "s-pass";
-}
-
-function badgeClass(prob: number): string {
-  if (prob >= 0.25) return "badge strong";
-  if (prob >= 0.12) return "badge lean";
-  return "badge pass";
-}
-
-// Heat-map: cool blue (low probability) -> warm red-orange (high), over ~5%-45%.
-// Muted saturation/lightness so it reads softly on the dark theme.
-function heatColor(p: number): string {
-  const t = Math.max(0, Math.min(1, (p - 0.05) / 0.4));
-  const hue = 210 - t * 210; // 210 (blue) -> 0 (red)
-  return `hsl(${hue}, 52%, 40%)`;
-}
-
-function HeatSphere({ prob }: { prob: number }) {
-  const c = heatColor(prob);
+function HeatSphere({ prob, kind }: { prob: number; kind: PropKind }) {
+  const c = heatColor(prob, kind);
   return (
     <span
       className="sphere"
@@ -96,7 +76,7 @@ function HeatSphere({ prob }: { prob: number }) {
   );
 }
 
-export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) {
+export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMode; kind: PropKind }) {
   if (rows.length === 0) {
     return (
       <div className="panel rise" style={{ textAlign: "center", color: "var(--muted)" }}>
@@ -109,7 +89,7 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
     <Link
       href={r.href}
       key={r.player}
-      className={`card rise ${strengthClass(r.prob)}`}
+      className={`card rise s-${strengthTier(r.prob, kind)}`}
       style={{ animationDelay: `${i * 45}ms` }}
     >
       <div className="flex items-baseline justify-between gap-3">
@@ -121,7 +101,7 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
         </span>
       </div>
       <div className="mt-1.5 flex items-center gap-2" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
-        <span className={badgeClass(r.prob)}>{strengthLabel(r.prob)}</span>
+        <span className={`badge ${strengthTier(r.prob, kind)}`}>{strengthLabel(r.prob, kind)}</span>
         <span>{r.detail}</span>
       </div>
       {(r.playerHand || r.opponent) && (
@@ -168,7 +148,7 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
               )}
             </td>
             <td style={{ textAlign: "right" }}>
-              <HeatSphere prob={r.prob} />
+              <HeatSphere prob={r.prob} kind={kind} />
             </td>
           </tr>
         ))}
@@ -199,7 +179,7 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
           </span>
         )}
       </span>
-      <HeatSphere prob={r.prob} />
+      <HeatSphere prob={r.prob} kind={kind} />
     </Link>
   );
 
