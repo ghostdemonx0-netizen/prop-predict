@@ -23,9 +23,9 @@ function MatchupSphere({ lean, prob }: { lean: string; prob: number }) {
   );
 }
 
-function Back() {
+function Back({ date }: { date?: string }) {
   return (
-    <Link href="/" className="eyebrow" style={{ textDecoration: "none" }}>
+    <Link href={date ? `/?date=${date}` : "/"} className="eyebrow" style={{ textDecoration: "none" }}>
       ← back to board
     </Link>
   );
@@ -103,14 +103,21 @@ function WeatherStrip({
   );
 }
 
-export default function PlayerPage({ params }: { params: Promise<{ prop: string; id: string }> }) {
+export default function PlayerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ prop: string; id: string }>;
+  searchParams: Promise<{ date?: string }>;
+}) {
   const { prop, id } = use(params);
+  const { date } = use(searchParams);
   const name = decodeURIComponent(id);
   const [data, setData] = useState<Projections | null>(null);
 
   useEffect(() => {
-    loadProjections().then(setData).catch(console.error);
-  }, []);
+    loadProjections(date).then(setData).catch(console.error);
+  }, [date]);
 
   if (!data) {
     return (
@@ -122,18 +129,18 @@ export default function PlayerPage({ params }: { params: Promise<{ prop: string;
 
   const notFound = (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-5">
-      <Back />
+      <Back date={date} />
       <p className="panel" style={{ color: "var(--muted)" }}>No data for {name}.</p>
     </main>
   );
 
   if (prop === "hr") {
-    const r = data.hr.find((x) => x.player === name);
+    const r = data.hr.find((x) => String(x.player_id) === id) ?? data.hr.find((x) => x.player === name);
     if (!r) return notFound;
     const parkFriendly = r.park_mult >= 1;
     return (
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-        <Back />
+        <Back date={date} />
         <div className="rise">
           <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Home Run</p>
           <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
@@ -194,13 +201,13 @@ export default function PlayerPage({ params }: { params: Promise<{ prop: string;
     );
   }
 
-  const r = data.strikeouts.find((x) => x.player === name);
+  const r = data.strikeouts.find((x) => String(x.player_id) === id) ?? data.strikeouts.find((x) => x.player === name);
   if (!r) return notFound;
   const scale = Math.max(r.line + 3, r.expected_ks + 1);
   const over = r.expected_ks > r.line;
   return (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-      <Back />
+      <Back date={date} />
       <div className="rise">
         <p className="eyebrow mb-1">{r.team}{r.throws ? ` · ${pitLabel(r.throws)}` : ""} · Strikeouts</p>
         <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>

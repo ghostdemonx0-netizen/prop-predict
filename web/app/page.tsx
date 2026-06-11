@@ -29,9 +29,10 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState<string>("");
 
   useEffect(() => {
+    const want = new URLSearchParams(window.location.search).get("date");
     loadIndex().then((ds) => {
       setDates(ds);
-      setSelectedDate(ds[0] ?? "");
+      setSelectedDate(want && ds.includes(want) ? want : ds[0] ?? "");
     });
   }, []);
 
@@ -49,12 +50,15 @@ export default function Home() {
     );
   }
 
+  const dateQ = selectedDate ? `?date=${selectedDate}` : "";
+
   const hrRows: BoardRow[] = data.hr.map((r) => ({
+    id: String(r.player_id ?? r.player),
     player: r.player,
     team: r.team,
     prob: r.probability,
     detail: `@ ${r.park}`,
-    href: `/player/hr/${encodeURIComponent(r.player)}`,
+    href: `/player/hr/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
     matchup: r.matchup,
     hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
     playerHand: batHand(r.bats),
@@ -66,11 +70,12 @@ export default function Home() {
     precipPct: r.precip_pct,
   }));
   const kRows: BoardRow[] = data.strikeouts.map((r) => ({
+    id: String(r.player_id ?? r.player),
     player: r.player,
     team: r.team,
     prob: r.over_prob,
     detail: `${r.line} Ks`,
-    href: `/player/k/${encodeURIComponent(r.player)}`,
+    href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
     matchup: r.matchup,
     hand: pitchHand(r.throws),
     playerHand: pitchHand(r.throws),

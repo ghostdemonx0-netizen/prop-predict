@@ -24,6 +24,9 @@ export type HrRow = {
   wind_dir?: number; // direction of travel relative to center field (0=out to CF, 90=to RF, 180=in, 270=to LF)
   bats?: string; // L / R / S
   vs?: Matchup; // the pitcher this batter faces
+  player_id?: number;
+  matchup_mult?: number; // platoon adjustment vs this starter
+  pitcher_mult?: number; // opposing starter's HR quality
 };
 
 export type KRow = {
@@ -40,6 +43,7 @@ export type KRow = {
   wind_dir?: number;
   throws?: string; // L / R
   matchups?: Matchup[]; // the opposing lineup this pitcher faces
+  player_id?: number;
 };
 
 export type Game = {

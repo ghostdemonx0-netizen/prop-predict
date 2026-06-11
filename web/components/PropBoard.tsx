@@ -5,6 +5,7 @@ import type { ViewMode } from "./ViewSwitcher";
 import { pct, strengthLabel, strengthTier, heatColor, arrowColor, type PropKind } from "../lib/format";
 
 export type BoardRow = {
+  id: string; // stable key: player_id when available, else name
   player: string;
   team: string;
   prob: number; // probability or over_prob
@@ -86,7 +87,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
   const Card = (r: BoardRow, i: number) => (
     <Link
       href={r.href}
-      key={r.player}
+      key={r.id}
       className={`card rise s-${strengthTier(r.prob, kind)}`}
       style={{ animationDelay: `${i * 45}ms` }}
     >
@@ -129,7 +130,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
       </thead>
       <tbody>
         {rows.map((r) => (
-          <tr key={r.player}>
+          <tr key={r.id}>
             <td style={{ whiteSpace: "nowrap" }}>
               <Link href={r.href} className="linklike">{r.player}</Link>
               {r.playerHand && <span className="hand" style={{ marginLeft: 6 }}>{r.playerHand}</span>}
@@ -156,7 +157,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
 
   const Row = (r: BoardRow) => (
     <Link
-      key={r.player}
+      key={r.id}
       href={r.href}
       style={{
         display: "flex",
