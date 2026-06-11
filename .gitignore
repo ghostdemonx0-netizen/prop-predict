@@ -33,3 +33,9 @@ build/
 # CLI projection output
 projections-*.json
 .cache/
+
+# generated per-date data (keep only the committed samples)
+web/public/data/*.json
+!web/public/data/index.json
+!web/public/data/2026-06-10.json
+!web/public/data/latest.json
