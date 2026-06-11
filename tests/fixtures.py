@@ -32,5 +32,5 @@ SAMPLE_PITCHERS = {
 
 # weather keyed by game_id
 SAMPLE_WEATHER = {
-    1: {"wind_speed_mph": 10.0, "wind_from_deg": 180.0, "temp_f": 80.0},
+    1: {"wind_speed_mph": 10.0, "wind_from_deg": 180.0, "temp_f": 80.0, "precip_pct": 30},
 }

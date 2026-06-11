@@ -19,6 +19,16 @@ def wind_out_to_cf(wind_speed_mph: float, wind_from_deg: float, cf_bearing_deg: 
     return wind_speed_mph * math.cos(angle)
 
 
+def wind_dir_rel_cf(wind_from_deg: float, cf_bearing_deg: float) -> float:
+    """Direction the wind is blowing TOWARD, relative to center field.
+
+    0 = out to center field, 90 = out to right field, 180 = in from center,
+    270 = out to left field. (The website rotates the wind arrow by this angle.)
+    """
+    wind_to_deg = (wind_from_deg + 180.0) % 360.0
+    return (wind_to_deg - cf_bearing_deg) % 360.0
+
+
 def weather_hr_multiplier(wind_out_mph: float, temp_f: float, dome: bool) -> float:
     """Multiplicative HR adjustment from wind and temperature.
 

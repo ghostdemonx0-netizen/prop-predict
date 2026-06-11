@@ -65,7 +65,7 @@ def main(date_str: str) -> None:
         return fetch.build_pitcher_profile(pid, int(date_str[:4]))
 
     hr_rows = build_hr_rows(slate, batters_fn, _weather_fn)
-    k_rows = build_strikeout_rows(slate, pitcher_fn)
+    k_rows = build_strikeout_rows(slate, pitcher_fn, _weather_fn)
 
     print("\n=== HOME RUNS ===")
     print(format_table(hr_rows, ["player", "team", "park", "probability", "wind_out_mph"]))

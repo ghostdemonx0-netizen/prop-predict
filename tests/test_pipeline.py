@@ -29,6 +29,11 @@ def test_build_hr_rows_produces_expected_fields():
     assert row["probability"] > base  # Coors + wind out + heat + form + matchup all boost
     assert "wind_out_mph" in row and row["wind_out_mph"] == pytest.approx(10.0)
     assert "recent_form_mult" in row and row["recent_form_mult"] == pytest.approx(1.10)
+    # weather display fields: wind from south (180) toward CF (bearing 0) -> dir 0 (out to CF)
+    assert row["wind_dir"] == pytest.approx(0)
+    assert row["wind_mph"] == pytest.approx(10.0)
+    assert row["temp_f"] == pytest.approx(80.0)
+    assert row["precip_pct"] == 30
 
 
 def test_build_hr_rows_sorted_descending():
@@ -43,7 +48,7 @@ def test_build_hr_rows_sorted_descending():
 
 
 def test_build_strikeout_rows():
-    rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn)
+    rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_weather_fn)
     names = {r["player"] for r in rows}
     assert names == {"Ace Coors", "Dodger Arm"}
     for r in rows:
@@ -51,6 +56,10 @@ def test_build_strikeout_rows():
         assert 0.0 <= r["over_prob"] <= 1.0
         assert r["expected_ks"] > 0
         assert r["line"] == 5.5
+        # weather display fields attached for parity with HR rows
+        assert r["wind_dir"] == pytest.approx(0)
+        assert r["temp_f"] == pytest.approx(80.0)
+        assert r["precip_pct"] == 30
 
 
 def test_build_hr_rows_skips_started_games():

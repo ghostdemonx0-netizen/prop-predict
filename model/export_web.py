@@ -31,7 +31,7 @@ def main(date_str: str) -> None:
         return fetch.build_pitcher_profile(pid, season, name=name)
 
     hr_rows = build_hr_rows(slate, batters_fn, _weather_fn)
-    k_rows = build_strikeout_rows(slate, pitcher_fn)
+    k_rows = build_strikeout_rows(slate, pitcher_fn, _weather_fn)
 
     payload = {
         "date": date_str,

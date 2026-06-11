@@ -1,5 +1,18 @@
 import pytest
-from model.weather import wind_out_to_cf, weather_hr_multiplier
+from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf
+
+
+def test_wind_dir_rel_cf():
+    # CF bearing 0 (north). Wind from south (180) blows toward north -> out to CF (0).
+    assert wind_dir_rel_cf(180, 0) == pytest.approx(0)
+    # Wind from north (0) blows toward south -> in from CF (180).
+    assert wind_dir_rel_cf(0, 0) == pytest.approx(180)
+    # Wind from west (270) blows toward east -> out to right field (90).
+    assert wind_dir_rel_cf(270, 0) == pytest.approx(90)
+    # Wind from east (90) blows toward west -> out to left field (270).
+    assert wind_dir_rel_cf(90, 0) == pytest.approx(270)
+    # Park rotated: cf bearing 90, wind from 180 (toward 0) -> rel (0-90)%360 = 270.
+    assert wind_dir_rel_cf(180, 90) == pytest.approx(270)
 
 
 def test_wind_blowing_straight_out_to_cf_is_positive():

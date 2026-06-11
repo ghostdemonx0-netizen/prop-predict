@@ -55,7 +55,7 @@ def get_weather(lat: float, lon: float, when_iso: str) -> dict:
         params={
             "latitude": lat,
             "longitude": lon,
-            "hourly": "temperature_2m,wind_speed_10m,wind_direction_10m",
+            "hourly": "temperature_2m,wind_speed_10m,wind_direction_10m,precipitation_probability",
             "temperature_unit": "fahrenheit",
             "wind_speed_unit": "mph",
             "start_date": date,
@@ -68,10 +68,12 @@ def get_weather(lat: float, lon: float, when_iso: str) -> dict:
     h = resp.json()["hourly"]
     times = [dt.datetime.fromisoformat(t + "+00:00") for t in h["time"]]
     idx = min(range(len(times)), key=lambda i: abs((times[i] - target).total_seconds()))
+    precip = h.get("precipitation_probability") or []
     return {
         "temp_f": h["temperature_2m"][idx],
         "wind_speed_mph": h["wind_speed_10m"][idx],
         "wind_from_deg": h["wind_direction_10m"][idx],
+        "precip_pct": precip[idx] if idx < len(precip) and precip[idx] is not None else 0,
     }
 
 

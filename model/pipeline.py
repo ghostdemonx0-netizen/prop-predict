@@ -10,12 +10,28 @@ Fetcher contracts:
   pitcher_fn(pitcher_id) -> pitcher dict:
       {player_id, name, team, throws, k_per_bf, expected_bf,
        opponent_k_mult, k_line}
-  weather_fn(game) -> {wind_speed_mph, wind_from_deg, temp_f}
+  weather_fn(game) -> {wind_speed_mph, wind_from_deg, temp_f, precip_pct}
 """
 
 from model.parks import get_park, hr_park_factor
-from model.weather import wind_out_to_cf, weather_hr_multiplier
+from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf
 from model.projections import hr_probability, expected_strikeouts, poisson_over_prob
+
+
+def _game_weather(game: dict, weather_fn) -> dict:
+    """Resolve a game's weather into display-ready fields shared by HR and K rows."""
+    park = get_park(game["park_team"])
+    wx = weather_fn(game)
+    wind_out = wind_out_to_cf(wx["wind_speed_mph"], wx["wind_from_deg"], park["cf_bearing_deg"])
+    return {
+        "park": park,
+        "wx": wx,
+        "wind_out_mph": wind_out,
+        "wind_mph": wx["wind_speed_mph"],
+        "wind_dir": wind_dir_rel_cf(wx["wind_from_deg"], park["cf_bearing_deg"]),
+        "temp_f": wx["temp_f"],
+        "precip_pct": wx.get("precip_pct", 0),
+    }
 
 
 def build_hr_rows(slate: list[dict], batters_fn, weather_fn) -> list[dict]:
@@ -24,12 +40,9 @@ def build_hr_rows(slate: list[dict], batters_fn, weather_fn) -> list[dict]:
     for game in slate:
         if game.get("started"):
             continue
-        park = get_park(game["park_team"])
-        wx = weather_fn(game)
-        wind_out = wind_out_to_cf(
-            wx["wind_speed_mph"], wx["wind_from_deg"], park["cf_bearing_deg"]
-        )
-        weather_mult = weather_hr_multiplier(wind_out, wx["temp_f"], park["dome"])
+        w = _game_weather(game, weather_fn)
+        wind_out = w["wind_out_mph"]
+        weather_mult = weather_hr_multiplier(wind_out, w["temp_f"], w["park"]["dome"])
         park_mult = hr_park_factor(game["park_team"])
         for b in batters_fn(game["game_id"]):
             prob = hr_probability(
@@ -52,17 +65,26 @@ def build_hr_rows(slate: list[dict], batters_fn, weather_fn) -> list[dict]:
                 "weather_mult": weather_mult,
                 "park_mult": park_mult,
                 "recent_form_mult": b.get("recent_form_mult", 1.0),
+                "wind_mph": w["wind_mph"],
+                "wind_dir": w["wind_dir"],
+                "temp_f": w["temp_f"],
+                "precip_pct": w["precip_pct"],
             })
     rows.sort(key=lambda r: r["probability"], reverse=True)
     return rows
 
 
-def build_strikeout_rows(slate: list[dict], pitcher_fn) -> list[dict]:
-    """Return strikeout projection rows for both starters of each game, sorted desc."""
+def build_strikeout_rows(slate: list[dict], pitcher_fn, weather_fn) -> list[dict]:
+    """Return strikeout projection rows for both starters of each game, sorted desc.
+
+    Weather (wind/temp/rain) is attached for display parity with HR rows even
+    though it has little effect on the strikeout projection itself.
+    """
     rows: list[dict] = []
     for game in slate:
         if game.get("started"):
             continue
+        w = _game_weather(game, weather_fn)
         for key in ("home_pitcher_id", "away_pitcher_id"):
             pid = game.get(key)
             if pid is None:
@@ -80,6 +102,11 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn) -> list[dict]:
                 "expected_ks": lam,
                 "line": line,
                 "over_prob": poisson_over_prob(lam, line),
+                "wind_out_mph": w["wind_out_mph"],
+                "wind_mph": w["wind_mph"],
+                "wind_dir": w["wind_dir"],
+                "temp_f": w["temp_f"],
+                "precip_pct": w["precip_pct"],
             })
     rows.sort(key=lambda r: r["over_prob"], reverse=True)
     return rows
