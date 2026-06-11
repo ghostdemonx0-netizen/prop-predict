@@ -1,8 +1,10 @@
-"""Tiny JSON disk cache so slow per-player fetches happen once per run/day.
+"""Tiny JSON disk cache so slow per-player fetches happen once per season.
 
-Keys are sanitized into filenames under cache_dir. Callers include the date
-in the key (e.g. "batter-592450-2026") so a new day naturally uses fresh
-files; old files can simply be deleted.
+Keys map to sanitized filenames under cache_dir. Raw per-player event lists
+are keyed ``bat-events-{pid}-{season}`` / ``pit-events-{pid}-{season}`` — no
+date in the key, because as-of date filtering happens at profile-compute time
+(see model/profiles.py). Freshness between days comes from clearing .cache/
+(the daily automation will do this each morning).
 """
 
 import json

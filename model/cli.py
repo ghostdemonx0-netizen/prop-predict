@@ -35,6 +35,8 @@ def format_table(rows: list[dict], columns: list[str]) -> str:
 
 def main(date_str: str) -> None:
     slate = fetch.get_schedule(date_str)
+    # Starters are not back-resolved from boxscores here; for finished dates
+    # use export_web.main(include_started=True) instead.
     lineups_fn, pitcher_fn = make_profile_fns(slate, int(date_str[:4]), date_str)
     weather_fn = fetch.make_weather_fn()
 

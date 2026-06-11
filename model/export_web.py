@@ -43,7 +43,7 @@ def _ensure_starters(slate: list[dict]) -> None:
         g["away_pitcher_id"] = g.get("away_pitcher_id") or s["away"]
 
 
-def make_profile_fns(slate: list[dict], season: int, as_of: str):
+def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
     """(lineups_fn, pitcher_fn) backed by the on-disk events cache.
 
     Raw per-player Statcast events are cached once per season; profiles are
@@ -60,7 +60,7 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str):
                 pids.add(g[k])
     meta = fetch.get_player_meta(list(pids))
 
-    def batter_profile(pid: int) -> dict:
+    def batter_fn(pid: int) -> dict:
         m = meta.get(pid, {})
         events = get_or_compute(f"bat-events-{pid}-{season}", lambda: fetch.batter_events(pid, season))
         return profiles.batter_profile_from_events(
@@ -75,8 +75,8 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str):
     def lineups_fn(game: dict) -> dict:
         lns = lineup_cache[game["game_id"]]
         return {
-            "home": [batter_profile(pid) for pid in lns["home"]],
-            "away": [batter_profile(pid) for pid in lns["away"]],
+            "home": [batter_fn(pid) for pid in lns["home"]],
+            "away": [batter_fn(pid) for pid in lns["away"]],
         }
 
     return lineups_fn, pitcher_fn
