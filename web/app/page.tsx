@@ -20,6 +20,13 @@ function oppTeam(matchup?: string, team?: string) {
   const [away, home] = parts;
   return team === home ? away : home;
 }
+// Standard notation: home batters read "vs AWAY", away batters read "@ HOME".
+function gameLabel(matchup?: string, team?: string) {
+  const parts = matchup?.split(" @ ");
+  if (!parts || parts.length !== 2) return undefined;
+  const [away, home] = parts;
+  return team === home ? `vs ${away}` : `@ ${home}`;
+}
 
 export default function Home() {
   const [data, setData] = useState<Projections | null>(null);
@@ -66,7 +73,7 @@ export default function Home() {
     player: r.player,
     team: r.team,
     prob: r.probability,
-    detail: `@ ${r.park}`,
+    detail: gameLabel(r.matchup, r.team) ?? `@ ${r.park}`,
     href: `/player/hr/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
     matchup: r.matchup,
     hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
