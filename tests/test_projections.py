@@ -81,3 +81,8 @@ def test_lineup_expected_ks_averages_lineup_probs():
 def test_lineup_expected_ks_empty_lineup_returns_none():
     from model.projections import lineup_expected_ks
     assert lineup_expected_ks([], 24) is None
+
+
+def test_lineup_expected_ks_nonpositive_bf_returns_none():
+    from model.projections import lineup_expected_ks
+    assert lineup_expected_ks([0.25], 0) is None

@@ -59,7 +59,10 @@ def lineup_expected_ks(k_probs: list[float], expected_bf: float) -> float | None
     (log5 + platoon, computed upstream) times expected batters faced.
     Returns None when the lineup is empty so callers can fall back to the
     pitcher-only estimate.
+
+    Assumes the posted batters are representative of the full lineup; a
+    partially posted lineup can bias the average.
     """
-    if not k_probs:
+    if not k_probs or expected_bf <= 0:
         return None
     return (sum(k_probs) / len(k_probs)) * expected_bf

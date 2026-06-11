@@ -87,3 +87,13 @@ def test_strikeout_rows_adjust_lambda_for_opposing_lineup():
     # Ace (k_per_bf 0.27, 24 BF) faces only Away Slugger (k_rate 0.25, bats L vs R)
     expected = strikeout_prob(0.25, 0.27, bats="L", throws="R") * 24
     assert ace["expected_ks"] == pytest.approx(expected)
+
+
+def test_strikeout_rows_fall_back_when_no_lineup_posted():
+    def empty_lineups_fn(game):
+        return {"home": [], "away": []}
+    rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, empty_lineups_fn, fake_weather_fn)
+    ace = next(r for r in rows if r["player"] == "Ace Coors")
+    # pitcher-only estimate: k_per_bf 0.27 * 24 BF * opponent_k_mult 1.04
+    assert ace["expected_ks"] == pytest.approx(0.27 * 24 * 1.04)
+    assert ace["matchups"] == []
