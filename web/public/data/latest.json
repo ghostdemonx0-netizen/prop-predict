@@ -1,0 +1,15 @@
+{
+  "date": "2026-06-10",
+  "updated": "2026-06-10T18:15:00Z",
+  "hr": [
+    {"player": "Kyle Schwarber", "team": "PHI", "park": "COL", "probability": 0.31, "wind_out_mph": 10.0, "weather_mult": 1.27, "park_mult": 1.22, "recent_form_mult": 1.0},
+    {"player": "Aaron Judge", "team": "NYY", "park": "COL", "probability": 0.29, "wind_out_mph": 10.0, "weather_mult": 1.27, "park_mult": 1.22, "recent_form_mult": 1.06},
+    {"player": "Shohei Ohtani", "team": "LAD", "park": "COL", "probability": 0.22, "wind_out_mph": 10.0, "weather_mult": 1.27, "park_mult": 1.22, "recent_form_mult": 1.09},
+    {"player": "Pete Alonso", "team": "NYM", "park": "NYM", "probability": 0.14, "wind_out_mph": -4.0, "weather_mult": 0.95, "park_mult": 0.97, "recent_form_mult": 0.98}
+  ],
+  "strikeouts": [
+    {"player": "Zack Wheeler", "team": "PHI", "expected_ks": 5.9, "line": 5.5, "over_prob": 0.54},
+    {"player": "Tarik Skubal", "team": "DET", "expected_ks": 5.8, "line": 5.5, "over_prob": 0.52},
+    {"player": "Gerrit Cole", "team": "NYY", "expected_ks": 3.5, "line": 5.5, "over_prob": 0.14}
+  ]
+}
