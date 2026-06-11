@@ -75,7 +75,9 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
             </td>
             <td style={{ color: "var(--muted)" }}>{r.team}</td>
             <td style={{ color: "var(--muted)" }}>{r.detail}</td>
-            <td style={{ textAlign: "right" }} className="stat">{pct(r.prob)}</td>
+            <td style={{ textAlign: "right" }}>
+              <span className="sphere">{pct(r.prob)}</span>
+            </td>
           </tr>
         ))}
       </tbody>
