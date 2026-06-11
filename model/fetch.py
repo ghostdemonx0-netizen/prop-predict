@@ -94,6 +94,10 @@ def build_batter_profile(player_id: int, season: int, name: str = "", team: str 
     season_hard = (bip["launch_speed"] >= 95).mean() if len(bip) else 0.0
     pa = int((df["events"].notna()).sum())
     hr = int((df["events"] == "home_run").sum())
+    ks = int(df["events"].isin(["strikeout", "strikeout_double_play"]).sum())
+    hits = int(df["events"].isin(["single", "double", "triple", "home_run"]).sum())
+    k_rate = (ks / pa) if pa else 0.0
+    hit_rate = (hits / pa) if pa else 0.0
 
     cutoff = pd.to_datetime(df["game_date"]).max() - pd.Timedelta(days=15)
     recent = bip[pd.to_datetime(bip["game_date"]) >= cutoff]
@@ -111,6 +115,8 @@ def build_batter_profile(player_id: int, season: int, name: str = "", team: str 
         "expected_pa": 4.0,
         "recent_form_mult": recent_form_mult,
         "matchup_mult": 1.0,
+        "k_rate": k_rate,
+        "hit_rate": hit_rate,
     }
 
 
@@ -122,6 +128,8 @@ def build_pitcher_profile(player_id: int, season: int, name: str = "", team: str
     pa = int((df["events"].notna()).sum())
     ks = int(df["events"].isin(["strikeout", "strikeout_double_play"]).sum())
     k_per_bf = (ks / pa) if pa else 0.0
+    hits_allowed = int(df["events"].isin(["single", "double", "triple", "home_run"]).sum())
+    hit_allowed_rate = (hits_allowed / pa) if pa else 0.0
 
     games = df["game_pk"].nunique() if "game_pk" in df else 0
     expected_bf = (pa / games) if games else 24.0
@@ -135,6 +143,7 @@ def build_pitcher_profile(player_id: int, season: int, name: str = "", team: str
         "expected_bf": expected_bf,
         "opponent_k_mult": 1.0,
         "k_line": k_line,
+        "hit_allowed_rate": hit_allowed_rate,
     }
 
 

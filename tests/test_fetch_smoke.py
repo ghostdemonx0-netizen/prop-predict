@@ -66,3 +66,14 @@ def test_get_lineups_smoke():
     assert isinstance(lns["home"], list) and isinstance(lns["away"], list)
     assert len(lns["home"]) >= 1 and len(lns["away"]) >= 1
     assert all(isinstance(pid, int) for pid in lns["home"] + lns["away"])
+
+
+def test_profiles_include_rates_and_hand_smoke():
+    from model.fetch import build_batter_profile, build_pitcher_profile
+    b = build_batter_profile(592450, 2026, name="Aaron Judge", bats="R")
+    assert 0.0 <= b["k_rate"] <= 1.0
+    assert 0.0 <= b["hit_rate"] <= 1.0
+    assert b["bats"] == "R"
+    p = build_pitcher_profile(669373, 2026, name="Tarik Skubal", throws="L")
+    assert 0.0 <= p["hit_allowed_rate"] <= 1.0
+    assert p["throws"] == "L"
