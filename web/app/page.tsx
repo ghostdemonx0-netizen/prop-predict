@@ -50,6 +50,15 @@ export default function Home() {
     );
   }
 
+  const updatedAt = data.updated ? new Date(data.updated) : null;
+  const updatedLabel = updatedAt
+    ? (updatedAt.toDateString() === new Date().toDateString()
+        ? updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+        : updatedAt.toLocaleDateString([], { month: "short", day: "numeric" }) +
+          " " +
+          updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))
+    : null;
+
   const dateQ = selectedDate ? `?date=${selectedDate}` : "";
 
   const hrRows: BoardRow[] = data.hr.map((r) => ({
@@ -118,11 +127,7 @@ export default function Home() {
             <span className="num">{data.date}</span>
           )}
           {dates.length > 1 && <span style={{ opacity: 0.6 }}>· last {dates.length} days</span>}
-          {data.updated && (
-            <span style={{ opacity: 0.6 }}>
-              · updated {new Date(data.updated).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-            </span>
-          )}
+          {updatedLabel && <span style={{ opacity: 0.6 }}>· updated {updatedLabel}</span>}
         </div>
       </header>
 
