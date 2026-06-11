@@ -135,7 +135,7 @@ def test_hr_rows_apply_capped_bvp_dial():
     from model.projections import bvp_hr_mult
     rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn, fake_bvp_fn)
     home = next(r for r in rows if r["team"] == "COL")
-    assert home["bvp_mult"] == pytest.approx(bvp_hr_mult(2, 10))  # capped 1.10
+    assert home["bvp_mult"] == pytest.approx(bvp_hr_mult(2, 10))  # ~1.07 on the ladder
     assert home["vs"]["bvp"]["hr"] == 2
     away = next(r for r in rows if r["team"] == "LAD")
     assert away["bvp_mult"] == pytest.approx(1.0)  # no history -> neutral

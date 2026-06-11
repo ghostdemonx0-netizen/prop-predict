@@ -122,16 +122,28 @@ def test_bvp_hr_mult_zero_pa_is_neutral():
 
 
 def test_bvp_hr_mult_single_meeting_is_nearly_neutral():
-    # 1 career PA, no HR: shrinkage keeps it ~0.995
-    assert bvp_hr_mult(0, 1) == pytest.approx((0.033 * 200) / 201 / 0.033)
+    # 1 career PA, no HR: shrinkage keeps it ~0.998
+    assert bvp_hr_mult(0, 1) == pytest.approx((0.033 * 600) / 601 / 0.033)
     assert 0.99 < bvp_hr_mult(0, 1) < 1.0
 
 
-def test_bvp_hr_mult_owner_hits_the_cap():
-    # 2 HR in 10 PA: (2 + 6.6)/210/0.033 = 1.24 -> capped at 1.10
-    assert bvp_hr_mult(2, 10) == pytest.approx(1.10)
+def test_bvp_hr_mult_climbs_a_ladder_not_a_cliff():
+    # user-tuned ladder: 1 HR small boost, 2 HR bigger, 3+ caps at +10%
+    one = bvp_hr_mult(1, 9)
+    two = bvp_hr_mult(2, 15)
+    three = bvp_hr_mult(3, 20)
+    assert one == pytest.approx((1 + 0.033 * 600) / 609 / 0.033)  # ~1.035
+    assert 1.02 < one < 1.05
+    assert 1.05 < two < 1.09
+    assert three == pytest.approx(1.10)  # the cap
+    assert one < two < three
+
+
+def test_bvp_hr_mult_one_hr_in_many_meetings_is_neutral():
+    # 1 HR in 30 PAs is league-average power vs him -> no boost
+    assert bvp_hr_mult(1, 30) == pytest.approx(1.0, abs=0.01)
 
 
 def test_bvp_hr_mult_never_homered_in_twenty():
-    assert bvp_hr_mult(0, 20) == pytest.approx((0.033 * 200) / 220 / 0.033)
-    assert bvp_hr_mult(0, 20) == pytest.approx(0.909, abs=1e-3)
+    assert bvp_hr_mult(0, 20) == pytest.approx((0.033 * 600) / 620 / 0.033)
+    assert bvp_hr_mult(0, 20) == pytest.approx(0.968, abs=1e-3)

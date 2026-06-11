@@ -88,7 +88,7 @@ def bvp_hr_mult(
     pa: float,
     *,
     league_hr_rate: float = LEAGUE_HR_RATE,
-    regression_pa: float = 200.0,
+    regression_pa: float = 600.0,
     min_pa: float = 1.0,
     lo: float = 0.90,
     hi: float = 1.10,
@@ -98,8 +98,10 @@ def bvp_hr_mult(
     The career HR rate against this pitcher is regressed toward league
     average with ``regression_pa`` phantom PAs, expressed as a multiplier
     vs league, clamped to [0.90, 1.10] (a +/-10%% cap). Counts from the
-    first career meeting (``min_pa=1``); the shrinkage keeps tiny samples
-    near 1.0 on its own (1 PA moves the dial ~0.5%%).
+    first career meeting (``min_pa=1``); the heavy shrinkage makes the dial
+    climb a ladder instead of jumping to the cap (user-tuned: ~+3-4%% for
+    1 career HR, ~+7%% for 2, full +10%% from 3 up; 0-HR histories fade
+    gently toward -10%% as the sample grows).
     """
     if pa < min_pa:
         return 1.0
