@@ -33,6 +33,8 @@ export default function Home() {
     detail: `@ ${r.park}`,
     href: `/player/hr/${encodeURIComponent(r.player)}`,
     windOut: r.wind_out_mph,
+    windMph: r.wind_mph,
+    windDir: r.wind_dir,
     tempF: r.temp_f,
     precipPct: r.precip_pct,
   }));
@@ -43,6 +45,8 @@ export default function Home() {
     detail: `${r.line} Ks`,
     href: `/player/k/${encodeURIComponent(r.player)}`,
     windOut: r.wind_out_mph,
+    windMph: r.wind_mph,
+    windDir: r.wind_dir,
     tempF: r.temp_f,
     precipPct: r.precip_pct,
   }));

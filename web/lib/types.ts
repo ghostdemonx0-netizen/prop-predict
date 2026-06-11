@@ -9,6 +9,8 @@ export type HrRow = {
   recent_form_mult: number;
   temp_f?: number;
   precip_pct?: number;
+  wind_mph?: number; // true wind speed
+  wind_dir?: number; // direction of travel relative to center field (0=out to CF, 90=to RF, 180=in, 270=to LF)
 };
 
 export type KRow = {
@@ -20,6 +22,8 @@ export type KRow = {
   wind_out_mph?: number;
   temp_f?: number;
   precip_pct?: number;
+  wind_mph?: number;
+  wind_dir?: number;
 };
 
 export type Projections = {

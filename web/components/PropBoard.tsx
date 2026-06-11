@@ -10,32 +10,42 @@ export type BoardRow = {
   prob: number; // probability or over_prob
   detail: string; // e.g. "@ COL" or "5.5 Ks"
   href: string;
-  windOut?: number; // mph toward center field (+out / -in)
+  windOut?: number; // mph toward center field (+out / -in) — fallback if no direction
+  windMph?: number; // true wind speed
+  windDir?: number; // direction of travel rel. to CF: 0=out to CF, 90=to RF, 180=in, 270=to LF
   tempF?: number;
   precipPct?: number;
 };
 
 function WeatherChips({ r }: { r: BoardRow }) {
-  const hasWind = typeof r.windOut === "number";
+  // Prefer a true directional arrow; fall back to simple out/in if only windOut is known.
+  const dir = typeof r.windDir === "number" ? r.windDir : r.windOut !== undefined ? (r.windOut >= 0 ? 0 : 180) : undefined;
+  const mph = typeof r.windMph === "number" ? r.windMph : typeof r.windOut === "number" ? Math.abs(r.windOut) : undefined;
+  const hasWind = typeof dir === "number" && typeof mph === "number";
   const hasTemp = typeof r.tempF === "number";
   const showRain = (r.precipPct ?? 0) >= 20;
   if (!hasWind && !hasTemp && !showRain) return null;
+
+  // helps when blowing out (cos near +1), hurts blowing in (cos near -1), crosswind in between
+  const outComponent = hasWind ? Math.cos(((dir as number) * Math.PI) / 180) : 0;
+  const windColor = outComponent > 0.2 ? "var(--green)" : outComponent < -0.2 ? "var(--red)" : "var(--amber)";
+
   return (
     <div className="mt-1.5 flex items-center gap-3" style={{ fontSize: "0.74rem", color: "var(--muted)" }}>
       {hasWind && (
-        <span className="inline-flex items-center gap-1" title="wind toward center field">
+        <span className="inline-flex items-center gap-1" title="wind direction relative to the field (up = out to center)">
           <span
             style={{
               display: "inline-block",
               lineHeight: 1,
               fontWeight: 800,
-              transform: `rotate(${(r.windOut as number) >= 0 ? 0 : 180}deg)`,
-              color: (r.windOut as number) > 1 ? "var(--green)" : (r.windOut as number) < -1 ? "var(--red)" : "var(--muted)",
+              transform: `rotate(${dir}deg)`,
+              color: windColor,
             }}
           >
             ↑
           </span>
-          {Math.abs(Math.round(r.windOut as number))}<span style={{ opacity: 0.6 }}>mph</span>
+          {Math.round(mph as number)}<span style={{ opacity: 0.6 }}>mph</span>
         </span>
       )}
       {hasTemp && <span>🌡️ {Math.round(r.tempF as number)}°</span>}
