@@ -11,14 +11,13 @@ export function ViewSwitcher({
   onChange: (m: ViewMode) => void;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+    <div className="pillbar">
       {MODES.map((m) => (
         <button
           key={m}
           onClick={() => onChange(m)}
-          className={`px-3 py-1.5 text-sm capitalize ${
-            mode === m ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100"
-          }`}
+          data-active={mode === m}
+          className="pill capitalize"
         >
           {m}
         </button>

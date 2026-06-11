@@ -16,7 +16,15 @@ export default function Home() {
     loadProjections().then(setData).catch(console.error);
   }, []);
 
-  if (!data) return <main className="p-6">Loading…</main>;
+  if (!data) {
+    return (
+      <main className="mx-auto max-w-3xl px-5 py-16">
+        <p className="eyebrow">
+          <span className="live-dot" /> &nbsp;loading the board…
+        </p>
+      </main>
+    );
+  }
 
   const hrRows: BoardRow[] = data.hr.map((r) => ({
     player: r.player,
@@ -35,22 +43,24 @@ export default function Home() {
   }));
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      <header className="mb-4">
-        <h1 className="text-2xl font-bold">⚾ prop-predict</h1>
-        <p className="text-sm text-gray-500">
-          {data.date} · updated {new Date(data.updated).toLocaleTimeString()}
+    <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">
+      <header className="mb-9 rise">
+        <p className="eyebrow mb-2">MLB player props · model-driven</p>
+        <h1 className="wordmark">
+          <span className="lo">prop-</span><span className="hi">predict</span>
+        </h1>
+        <p className="mt-3 flex items-center gap-2" style={{ color: "var(--muted)", fontSize: "0.82rem" }}>
+          <span className="live-dot" />
+          <span className="num">{data.date}</span>
+          <span>·</span>
+          <span>updated {new Date(data.updated).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
         </p>
       </header>
 
-      <div className="mb-4 flex items-center justify-between">
-        <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rise" style={{ animationDelay: "60ms" }}>
+        <div className="pillbar">
           {(["hr", "k"] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setProp(p)}
-              className={`px-3 py-1.5 text-sm ${prop === p ? "bg-gray-800 text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}
-            >
+            <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
               {p === "hr" ? "Home Runs" : "Strikeouts"}
             </button>
           ))}
@@ -59,6 +69,10 @@ export default function Home() {
       </div>
 
       <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={mode} />
+
+      <footer className="mt-12" style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
+        Projections are model estimates, not guarantees · built on free public data
+      </footer>
     </main>
   );
 }

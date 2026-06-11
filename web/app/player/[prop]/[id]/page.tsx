@@ -6,6 +6,23 @@ import { loadProjections } from "../../../../lib/data";
 import type { Projections } from "../../../../lib/types";
 import { pct, windLabel, strengthLabel } from "../../../../lib/format";
 
+function Back() {
+  return (
+    <Link href="/" className="eyebrow" style={{ textDecoration: "none" }}>
+      ← back to board
+    </Link>
+  );
+}
+
+function Stat({ value, label, glow }: { value: string; label: string; glow?: boolean }) {
+  return (
+    <div>
+      <div className={`stat big ${glow ? "glow" : ""}`}>{value}</div>
+      <div className="eyebrow mt-1">{label}</div>
+    </div>
+  );
+}
+
 export default function PlayerPage({
   params,
 }: {
@@ -19,29 +36,54 @@ export default function PlayerPage({
     loadProjections().then(setData).catch(console.error);
   }, []);
 
-  if (!data) return <main className="p-6">Loading…</main>;
+  if (!data) {
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-16">
+        <p className="eyebrow"><span className="live-dot" /> &nbsp;loading…</p>
+      </main>
+    );
+  }
 
-  const back = (
-    <Link href="/" className="text-blue-700 hover:underline text-sm">← back to board</Link>
+  const notFound = (
+    <main className="mx-auto max-w-2xl px-5 py-14 space-y-5">
+      <Back />
+      <p className="panel" style={{ color: "var(--muted)" }}>No data for {name}.</p>
+    </main>
   );
 
   if (prop === "hr") {
     const r = data.hr.find((x) => x.player === name);
-    if (!r) return <main className="p-6">{back}<p className="mt-4">No data for {name}.</p></main>;
+    if (!r) return notFound;
     return (
-      <main className="mx-auto max-w-2xl p-6 space-y-4">
-        {back}
-        <h1 className="text-2xl font-bold">{r.player} — Home Run</h1>
-        <div className="flex gap-6">
-          <div><div className="text-3xl font-bold text-green-700">{pct(r.probability)}</div><div className="text-sm text-gray-500">our HR chance</div></div>
-          <div><div className="text-3xl font-bold">{strengthLabel(r.probability)}</div><div className="text-sm text-gray-500">our read</div></div>
+      <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
+        <Back />
+        <div className="rise">
+          <p className="eyebrow mb-1">{r.team} · Home Run</p>
+          <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
+            <span className="lo">{r.player}</span>
+          </h1>
         </div>
-        <div>
-          <h2 className="font-semibold mb-2">Why</h2>
-          <ul className="space-y-1 text-sm">
-            <li>🏟️ Park ({r.park}): ×{r.park_mult.toFixed(2)} {r.park_mult > 1 ? "(boost)" : r.park_mult < 1 ? "(suppress)" : ""}</li>
-            <li>🌬️ Weather: {windLabel(r.wind_out_mph)} → ×{r.weather_mult.toFixed(2)}</li>
-            <li>🔥 Recent form: ×{r.recent_form_mult.toFixed(2)} {r.recent_form_mult > 1 ? "(hot)" : r.recent_form_mult < 1 ? "(cold)" : "(neutral)"}</li>
+
+        <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
+          <Stat value={pct(r.probability)} label="our HR chance" glow />
+          <Stat value={strengthLabel(r.probability)} label="our read" />
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "120ms" }}>
+          <div className="eyebrow mb-3">Why</div>
+          <ul className="space-y-3" style={{ fontSize: "0.92rem" }}>
+            <li className="flex justify-between gap-4">
+              <span>🏟️ Park ({r.park})</span>
+              <span className="num">×{r.park_mult.toFixed(2)} {r.park_mult > 1 ? "↑" : r.park_mult < 1 ? "↓" : ""}</span>
+            </li>
+            <li className="flex justify-between gap-4">
+              <span>🌬️ Weather · {windLabel(r.wind_out_mph)}</span>
+              <span className="num">×{r.weather_mult.toFixed(2)} {r.weather_mult > 1 ? "↑" : r.weather_mult < 1 ? "↓" : ""}</span>
+            </li>
+            <li className="flex justify-between gap-4">
+              <span>🔥 Recent form {r.recent_form_mult > 1 ? "(hot)" : r.recent_form_mult < 1 ? "(cold)" : "(neutral)"}</span>
+              <span className="num">×{r.recent_form_mult.toFixed(2)} {r.recent_form_mult > 1 ? "↑" : r.recent_form_mult < 1 ? "↓" : ""}</span>
+            </li>
           </ul>
         </div>
       </main>
@@ -49,14 +91,19 @@ export default function PlayerPage({
   }
 
   const r = data.strikeouts.find((x) => x.player === name);
-  if (!r) return <main className="p-6">{back}<p className="mt-4">No data for {name}.</p></main>;
+  if (!r) return notFound;
   return (
-    <main className="mx-auto max-w-2xl p-6 space-y-4">
-      {back}
-      <h1 className="text-2xl font-bold">{r.player} — Strikeouts</h1>
-      <div className="flex gap-6">
-        <div><div className="text-3xl font-bold text-green-700">{pct(r.over_prob)}</div><div className="text-sm text-gray-500">over {r.line}</div></div>
-        <div><div className="text-3xl font-bold">{r.expected_ks.toFixed(1)}</div><div className="text-sm text-gray-500">projected Ks</div></div>
+    <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
+      <Back />
+      <div className="rise">
+        <p className="eyebrow mb-1">{r.team} · Strikeouts</p>
+        <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
+          <span className="lo">{r.player}</span>
+        </h1>
+      </div>
+      <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
+        <Stat value={pct(r.over_prob)} label={`over ${r.line} Ks`} glow />
+        <Stat value={r.expected_ks.toFixed(1)} label="projected Ks" />
       </div>
     </main>
   );

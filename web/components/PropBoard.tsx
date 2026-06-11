@@ -8,58 +8,74 @@ export type BoardRow = {
   player: string;
   team: string;
   prob: number; // probability or over_prob
-  detail: string; // e.g. "vs COL" or "5.5 line"
+  detail: string; // e.g. "@ COL" or "5.5 Ks"
   context?: string; // e.g. wind label
   href: string;
 };
 
-function colorFor(prob: number): string {
-  if (prob >= 0.25) return "border-green-500";
-  if (prob >= 0.12) return "border-green-300";
-  return "border-gray-200 opacity-70";
+function strengthClass(prob: number): string {
+  if (prob >= 0.25) return "s-strong";
+  if (prob >= 0.12) return "s-lean";
+  return "s-pass";
+}
+
+function badgeClass(prob: number): string {
+  if (prob >= 0.25) return "badge strong";
+  if (prob >= 0.12) return "badge lean";
+  return "badge pass";
 }
 
 export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) {
   if (rows.length === 0) {
-    return <p className="text-gray-500 py-6">No plays yet — lineups may not be posted.</p>;
+    return (
+      <div className="panel rise" style={{ textAlign: "center", color: "var(--muted)" }}>
+        No plays on the board yet — lineups may not be posted.
+      </div>
+    );
   }
 
-  const Card = (r: BoardRow) => (
+  const Card = (r: BoardRow, i: number) => (
     <Link
       href={r.href}
       key={r.player}
-      className={`block rounded-lg border-l-4 ${colorFor(r.prob)} border border-gray-200 p-3 hover:bg-gray-50`}
+      className={`card rise ${strengthClass(r.prob)}`}
+      style={{ animationDelay: `${i * 45}ms` }}
     >
-      <div className="flex justify-between">
-        <span className="font-semibold">{r.player}</span>
-        <span className="text-green-700 font-bold">{pct(r.prob)}</span>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="display" style={{ fontWeight: 700, fontSize: "1.02rem" }}>
+          {r.player}
+        </span>
+        <span className="stat glow" style={{ fontSize: "1.35rem" }}>
+          {pct(r.prob)}
+        </span>
       </div>
-      <div className="text-sm text-gray-600">
-        {r.detail} · {strengthLabel(r.prob)}
-        {r.context ? ` · ${r.context}` : ""}
+      <div className="mt-1.5 flex items-center gap-2" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
+        <span className={badgeClass(r.prob)}>{strengthLabel(r.prob)}</span>
+        <span>{r.detail}</span>
+        {r.context ? <span>· {r.context}</span> : null}
       </div>
     </Link>
   );
 
   const Table = () => (
-    <table className="w-full text-sm">
+    <table className="board">
       <thead>
-        <tr className="border-b text-left text-gray-500">
-          <th className="py-1">Player</th>
+        <tr>
+          <th>Player</th>
           <th>Team</th>
           <th>Detail</th>
-          <th className="text-right">Chance</th>
+          <th style={{ textAlign: "right" }}>Chance</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((r) => (
-          <tr key={r.player} className="border-b hover:bg-gray-50">
-            <td className="py-1">
-              <Link href={r.href} className="text-blue-700 hover:underline">{r.player}</Link>
+          <tr key={r.player}>
+            <td>
+              <Link href={r.href} className="linklike">{r.player}</Link>
             </td>
-            <td>{r.team}</td>
-            <td className="text-gray-600">{r.detail}</td>
-            <td className="text-right font-medium">{pct(r.prob)}</td>
+            <td style={{ color: "var(--muted)" }}>{r.team}</td>
+            <td style={{ color: "var(--muted)" }}>{r.detail}</td>
+            <td style={{ textAlign: "right" }} className="stat">{pct(r.prob)}</td>
           </tr>
         ))}
       </tbody>
@@ -67,11 +83,27 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
   );
 
   const List = () => (
-    <div className="divide-y">
-      {rows.map((r) => (
-        <Link key={r.player} href={r.href} className="flex justify-between py-2 hover:bg-gray-50">
-          <span>{r.player} <span className="text-gray-500">{r.detail}</span></span>
-          <span className="font-medium">{pct(r.prob)}</span>
+    <div>
+      {rows.map((r, i) => (
+        <Link
+          key={r.player}
+          href={r.href}
+          className="rise"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "0.7rem 0.25rem",
+            borderBottom: "1px solid var(--line)",
+            color: "var(--text)",
+            textDecoration: "none",
+            animationDelay: `${i * 35}ms`,
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>
+            {r.player} <span style={{ color: "var(--muted)", fontWeight: 400 }}>{r.detail}</span>
+          </span>
+          <span className="stat">{pct(r.prob)}</span>
         </Link>
       ))}
     </div>
@@ -79,15 +111,23 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
 
   if (mode === "table") return <Table />;
   if (mode === "list") return <List />;
-  if (mode === "cards") return <div className="grid gap-2 sm:grid-cols-2">{rows.map(Card)}</div>;
+  if (mode === "cards") return <div className="grid gap-2.5 sm:grid-cols-2">{rows.map(Card)}</div>;
 
-  // hybrid: top 3 as cards, the rest as a table
+  // hybrid: top 3 as glowing cards, the rest in a table
   const top = rows.slice(0, 3);
   const rest = rows.slice(3);
   return (
-    <div className="space-y-3">
-      <div className="grid gap-2 sm:grid-cols-3">{top.map(Card)}</div>
-      {rest.length > 0 && <Table />}
+    <div className="space-y-5">
+      <div>
+        <div className="eyebrow" style={{ marginBottom: "0.6rem" }}>★ Top plays</div>
+        <div className="grid gap-2.5 sm:grid-cols-3">{top.map(Card)}</div>
+      </div>
+      {rest.length > 0 && (
+        <div>
+          <div className="eyebrow" style={{ marginBottom: "0.4rem" }}>Full board</div>
+          <Table />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,26 +1,200 @@
 @import "tailwindcss";
 
+/* ===== prop-predict · "Ballpark Lights" theme ===== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0a100d;
+  --bg-2: #0e1613;
+  --bg-3: #15241d;
+  --line: rgba(120, 200, 150, 0.14);
+  --line-strong: rgba(120, 200, 150, 0.32);
+  --text: #e9f1ec;
+  --muted: #87a096;
+  --green: #3ee07f;
+  --green-dim: #1f8a50;
+  --green-soft: #a6f3c4;
+  --amber: #f5b942;
+  --red: #f0746e;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+* { box-sizing: border-box; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.005em;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
 }
+
+/* stadium-light glow */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(125% 80% at 50% -12%, rgba(62, 224, 127, 0.18), transparent 55%),
+    radial-gradient(90% 60% at 88% -5%, rgba(245, 185, 66, 0.06), transparent 50%),
+    var(--bg);
+}
+
+/* film grain */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- typography helpers ---- */
+.display { font-family: var(--font-display), sans-serif; }
+.num {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.wordmark {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.1rem, 7vw, 3.4rem);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+}
+.wordmark .lo { color: var(--text); }
+.wordmark .hi {
+  color: var(--green);
+  text-shadow: 0 0 26px rgba(62, 224, 127, 0.55);
+}
+
+.eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* live dot */
+.live-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 0 10px var(--green);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* ---- pills / toggles ---- */
+.pillbar {
+  display: inline-flex;
+  padding: 4px;
+  gap: 2px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.pill {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-body), sans-serif;
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.16s, background 0.16s, box-shadow 0.16s;
+  letter-spacing: 0.01em;
+}
+.pill:hover { color: var(--text); }
+.pill[data-active="true"] {
+  background: var(--green);
+  color: #06140b;
+  box-shadow: 0 0 18px rgba(62, 224, 127, 0.42);
+}
+
+/* ---- play cards ---- */
+.card {
+  display: block;
+  background: linear-gradient(180deg, var(--bg-2), #0b1310);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+}
+.card:hover {
+  transform: translateY(-3px);
+  border-color: var(--line-strong);
+  box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.75);
+}
+.s-strong { border-left-color: var(--green); }
+.s-lean { border-left-color: var(--green-dim); }
+.s-pass { border-left-color: #2a3a33; opacity: 0.7; }
+
+/* ---- stat numbers ---- */
+.stat {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.stat.big { font-size: 2.7rem; line-height: 1; }
+.glow { color: var(--green); text-shadow: 0 0 16px rgba(62, 224, 127, 0.45); }
+
+/* ---- badges ---- */
+.badge {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 700;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.badge.strong { color: #06140b; background: var(--green); box-shadow: 0 0 14px rgba(62, 224, 127, 0.4); }
+.badge.lean { color: var(--green-soft); background: rgba(62, 224, 127, 0.12); border: 1px solid rgba(62, 224, 127, 0.3); }
+.badge.pass { color: var(--muted); background: rgba(138, 163, 153, 0.1); }
+
+/* ---- table ---- */
+table.board { width: 100%; border-collapse: collapse; }
+.board th {
+  text-align: left;
+  font-family: var(--font-body), sans-serif;
+  font-weight: 600;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+}
+.board td { padding: 0.72rem 0.65rem; border-bottom: 1px solid var(--line); }
+.board tr:last-child td { border-bottom: 0; }
+.board tbody tr:hover td { background: rgba(120, 200, 150, 0.045); }
+.linklike { color: var(--text); text-decoration: none; font-weight: 600; }
+.linklike:hover { color: var(--green); }
+
+/* ---- generic surface ---- */
+.panel {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1.25rem 1.4rem;
+}
+
+/* ---- entrance animation ---- */
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+a { color: var(--green); }
