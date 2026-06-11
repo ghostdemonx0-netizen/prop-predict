@@ -70,3 +70,14 @@ def test_poisson_over_prob_integer_line_uses_strictly_greater():
     lam = 6.0
     manual = 1 - sum(math.exp(-lam) * lam**k / math.factorial(k) for k in range(7))
     assert poisson_over_prob(lam, 6) == pytest.approx(manual)
+
+
+def test_lineup_expected_ks_averages_lineup_probs():
+    from model.projections import lineup_expected_ks
+    # three batters at 0.30/0.20/0.25 -> mean 0.25; * 24 BF = 6.0
+    assert lineup_expected_ks([0.30, 0.20, 0.25], 24) == pytest.approx(6.0)
+
+
+def test_lineup_expected_ks_empty_lineup_returns_none():
+    from model.projections import lineup_expected_ks
+    assert lineup_expected_ks([], 24) is None

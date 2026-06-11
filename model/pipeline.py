@@ -14,7 +14,7 @@ Fetcher contracts:
 
 from model.parks import get_park, hr_park_factor
 from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf
-from model.projections import hr_probability, expected_strikeouts, poisson_over_prob
+from model.projections import hr_probability, expected_strikeouts, poisson_over_prob, lineup_expected_ks
 from model.matchup import matchup
 
 
@@ -97,8 +97,6 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn) 
             if pid is None:
                 continue
             p = pitcher_fn(pid)
-            lam = expected_strikeouts(p["k_per_bf"], p["expected_bf"], p.get("opponent_k_mult", 1.0))
-            line = p.get("k_line", 5.5)
             matchups = []
             for b in lineups.get(opp_side, []):
                 m = matchup(
@@ -107,6 +105,10 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn) 
                     bats=b.get("bats", "R"), throws=p.get("throws", "R"),
                 )
                 matchups.append({"name": b["name"], "bats": b.get("bats", "R"), **m})
+            lam = lineup_expected_ks([m["k_prob"] for m in matchups], p["expected_bf"])
+            if lam is None:
+                lam = expected_strikeouts(p["k_per_bf"], p["expected_bf"], p.get("opponent_k_mult", 1.0))
+            line = p.get("k_line", 5.5)
             rows.append({
                 "prop": "K", "game_id": game["game_id"],
                 "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',

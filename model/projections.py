@@ -50,3 +50,16 @@ def poisson_over_prob(lam: float, line: float) -> float:
     threshold = math.floor(line) + 1
     cdf = sum(math.exp(-lam) * lam**k / math.factorial(k) for k in range(threshold))
     return 1 - cdf
+
+
+def lineup_expected_ks(k_probs: list[float], expected_bf: float) -> float | None:
+    """Opponent-adjusted expected strikeouts.
+
+    Average per-PA strikeout probability against the actual posted lineup
+    (log5 + platoon, computed upstream) times expected batters faced.
+    Returns None when the lineup is empty so callers can fall back to the
+    pitcher-only estimate.
+    """
+    if not k_probs:
+        return None
+    return (sum(k_probs) / len(k_probs)) * expected_bf
