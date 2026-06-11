@@ -176,6 +176,16 @@ export default function PlayerPage({
             mult={r.recent_form_mult}
             note={r.recent_form_mult > 1 ? "Hot lately — hitting the ball harder than his season norm." : r.recent_form_mult < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
           />
+          {r.vs && (r.pitcher_mult !== undefined || r.matchup_mult !== undefined) && (
+            <Factor
+              icon="⚾"
+              label={`Pitcher · ${r.vs.name}`}
+              mult={(r.pitcher_mult ?? 1) * (r.matchup_mult ?? 1)}
+              note={`Combines ${r.vs.name}'s home-run quality with the ${
+                (r.matchup_mult ?? 1) > 1 ? "favorable" : "unfavorable"
+              } ${batLabel(r.bats)}-vs-${pitLabel(r.vs.throws)} platoon matchup.`}
+            />
+          )}
         </div>
 
         <div className="panel rise" style={{ animationDelay: "180ms" }}>

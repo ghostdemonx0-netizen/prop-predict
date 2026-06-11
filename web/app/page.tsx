@@ -117,7 +117,12 @@ export default function Home() {
           ) : (
             <span className="num">{data.date}</span>
           )}
-          <span style={{ opacity: 0.6 }}>· browse the last 7 days</span>
+          {dates.length > 1 && <span style={{ opacity: 0.6 }}>· last {dates.length} days</span>}
+          {data.updated && (
+            <span style={{ opacity: 0.6 }}>
+              · updated {new Date(data.updated).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+            </span>
+          )}
         </div>
       </header>
 
