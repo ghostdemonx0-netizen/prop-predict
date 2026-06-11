@@ -93,7 +93,7 @@ export default function Home() {
       <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={mode} />
 
       <footer className="mt-12" style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
-        Projections are model estimates, not guarantees · built on free public data
+        Projections are model estimates, not guarantees · Built on Historical and Current Data
       </footer>
     </main>
   );
