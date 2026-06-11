@@ -86,3 +86,32 @@ def test_lineup_expected_ks_empty_lineup_returns_none():
 def test_lineup_expected_ks_nonpositive_bf_returns_none():
     from model.projections import lineup_expected_ks
     assert lineup_expected_ks([0.25], 0) is None
+
+
+def test_pitcher_hr_mult_league_average_is_neutral():
+    from model.projections import pitcher_hr_mult
+    assert pitcher_hr_mult(0.033, 500) == pytest.approx(1.0)
+
+
+def test_pitcher_hr_mult_no_data_is_neutral():
+    from model.projections import pitcher_hr_mult
+    assert pitcher_hr_mult(0.0, 0) == pytest.approx(1.0)
+
+
+def test_pitcher_hr_mult_gopher_ball_pitcher_clamped():
+    from model.projections import pitcher_hr_mult
+    # 0.05 HR/BF over 400 BF: (20 + 6.6)/600 = 0.04433/0.033 = 1.343 -> clamp 1.3
+    assert pitcher_hr_mult(0.05, 400) == pytest.approx(1.3)
+
+
+def test_pitcher_hr_mult_hr_suppressor_below_one():
+    from model.projections import pitcher_hr_mult
+    assert pitcher_hr_mult(0.015, 500) < 1.0
+
+
+def test_expected_pa_for_slot_declines_through_order():
+    from model.projections import expected_pa_for_slot
+    assert expected_pa_for_slot(0) == pytest.approx(4.65)
+    assert expected_pa_for_slot(8) == pytest.approx(3.78)
+    assert expected_pa_for_slot(0) > expected_pa_for_slot(4) > expected_pa_for_slot(8)
+    assert expected_pa_for_slot(11) == 4.0  # out of range -> neutral

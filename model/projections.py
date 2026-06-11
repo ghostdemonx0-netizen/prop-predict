@@ -66,3 +66,31 @@ def lineup_expected_ks(k_probs: list[float], expected_bf: float) -> float | None
     if not k_probs or expected_bf <= 0:
         return None
     return (sum(k_probs) / len(k_probs)) * expected_bf
+
+
+PA_BY_SLOT = (4.65, 4.54, 4.43, 4.32, 4.21, 4.10, 3.99, 3.89, 3.78)
+
+
+def expected_pa_for_slot(slot: int) -> float:
+    """Average plate appearances by batting-order slot (0 = leadoff).
+
+    League-average figures; out-of-range slots get a neutral 4.0.
+    """
+    return PA_BY_SLOT[slot] if 0 <= slot < len(PA_BY_SLOT) else 4.0
+
+
+def pitcher_hr_mult(
+    hr_allowed_rate: float,
+    bf: float,
+    *,
+    league_hr_rate: float = 0.033,
+    regression_bf: float = 200.0,
+) -> float:
+    """How much the opposing pitcher inflates or suppresses HRs.
+
+    The pitcher's HR-allowed-per-batter rate is regressed toward league
+    average with ``regression_bf`` phantom batters faced, then expressed as
+    a multiplier vs league (1.0 = average), clamped to [0.75, 1.3].
+    """
+    reg = (hr_allowed_rate * bf + league_hr_rate * regression_bf) / (bf + regression_bf)
+    return max(0.75, min(reg / league_hr_rate, 1.3))

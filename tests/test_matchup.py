@@ -51,3 +51,10 @@ def test_matchup_shape_and_bounds():
     assert 0.0 <= m["k_prob"] <= 0.7
     assert 0.0 <= m["hit_prob"] <= 0.6
     assert m["lean"] in {"K", "H", "NEU"}
+
+
+def test_hr_platoon_mult():
+    from model.matchup import hr_platoon_mult
+    assert hr_platoon_mult("L", "R") == pytest.approx(1.06)  # advantage
+    assert hr_platoon_mult("R", "R") == pytest.approx(0.95)  # same-hand
+    assert hr_platoon_mult("S", "L") == pytest.approx(1.06)  # switch always has it

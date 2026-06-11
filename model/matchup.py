@@ -56,3 +56,9 @@ def matchup(*, b_k: float, b_hit: float, p_k: float, p_hit: float, bats: str, th
     kp = strikeout_prob(b_k, p_k, bats=bats, throws=throws)
     hp = hit_prob(b_hit, p_hit, bats=bats, throws=throws)
     return {"k_prob": kp, "hit_prob": hp, **classify_lean(kp, hp)}
+
+
+def hr_platoon_mult(bats: str, throws: str) -> float:
+    """HR platoon adjustment: hitters homer more with the platoon advantage
+    (opposite hands, or switch), less without it."""
+    return 1.06 if batter_advantage(bats, throws) else 0.95
