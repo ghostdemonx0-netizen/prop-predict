@@ -2,6 +2,12 @@
 
 export type ViewMode = "cards" | "table" | "hybrid" | "list";
 const MODES: ViewMode[] = ["hybrid", "cards", "table", "list"];
+const LABELS: Record<ViewMode, string> = {
+  hybrid: "Hybrid",
+  cards: "Cards",
+  table: "Table",
+  list: "Matchups",
+};
 
 export function ViewSwitcher({
   mode,
@@ -13,13 +19,8 @@ export function ViewSwitcher({
   return (
     <div className="pillbar">
       {MODES.map((m) => (
-        <button
-          key={m}
-          onClick={() => onChange(m)}
-          data-active={mode === m}
-          className="pill capitalize"
-        >
-          {m}
+        <button key={m} onClick={() => onChange(m)} data-active={mode === m} className="pill">
+          {LABELS[m]}
         </button>
       ))}
     </div>

@@ -68,6 +68,31 @@ function badgeClass(prob: number): string {
   return "badge pass";
 }
 
+// Heat-map: cool blue (low probability) -> hot red-orange (high), over ~5%-45%.
+function heatColor(p: number): string {
+  const t = Math.max(0, Math.min(1, (p - 0.05) / 0.4));
+  const hue = 210 - t * 210; // 210 (blue) -> 0 (red)
+  return `hsl(${hue}, 75%, 52%)`;
+}
+
+function HeatSphere({ prob }: { prob: number }) {
+  const c = heatColor(prob);
+  return (
+    <span
+      className="sphere"
+      title="model probability"
+      style={{
+        background: `radial-gradient(circle at 34% 30%, rgba(255,255,255,0.28), ${c} 55%, rgba(8,14,10,0.55))`,
+        borderColor: c,
+        color: "#fff",
+        textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+      }}
+    >
+      {pct(prob)}
+    </span>
+  );
+}
+
 export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) {
   if (rows.length === 0) {
     return (
@@ -108,7 +133,7 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
           <th>Player</th>
           <th>Team</th>
           <th>Detail</th>
-          <th style={{ textAlign: "right" }}>Chance</th>
+          <th style={{ textAlign: "right" }}>Probability</th>
         </tr>
       </thead>
       <tbody>
@@ -120,7 +145,7 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
             <td style={{ color: "var(--muted)" }}>{r.team}</td>
             <td style={{ color: "var(--muted)" }}>{r.detail}</td>
             <td style={{ textAlign: "right" }}>
-              <span className="sphere">{pct(r.prob)}</span>
+              <HeatSphere prob={r.prob} />
             </td>
           </tr>
         ))}
@@ -145,7 +170,7 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
       <span style={{ fontWeight: 600 }}>
         {r.player} <span style={{ color: "var(--muted)", fontWeight: 400 }}>{r.detail}</span>
       </span>
-      <span className="stat">{pct(r.prob)}</span>
+      <HeatSphere prob={r.prob} />
     </Link>
   );
 

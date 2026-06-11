@@ -154,14 +154,14 @@ export default function PlayerPage({ params }: { params: Promise<{ prop: string;
         </div>
 
         <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
-          <Stat value={pct(r.probability)} label="our HR chance" glow />
+          <Stat value={pct(r.probability)} label="our HR probability" glow />
           <Stat value={strengthLabel(r.probability)} label="our read" />
         </div>
 
         <div className="panel rise" style={{ animationDelay: "120ms" }}>
           <div className="eyebrow mb-1">What&apos;s driving it</div>
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
-            How much each factor raises (green) or lowers (red) his normal chance.
+            How much each factor raises (green) or lowers (red) his normal probability.
           </p>
           <Factor
             icon="🏟️"
