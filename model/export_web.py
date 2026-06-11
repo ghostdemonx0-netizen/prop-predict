@@ -16,7 +16,21 @@ from model.cache import get_or_compute
 from model.cli import _weather_fn
 from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 
-OUT = Path(__file__).resolve().parent.parent / "web" / "public" / "data" / "latest.json"
+DATA_DIR = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
+
+
+def _update_index(date_str: str) -> None:
+    """Maintain web/public/data/index.json: a newest-first list of dates that
+    have a data file, limited to the most recent 14."""
+    index_path = DATA_DIR / "index.json"
+    dates: list[str] = []
+    if index_path.exists():
+        try:
+            dates = json.loads(index_path.read_text()).get("dates", [])
+        except (json.JSONDecodeError, OSError):
+            dates = []
+    dates = sorted(set(dates) | {date_str}, reverse=True)[:14]
+    index_path.write_text(json.dumps({"dates": dates}, indent=2))
 
 
 def _ensure_starters(slate: list[dict]) -> None:
@@ -85,9 +99,12 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
         "strikeouts": k_rows,
         "games": build_games(slate, _weather_fn),
     }
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(payload, indent=2))
-    print(f"Wrote {OUT} ({len(hr_rows)} HR rows, {len(k_rows)} K rows, {len(payload['games'])} games)")
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    (DATA_DIR / f"{date_str}.json").write_text(json.dumps(payload, indent=2))
+    # latest.json mirrors the date just written (fallback default for the site)
+    (DATA_DIR / "latest.json").write_text(json.dumps(payload, indent=2))
+    _update_index(date_str)
+    print(f"Wrote {date_str}.json ({len(hr_rows)} HR rows, {len(k_rows)} K rows, {len(payload['games'])} games)")
 
 
 if __name__ == "__main__":
