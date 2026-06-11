@@ -5,7 +5,6 @@ import { loadProjections } from "../lib/data";
 import type { Projections } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
-import { windLabel } from "../lib/format";
 import { FlamingBall, ElectricBat } from "../components/Marks";
 
 export default function Home() {
@@ -32,8 +31,10 @@ export default function Home() {
     team: r.team,
     prob: r.probability,
     detail: `@ ${r.park}`,
-    context: windLabel(r.wind_out_mph),
     href: `/player/hr/${encodeURIComponent(r.player)}`,
+    windOut: r.wind_out_mph,
+    tempF: r.temp_f,
+    precipPct: r.precip_pct,
   }));
   const kRows: BoardRow[] = data.strikeouts.map((r) => ({
     player: r.player,
@@ -41,6 +42,9 @@ export default function Home() {
     prob: r.over_prob,
     detail: `${r.line} Ks`,
     href: `/player/k/${encodeURIComponent(r.player)}`,
+    windOut: r.wind_out_mph,
+    tempF: r.temp_f,
+    precipPct: r.precip_pct,
   }));
 
   return (

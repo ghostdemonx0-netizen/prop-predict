@@ -9,9 +9,40 @@ export type BoardRow = {
   team: string;
   prob: number; // probability or over_prob
   detail: string; // e.g. "@ COL" or "5.5 Ks"
-  context?: string; // e.g. wind label
   href: string;
+  windOut?: number; // mph toward center field (+out / -in)
+  tempF?: number;
+  precipPct?: number;
 };
+
+function WeatherChips({ r }: { r: BoardRow }) {
+  const hasWind = typeof r.windOut === "number";
+  const hasTemp = typeof r.tempF === "number";
+  const showRain = (r.precipPct ?? 0) >= 20;
+  if (!hasWind && !hasTemp && !showRain) return null;
+  return (
+    <div className="mt-1.5 flex items-center gap-3" style={{ fontSize: "0.74rem", color: "var(--muted)" }}>
+      {hasWind && (
+        <span className="inline-flex items-center gap-1" title="wind toward center field">
+          <span
+            style={{
+              display: "inline-block",
+              lineHeight: 1,
+              fontWeight: 800,
+              transform: `rotate(${(r.windOut as number) >= 0 ? 0 : 180}deg)`,
+              color: (r.windOut as number) > 1 ? "var(--green)" : (r.windOut as number) < -1 ? "var(--red)" : "var(--muted)",
+            }}
+          >
+            ↑
+          </span>
+          {Math.abs(Math.round(r.windOut as number))}<span style={{ opacity: 0.6 }}>mph</span>
+        </span>
+      )}
+      {hasTemp && <span>🌡️ {Math.round(r.tempF as number)}°</span>}
+      {showRain && <span style={{ color: "#7cc7ff" }}>💧 {r.precipPct}%</span>}
+    </div>
+  );
+}
 
 function strengthClass(prob: number): string {
   if (prob >= 0.25) return "s-strong";
@@ -52,8 +83,8 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
       <div className="mt-1.5 flex items-center gap-2" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
         <span className={badgeClass(r.prob)}>{strengthLabel(r.prob)}</span>
         <span>{r.detail}</span>
-        {r.context ? <span>· {r.context}</span> : null}
       </div>
+      <WeatherChips r={r} />
     </Link>
   );
 

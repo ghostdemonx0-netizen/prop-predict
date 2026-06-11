@@ -7,6 +7,8 @@ export type HrRow = {
   weather_mult: number;
   park_mult: number;
   recent_form_mult: number;
+  temp_f?: number;
+  precip_pct?: number;
 };
 
 export type KRow = {
@@ -15,6 +17,9 @@ export type KRow = {
   expected_ks: number;
   line: number;
   over_prob: number;
+  wind_out_mph?: number;
+  temp_f?: number;
+  precip_pct?: number;
 };
 
 export type Projections = {
