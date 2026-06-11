@@ -87,3 +87,18 @@ def test_get_starters_smoke():
     s = get_starters(finished[0]["game_id"])
     assert set(s) == {"home", "away"}
     assert isinstance(s["home"], int) and isinstance(s["away"], int)
+
+
+def test_batter_events_smoke():
+    from model.fetch import batter_events
+    ev = batter_events(592450, 2026)  # Aaron Judge
+    assert len(ev) > 0
+    assert {"game_date", "events", "launch_speed"} <= set(ev[0])
+    assert ev[0]["game_date"][:4] == "2026"
+
+
+def test_pitcher_events_smoke():
+    from model.fetch import pitcher_events
+    ev = pitcher_events(669373, 2026)  # Tarik Skubal
+    assert len(ev) > 0
+    assert {"game_date", "events", "game_pk"} <= set(ev[0])

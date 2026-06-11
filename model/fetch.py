@@ -81,6 +81,33 @@ def _date_window(season: int) -> tuple[str, str]:
     return f"{season}-03-01", f"{season}-11-01"
 
 
+_BATTER_EVENT_COLS = ["game_date", "events", "launch_speed"]
+_PITCHER_EVENT_COLS = ["game_date", "events", "game_pk"]
+
+
+def _slim_records(df: pd.DataFrame, cols: list[str]) -> list[dict]:
+    """Reduce a Statcast frame to JSON-safe dicts with only the columns the
+    profile math needs (cache-friendly: ~100x smaller than the raw pull)."""
+    if df is None or len(df) == 0:
+        return []
+    d = df[cols].copy()
+    d["game_date"] = pd.to_datetime(d["game_date"]).dt.strftime("%Y-%m-%d")
+    d = d.astype(object).where(pd.notna(d), None)
+    return d.to_dict("records")
+
+
+def batter_events(player_id: int, season: int) -> list[dict]:
+    """One batter-season of slim Statcast rows: game_date, events, launch_speed."""
+    start, end = _date_window(season)
+    return _slim_records(statcast_batter(start, end, player_id), _BATTER_EVENT_COLS)
+
+
+def pitcher_events(player_id: int, season: int) -> list[dict]:
+    """One pitcher-season of slim Statcast rows: game_date, events, game_pk."""
+    start, end = _date_window(season)
+    return _slim_records(statcast_pitcher(start, end, player_id), _PITCHER_EVENT_COLS)
+
+
 def build_batter_profile(player_id: int, season: int, name: str = "", team: str = "",
                          bats: str = "") -> dict:
     """Season HR/PA + a recent-form multiplier from Statcast batted-ball data.
