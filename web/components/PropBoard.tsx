@@ -133,28 +133,28 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
     <table className="board">
       <thead>
         <tr>
-          <th>Player</th>
-          <th>Team</th>
-          <th>Opponent</th>
+          <th style={{ whiteSpace: "nowrap" }}>Player</th>
+          <th style={{ whiteSpace: "nowrap", paddingLeft: 0 }}>Team</th>
+          <th style={{ width: "100%" }}>Opponent</th>
           <th style={{ textAlign: "right" }}>Probability</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((r) => (
           <tr key={r.player}>
-            <td>
+            <td style={{ whiteSpace: "nowrap" }}>
               <Link href={r.href} className="linklike">{r.player}</Link>
               {r.playerHand && <span className="hand" style={{ marginLeft: 6 }}>{r.playerHand}</span>}
             </td>
-            <td style={{ color: "var(--muted)" }}>{r.team}</td>
+            <td style={{ color: "var(--muted)", whiteSpace: "nowrap", paddingLeft: 0 }}>{r.team}</td>
             <td style={{ color: "var(--muted)" }}>
-              {r.opponent ? (
+              <span>{r.detail}</span>
+              {r.opponent && (
                 <>
+                  <span style={{ opacity: 0.45 }}> · </span>
                   {r.opponent.name}
                   {r.opponent.hand && <span className="hand" style={{ marginLeft: 6 }}>{r.opponent.hand}</span>}
                 </>
-              ) : (
-                "—"
               )}
             </td>
             <td style={{ textAlign: "right" }}>
