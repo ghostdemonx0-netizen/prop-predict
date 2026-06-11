@@ -68,11 +68,12 @@ function badgeClass(prob: number): string {
   return "badge pass";
 }
 
-// Heat-map: cool blue (low probability) -> hot red-orange (high), over ~5%-45%.
+// Heat-map: cool blue (low probability) -> warm red-orange (high), over ~5%-45%.
+// Muted saturation/lightness so it reads softly on the dark theme.
 function heatColor(p: number): string {
   const t = Math.max(0, Math.min(1, (p - 0.05) / 0.4));
   const hue = 210 - t * 210; // 210 (blue) -> 0 (red)
-  return `hsl(${hue}, 75%, 52%)`;
+  return `hsl(${hue}, 52%, 40%)`;
 }
 
 function HeatSphere({ prob }: { prob: number }) {
@@ -82,10 +83,10 @@ function HeatSphere({ prob }: { prob: number }) {
       className="sphere"
       title="model probability"
       style={{
-        background: `radial-gradient(circle at 34% 30%, rgba(255,255,255,0.28), ${c} 55%, rgba(8,14,10,0.55))`,
+        background: `radial-gradient(circle at 34% 30%, rgba(255,255,255,0.12), ${c} 60%, rgba(8,14,10,0.65))`,
         borderColor: c,
-        color: "#fff",
-        textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+        color: "#eef3f0",
+        textShadow: "0 1px 2px rgba(0,0,0,0.6)",
       }}
     >
       {pct(prob)}
