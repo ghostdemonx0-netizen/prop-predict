@@ -19,6 +19,17 @@ from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 OUT = Path(__file__).resolve().parent.parent / "web" / "public" / "data" / "latest.json"
 
 
+def _ensure_starters(slate: list[dict]) -> None:
+    """Populate home/away_pitcher_id from the boxscore when the schedule's
+    probable-pitcher fields are blank (true for finished games)."""
+    for g in slate:
+        if g.get("home_pitcher_id") and g.get("away_pitcher_id"):
+            continue
+        s = fetch.get_starters(g["game_id"])
+        g["home_pitcher_id"] = g.get("home_pitcher_id") or s["home"]
+        g["away_pitcher_id"] = g.get("away_pitcher_id") or s["away"]
+
+
 def main(date_str: str, max_games: int | None = None, include_started: bool = False) -> None:
     season = int(date_str[:4])
     slate = fetch.get_schedule(date_str)
@@ -29,6 +40,8 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
         # posted lineups produces a full board to preview the site with real data)
         for g in slate:
             g["started"] = False
+
+    _ensure_starters(slate)
 
     # resolve handedness once for every player on the slate
     pids: set[int] = set()
