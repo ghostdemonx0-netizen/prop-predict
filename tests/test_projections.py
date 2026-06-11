@@ -4,8 +4,9 @@ from model.projections import hr_probability, expected_strikeouts, poisson_over_
 
 
 def test_hr_probability_baseline_no_adjustments():
+    # regression_pa=0 disables shrinkage so this tests the raw formula:
     # 40 HR / 600 PA = 0.0667 per PA; over 4 PA: 1-(1-0.0667)^4
-    p = hr_probability(season_hr=40, season_pa=600, expected_pa=4.0)
+    p = hr_probability(season_hr=40, season_pa=600, expected_pa=4.0, regression_pa=0)
     expected = 1 - (1 - 40 / 600) ** 4
     assert p == pytest.approx(expected)
 
@@ -15,11 +16,31 @@ def test_hr_probability_multipliers_stack():
         season_hr=30, season_pa=600,
         recent_form_mult=1.1, matchup_mult=1.2, park_mult=1.22,
         weather_mult=1.25, pitcher_mult=1.1, expected_pa=4.0,
+        regression_pa=0,  # test the raw multiplier stacking, no shrinkage
     )
     base = 30 / 600
     rate = base * 1.1 * 1.2 * 1.22 * 1.25 * 1.1
     rate = min(rate, 1.0)
     assert p == pytest.approx(1 - (1 - rate) ** 4)
+
+
+def test_hr_probability_regresses_toward_league_mean_by_default():
+    # By default the rate is regressed toward league average (0.033) by
+    # adding 300 phantom league-average PAs, lowering the naive estimate.
+    p = hr_probability(season_hr=40, season_pa=600, expected_pa=4.0)
+    reg_rate = (40 + 0.033 * 300) / (600 + 300)
+    assert p == pytest.approx(1 - (1 - reg_rate) ** 4)
+    naive = 1 - (1 - 40 / 600) ** 4
+    assert p < naive  # regression pulls the inflated naive estimate down
+
+
+def test_hr_probability_small_hot_sample_is_regressed_hard():
+    # 10 HR in 80 PA is a blistering 0.125/PA; shrinkage must temper it.
+    p = hr_probability(season_hr=10, season_pa=80, expected_pa=4.0)
+    reg_rate = (10 + 0.033 * 300) / (80 + 300)
+    assert p == pytest.approx(1 - (1 - reg_rate) ** 4)
+    naive = 1 - (1 - 10 / 80) ** 4
+    assert p < naive * 0.8  # tempered well below the raw hot rate
 
 
 def test_hr_probability_zero_pa_is_zero():

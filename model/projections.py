@@ -13,16 +13,24 @@ def hr_probability(
     weather_mult: float = 1.0,
     pitcher_mult: float = 1.0,
     expected_pa: float = 4.0,
+    league_hr_rate: float = 0.033,
+    regression_pa: float = 300.0,
 ) -> float:
     """Probability a hitter hits at least one HR in the game.
 
-    Starts from the season HR-per-PA rate, applies multiplicative
-    adjustments (each centered at 1.0), then converts a per-PA rate into a
-    "1 or more in `expected_pa` chances" probability.
+    The season HR-per-PA rate is first regressed toward the league average
+    (``league_hr_rate``) by adding ``regression_pa`` phantom league-average
+    plate appearances. This shrinkage tempers small or hot samples so a
+    partial/hot season doesn't produce wildly inflated probabilities
+    (calibration). Set ``regression_pa=0`` to use the raw rate.
+
+    The regressed rate then gets multiplicative adjustments (each centered
+    at 1.0) and is converted into a "1 or more in ``expected_pa`` chances"
+    probability.
     """
     if season_pa <= 0:
         return 0.0
-    base = season_hr / season_pa
+    base = (season_hr + league_hr_rate * regression_pa) / (season_pa + regression_pa)
     rate = base * recent_form_mult * matchup_mult * park_mult * weather_mult * pitcher_mult
     rate = max(0.0, min(rate, 1.0))
     return 1 - (1 - rate) ** expected_pa
