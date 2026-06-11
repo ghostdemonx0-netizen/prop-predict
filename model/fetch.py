@@ -180,6 +180,36 @@ def get_player_meta(player_ids: list[int]) -> dict[int, dict]:
     return out
 
 
+def get_bvp(batter_id: int, pitcher_id: int) -> dict | None:
+    """Career batter-vs-pitcher line from the MLB Stats API.
+
+    Display context only — deliberately NOT used in the probability math
+    (head-to-head samples are tiny). Returns None when either id is missing,
+    there is no history, or the API call fails.
+    """
+    if not batter_id or not pitcher_id:
+        return None
+    try:
+        data = statsapi.get("people", {
+            "personIds": str(batter_id),
+            "hydrate": f"stats(group=[hitting],type=[vsPlayerTotal],opposingPlayerId={pitcher_id},sportId=1)",
+        })
+        splits = data["people"][0].get("stats", [{}])[0].get("splits", [])
+        if not splits:
+            return None
+        st = splits[0].get("stat", {})
+        return {
+            "pa": st.get("plateAppearances", 0),
+            "ab": st.get("atBats", 0),
+            "hits": st.get("hits", 0),
+            "hr": st.get("homeRuns", 0),
+            "k": st.get("strikeOuts", 0),
+            "avg": st.get("avg", ""),
+        }
+    except Exception:
+        return None
+
+
 def get_starters(game_id: int) -> dict[str, int | None]:
     """Actual starting pitcher MLBAM ids from a game's boxscore: {"home", "away"}.
 

@@ -6,6 +6,8 @@ export type Matchup = {
   prob: number; // headline probability for the lean
   k_prob: number;
   hit_prob: number;
+  player_id?: number;
+  bvp?: { pa: number; ab: number; hits: number; hr: number; k: number; avg: string } | null;
 };
 
 export type HrRow = {

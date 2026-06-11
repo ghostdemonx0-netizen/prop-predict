@@ -20,6 +20,7 @@ export type BoardRow = {
   windDir?: number; // direction of travel rel. to CF: 0=out to CF, 90=to RF, 180=in, 270=to LF
   tempF?: number;
   precipPct?: number;
+  bvp?: { pa: number; ab: number; hits: number; hr: number; k: number; avg: string } | null;
 };
 
 function WeatherChips({ r }: { r: BoardRow }) {
@@ -110,6 +111,11 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
             <span className="inline-flex items-center gap-1.5">
               vs {r.opponent.name}
               {r.opponent.hand && <span className="hand">{r.opponent.hand}</span>}
+            </span>
+          )}
+          {r.bvp && r.bvp.pa > 0 && (
+            <span className="hand" title="career history vs this pitcher (context only — not part of the math)">
+              {r.bvp.hits}-{r.bvp.ab}{r.bvp.hr > 0 ? ` · ${r.bvp.hr} HR` : ""}
             </span>
           )}
         </div>

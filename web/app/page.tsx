@@ -79,6 +79,7 @@ export default function Home() {
     hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
     playerHand: batHand(r.bats),
     opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
+    bvp: r.vs?.bvp,
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
     windDir: r.wind_dir,

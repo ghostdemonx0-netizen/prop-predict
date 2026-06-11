@@ -92,6 +92,24 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
     return lineups_fn, pitcher_fn
 
 
+def _attach_bvp(hr_rows: list[dict], k_rows: list[dict]) -> None:
+    """Annotate matchup entries with career batter-vs-pitcher history (display
+    context only; cached per pair, one API call each)."""
+    def bvp(batter_id, pitcher_id):
+        if not batter_id or not pitcher_id:
+            return None
+        out = get_or_compute(f"bvp-{batter_id}-{pitcher_id}",
+                             lambda: fetch.get_bvp(batter_id, pitcher_id) or {})
+        return out or None
+
+    for r in hr_rows:
+        if r.get("vs"):
+            r["vs"]["bvp"] = bvp(r.get("player_id"), r["vs"].get("player_id"))
+    for r in k_rows:
+        for m in r.get("matchups") or []:
+            m["bvp"] = bvp(m.get("player_id"), r.get("player_id"))
+
+
 def main(date_str: str, max_games: int | None = None, include_started: bool = False) -> None:
     season = int(date_str[:4])
     slate = fetch.get_schedule(date_str)
@@ -109,6 +127,7 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
 
     hr_rows = build_hr_rows(slate, lineups_fn, pitcher_fn, weather_fn)
     k_rows = build_strikeout_rows(slate, pitcher_fn, lineups_fn, weather_fn)
+    _attach_bvp(hr_rows, k_rows)
 
     payload = {
         "date": date_str,

@@ -1,6 +1,47 @@
 import json
 
 
+def test_attach_bvp_annotates_rows_and_handles_missing_ids(monkeypatch):
+    from model import export_web, fetch
+
+    fake_bvp = {"pa": 17, "ab": 17, "hits": 7, "hr": 2, "k": 5, "avg": ".412"}
+
+    # make get_or_compute just call the producer directly (no disk cache)
+    monkeypatch.setattr(export_web, "get_or_compute", lambda key, fn: fn())
+    # make fetch.get_bvp return our known dict for known ids
+    monkeypatch.setattr(fetch, "get_bvp", lambda b, p: fake_bvp if (b and p) else None)
+
+    hr_rows = [
+        {"player_id": 592450, "vs": {"player_id": 669373, "name": "Test Pitcher"}},
+        {"player_id": None, "vs": {"player_id": 669373, "name": "Test Pitcher"}},  # missing batter id
+        {"player_id": 592450, "vs": None},  # no vs
+    ]
+    k_rows = [
+        {
+            "player_id": 669373,
+            "matchups": [
+                {"player_id": 592450, "name": "Test Batter"},
+                {"player_id": None, "name": "Unknown"},
+            ],
+        },
+        {"player_id": 669373, "matchups": []},  # empty lineup
+    ]
+
+    export_web._attach_bvp(hr_rows, k_rows)
+
+    # HR row with both ids → bvp attached
+    assert hr_rows[0]["vs"]["bvp"] == fake_bvp
+    # HR row with missing batter id → None
+    assert hr_rows[1]["vs"]["bvp"] is None
+    # HR row with no vs → unchanged (no bvp key on None)
+    assert hr_rows[2]["vs"] is None
+
+    # K matchup with both ids → bvp attached
+    assert k_rows[0]["matchups"][0]["bvp"] == fake_bvp
+    # K matchup with missing batter id → None
+    assert k_rows[0]["matchups"][1]["bvp"] is None
+
+
 def test_update_index_caps_at_seven_and_prunes_old_files(tmp_path, monkeypatch):
     from model import export_web
     monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)

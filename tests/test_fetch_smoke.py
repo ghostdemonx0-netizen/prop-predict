@@ -66,3 +66,10 @@ def test_pitcher_events_smoke():
     ev = pitcher_events(669373, 2026)  # Tarik Skubal
     assert len(ev) > 0
     assert {"game_date", "events", "game_pk"} <= set(ev[0])
+
+
+def test_get_bvp_smoke():
+    from model.fetch import get_bvp
+    b = get_bvp(592450, 669373)  # Aaron Judge vs Tarik Skubal
+    assert b and b["pa"] > 0 and "hr" in b
+    assert get_bvp(592450, 0) is None

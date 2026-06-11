@@ -49,6 +49,7 @@ def test_build_strikeout_rows():
     # home pitcher faces the AWAY lineup (Away Slugger)
     assert [m["name"] for m in ace["matchups"]] == ["Away Slugger"]
     assert ace["matchups"][0]["lean"] in {"K", "H", "NEU"}
+    assert ace["matchups"][0]["player_id"] == 111
     assert 0.0 <= ace["over_prob"] <= 1.0
     assert ace["temp_f"] == pytest.approx(80.0)
 
@@ -111,6 +112,7 @@ def test_hr_rows_wire_pitcher_platoon_slot_and_park():
     # game park (COL 1.22) divided by sqrt of the batter's home park (COL)
     assert home["park_mult"] == pytest.approx(1.22 / math.sqrt(1.22))
     assert home["player_id"] == 101
+    assert home["vs"]["player_id"] == 202
     away = next(r for r in rows if r["team"] == "LAD")
     # away batter's own park (LAD 1.06) divided out of the game park (COL)
     assert away["park_mult"] == pytest.approx(1.22 / math.sqrt(1.06))

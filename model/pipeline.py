@@ -75,7 +75,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn) -> list
                         p_k=opp.get("k_per_bf", 0.22), p_hit=opp.get("hit_allowed_rate", 0.22),
                         bats=b.get("bats", "R"), throws=opp.get("throws", "R"),
                     )
-                    vs = {"name": opp["name"], "throws": opp.get("throws", "R"), **m}
+                    vs = {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R"), **m}
                 rows.append({
                     "prop": "HR", "game_id": game["game_id"],
                     "player_id": b.get("player_id"),
@@ -117,7 +117,7 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn) 
                     p_k=p.get("k_per_bf", 0.22), p_hit=p.get("hit_allowed_rate", 0.22),
                     bats=b.get("bats", "R"), throws=p.get("throws", "R"),
                 )
-                matchups.append({"name": b["name"], "bats": b.get("bats", "R"), **m})
+                matchups.append({"name": b["name"], "player_id": b.get("player_id"), "bats": b.get("bats", "R"), **m})
             lam = lineup_expected_ks([m["k_prob"] for m in matchups], p["expected_bf"])
             if lam is None:
                 lam = expected_strikeouts(p["k_per_bf"], p["expected_bf"], p.get("opponent_k_mult", 1.0))
