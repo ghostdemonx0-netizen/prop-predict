@@ -4,7 +4,19 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { loadProjections } from "../../../../lib/data";
 import type { Projections } from "../../../../lib/types";
-import { pct, windLabel, strengthLabel } from "../../../../lib/format";
+import { pct, strengthLabel } from "../../../../lib/format";
+
+const DIRS = [
+  "out to center", "out to right-center", "out to right field", "blowing in (right)",
+  "blowing in", "blowing in (left)", "out to left field", "out to left-center",
+];
+function windText(dir: number) {
+  return DIRS[Math.round((((dir % 360) + 360) % 360) / 45) % 8];
+}
+function arrowColor(dir: number) {
+  const c = Math.cos((dir * Math.PI) / 180);
+  return c > 0.2 ? "var(--green)" : c < -0.2 ? "var(--red)" : "var(--amber)";
+}
 
 function Back() {
   return (
@@ -23,11 +35,70 @@ function Stat({ value, label, glow }: { value: string; label: string; glow?: boo
   );
 }
 
-export default function PlayerPage({
-  params,
+/** Renders a factor as a +/-% impact with a centered bar, instead of a raw multiplier. */
+function Factor({ icon, label, mult, note }: { icon: string; label: string; mult: number; note: string }) {
+  const delta = Math.round((mult - 1) * 100);
+  const pos = delta > 0;
+  const neg = delta < 0;
+  const mag = Math.min(Math.abs(delta), 40) / 40; // scaled to ±40%
+  return (
+    <div className="factor">
+      <div className="factor-head">
+        <span>{icon} {label}</span>
+        <span className={`delta ${pos ? "up" : neg ? "down" : "flat"}`}>
+          {pos ? `+${delta}%` : neg ? `${delta}%` : "neutral"}
+        </span>
+      </div>
+      <div className="impact-track">
+        <span className="impact-mid" />
+        <span
+          className="impact-fill"
+          style={{
+            left: pos ? "50%" : `${50 - mag * 50}%`,
+            width: `${mag * 50}%`,
+            background: pos ? "var(--green)" : "var(--red)",
+          }}
+        />
+      </div>
+      <div className="factor-note">{note}</div>
+    </div>
+  );
+}
+
+function WeatherStrip({
+  tempF,
+  windMph,
+  windDir,
+  precipPct,
 }: {
-  params: Promise<{ prop: string; id: string }>;
+  tempF?: number;
+  windMph?: number;
+  windDir?: number;
+  precipPct?: number;
 }) {
+  return (
+    <div className="wx-strip">
+      {typeof tempF === "number" && (
+        <span className="wx-chip">🌡️ <span className="num">{Math.round(tempF)}°</span></span>
+      )}
+      {typeof windMph === "number" && typeof windDir === "number" && (
+        <span className="wx-chip" title="wind direction relative to the field">
+          <span style={{ display: "inline-block", fontWeight: 800, transform: `rotate(${windDir}deg)`, color: arrowColor(windDir) }}>↑</span>
+          <span className="num">{Math.round(windMph)}mph</span>
+          <span style={{ color: "var(--muted)" }}>{windText(windDir)}</span>
+        </span>
+      )}
+      {typeof precipPct === "number" && (
+        <span className="wx-chip">
+          💧 <span className="num" style={{ color: precipPct >= 20 ? "#7cc7ff" : "inherit" }}>{precipPct}%</span>
+          <span style={{ color: "var(--muted)" }}>rain</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function PlayerPage({ params }: { params: Promise<{ prop: string; id: string }> }) {
   const { prop, id } = use(params);
   const name = decodeURIComponent(id);
   const [data, setData] = useState<Projections | null>(null);
@@ -54,6 +125,7 @@ export default function PlayerPage({
   if (prop === "hr") {
     const r = data.hr.find((x) => x.player === name);
     if (!r) return notFound;
+    const parkFriendly = r.park_mult >= 1;
     return (
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
         <Back />
@@ -70,21 +142,33 @@ export default function PlayerPage({
         </div>
 
         <div className="panel rise" style={{ animationDelay: "120ms" }}>
-          <div className="eyebrow mb-3">Why</div>
-          <ul className="space-y-3" style={{ fontSize: "0.92rem" }}>
-            <li className="flex justify-between gap-4">
-              <span>🏟️ Park ({r.park})</span>
-              <span className="num">×{r.park_mult.toFixed(2)} {r.park_mult > 1 ? "↑" : r.park_mult < 1 ? "↓" : ""}</span>
-            </li>
-            <li className="flex justify-between gap-4">
-              <span>🌬️ Weather · {windLabel(r.wind_out_mph)}</span>
-              <span className="num">×{r.weather_mult.toFixed(2)} {r.weather_mult > 1 ? "↑" : r.weather_mult < 1 ? "↓" : ""}</span>
-            </li>
-            <li className="flex justify-between gap-4">
-              <span>🔥 Recent form {r.recent_form_mult > 1 ? "(hot)" : r.recent_form_mult < 1 ? "(cold)" : "(neutral)"}</span>
-              <span className="num">×{r.recent_form_mult.toFixed(2)} {r.recent_form_mult > 1 ? "↑" : r.recent_form_mult < 1 ? "↓" : ""}</span>
-            </li>
-          </ul>
+          <div className="eyebrow mb-1">What&apos;s driving it</div>
+          <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
+            How much each factor raises (green) or lowers (red) his normal chance.
+          </p>
+          <Factor
+            icon="🏟️"
+            label={`Park · ${r.park}`}
+            mult={r.park_mult}
+            note={`${r.park} plays ${parkFriendly ? "hitter-friendly" : "pitcher-friendly"} for home runs.`}
+          />
+          <Factor
+            icon="🌬️"
+            label="Weather"
+            mult={r.weather_mult}
+            note={`${typeof r.wind_mph === "number" ? Math.round(r.wind_mph) + "mph wind " : ""}${typeof r.wind_dir === "number" ? windText(r.wind_dir) : ""}${typeof r.temp_f === "number" ? `, ${Math.round(r.temp_f)}°` : ""}.`}
+          />
+          <Factor
+            icon="🔥"
+            label="Recent form"
+            mult={r.recent_form_mult}
+            note={r.recent_form_mult > 1 ? "Hot lately — hitting the ball harder than his season norm." : r.recent_form_mult < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
+          />
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "180ms" }}>
+          <div className="eyebrow mb-3">Conditions</div>
+          <WeatherStrip tempF={r.temp_f} windMph={r.wind_mph} windDir={r.wind_dir} precipPct={r.precip_pct} />
         </div>
       </main>
     );
@@ -92,6 +176,8 @@ export default function PlayerPage({
 
   const r = data.strikeouts.find((x) => x.player === name);
   if (!r) return notFound;
+  const scale = Math.max(r.line + 3, r.expected_ks + 1);
+  const over = r.expected_ks > r.line;
   return (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
       <Back />
@@ -101,9 +187,29 @@ export default function PlayerPage({
           <span className="lo">{r.player}</span>
         </h1>
       </div>
+
       <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
         <Stat value={pct(r.over_prob)} label={`over ${r.line} Ks`} glow />
         <Stat value={r.expected_ks.toFixed(1)} label="projected Ks" />
+      </div>
+
+      <div className="panel rise" style={{ animationDelay: "120ms" }}>
+        <div className="eyebrow mb-3">Projection vs the line</div>
+        <div style={{ position: "relative", height: "12px", background: "rgba(120,200,150,0.08)", borderRadius: 999 }}>
+          <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${(r.expected_ks / scale) * 100}%`, background: over ? "var(--green)" : "var(--red)", borderRadius: 999 }} />
+          <span style={{ position: "absolute", left: `${(r.line / scale) * 100}%`, top: -4, bottom: -4, width: "2px", background: "var(--text)" }} title="the line" />
+        </div>
+        <p className="factor-note">
+          We project <strong style={{ color: "var(--text)" }}>{r.expected_ks.toFixed(1)} Ks</strong>; the line is{" "}
+          <strong style={{ color: "var(--text)" }}>{r.line}</strong> (the white marker) — so we lean{" "}
+          <strong style={{ color: over ? "var(--green)" : "var(--red)" }}>{over ? "OVER" : "UNDER"}</strong>.
+        </p>
+      </div>
+
+      <div className="panel rise" style={{ animationDelay: "180ms" }}>
+        <div className="eyebrow mb-3">Conditions</div>
+        <WeatherStrip tempF={r.temp_f} windMph={r.wind_mph} windDir={r.wind_dir} precipPct={r.precip_pct} />
+        <p className="factor-note">Weather barely affects strikeouts — shown for game context.</p>
       </div>
     </main>
   );

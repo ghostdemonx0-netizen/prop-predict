@@ -221,6 +221,46 @@ table.board { width: 100%; border-collapse: collapse; }
 
 a { color: var(--green); }
 
+/* ---- factor breakdown (replaces raw x1.22 multipliers) ---- */
+.factor { padding: 0.6rem 0; border-bottom: 1px solid var(--line); }
+.factor:last-child { border-bottom: 0; }
+.factor-head { display: flex; justify-content: space-between; align-items: center; font-size: 0.92rem; }
+.delta {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 7px;
+}
+.delta.up { color: #06140b; background: var(--green); }
+.delta.down { color: #fff; background: var(--red); }
+.delta.flat { color: var(--muted); background: rgba(138, 163, 153, 0.12); }
+.impact-track {
+  position: relative;
+  height: 7px;
+  margin-top: 0.55rem;
+  background: rgba(120, 200, 150, 0.08);
+  border-radius: 999px;
+}
+.impact-mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--line-strong); }
+.impact-fill { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
+.factor-note { font-size: 0.76rem; color: var(--muted); margin-top: 0.4rem; }
+
+/* ---- weather strip chips ---- */
+.wx-strip { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.wx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+.wx-chip .num { font-weight: 700; }
+
 /* ---- logo marks (flaming ball + electric bat) ---- */
 .mark { display: block; flex: 0 0 auto; }
 .mark-ball { filter: drop-shadow(0 0 8px rgba(255, 70, 40, 0.65)); }
