@@ -6,6 +6,7 @@ from model.matchup import (
     hit_prob,
     classify_lean,
     matchup,
+    hr_platoon_mult,
 )
 
 
@@ -54,7 +55,6 @@ def test_matchup_shape_and_bounds():
 
 
 def test_hr_platoon_mult():
-    from model.matchup import hr_platoon_mult
     assert hr_platoon_mult("L", "R") == pytest.approx(1.06)  # advantage
     assert hr_platoon_mult("R", "R") == pytest.approx(0.95)  # same-hand
     assert hr_platoon_mult("S", "L") == pytest.approx(1.06)  # switch always has it

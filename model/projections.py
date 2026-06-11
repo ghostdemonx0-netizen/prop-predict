@@ -2,6 +2,8 @@
 
 import math
 
+LEAGUE_HR_RATE = 0.033  # league-average HR per plate appearance
+
 
 def hr_probability(
     season_hr: float,
@@ -13,7 +15,7 @@ def hr_probability(
     weather_mult: float = 1.0,
     pitcher_mult: float = 1.0,
     expected_pa: float = 4.0,
-    league_hr_rate: float = 0.033,
+    league_hr_rate: float = LEAGUE_HR_RATE,
     regression_pa: float = 300.0,
 ) -> float:
     """Probability a hitter hits at least one HR in the game.
@@ -83,7 +85,7 @@ def pitcher_hr_mult(
     hr_allowed_rate: float,
     bf: float,
     *,
-    league_hr_rate: float = 0.033,
+    league_hr_rate: float = LEAGUE_HR_RATE,
     regression_bf: float = 200.0,
 ) -> float:
     """How much the opposing pitcher inflates or suppresses HRs.
@@ -92,5 +94,6 @@ def pitcher_hr_mult(
     average with ``regression_bf`` phantom batters faced, then expressed as
     a multiplier vs league (1.0 = average), clamped to [0.75, 1.3].
     """
+    bf = max(0.0, bf)
     reg = (hr_allowed_rate * bf + league_hr_rate * regression_bf) / (bf + regression_bf)
     return max(0.75, min(reg / league_hr_rate, 1.3))
