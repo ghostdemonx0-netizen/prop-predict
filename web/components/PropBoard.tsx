@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ViewMode } from "./ViewSwitcher";
-import { pct, strengthLabel, strengthTier, heatColor, type PropKind } from "../lib/format";
+import { pct, strengthLabel, strengthTier, heatColor, arrowColor, type PropKind } from "../lib/format";
 
 export type BoardRow = {
   player: string;
@@ -30,9 +30,7 @@ function WeatherChips({ r }: { r: BoardRow }) {
   const showRain = (r.precipPct ?? 0) >= 20;
   if (!hasWind && !hasTemp && !showRain) return null;
 
-  // helps when blowing out (cos near +1), hurts blowing in (cos near -1), crosswind in between
-  const outComponent = hasWind ? Math.cos(((dir as number) * Math.PI) / 180) : 0;
-  const windColor = outComponent > 0.2 ? "var(--green)" : outComponent < -0.2 ? "var(--red)" : "var(--amber)";
+  const windColor = hasWind ? arrowColor(dir as number) : "var(--amber)";
 
   return (
     <div className="mt-1.5 flex items-center gap-3" style={{ fontSize: "0.74rem", color: "var(--muted)" }}>
