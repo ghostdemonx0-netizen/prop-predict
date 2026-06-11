@@ -15,19 +15,31 @@ SAMPLE_SLATE = [
     }
 ]
 
-SAMPLE_BATTERS = {
-    1: [
-        {"player_id": 101, "name": "Big Bopper", "team": "LAD", "bats": "R",
-         "season_hr": 30, "season_pa": 600, "expected_pa": 4.3,
-         "recent_form_mult": 1.10, "matchup_mult": 1.05},
-    ],
+
+def _batter(pid, name, team, bats, hr, k_rate, hit_rate):
+    return {
+        "player_id": pid, "name": name, "team": team, "bats": bats,
+        "season_hr": hr, "season_pa": 600, "expected_pa": 4.3,
+        "recent_form_mult": 1.10, "matchup_mult": 1.05,
+        "k_rate": k_rate, "hit_rate": hit_rate,
+    }
+
+
+# lineups split by side; keyed by game_id
+SAMPLE_LINEUPS = {
+    1: {
+        "home": [_batter(101, "Home Masher", "COL", "R", 30, 0.22, 0.26)],
+        "away": [_batter(111, "Away Slugger", "LAD", "L", 28, 0.25, 0.24)],
+    },
 }
 
 SAMPLE_PITCHERS = {
     201: {"player_id": 201, "name": "Ace Coors", "team": "COL", "throws": "R",
-          "k_per_bf": 0.27, "expected_bf": 24, "opponent_k_mult": 1.04, "k_line": 5.5},
+          "k_per_bf": 0.27, "expected_bf": 24, "opponent_k_mult": 1.04,
+          "k_line": 5.5, "hit_allowed_rate": 0.20},
     202: {"player_id": 202, "name": "Dodger Arm", "team": "LAD", "throws": "L",
-          "k_per_bf": 0.25, "expected_bf": 23, "opponent_k_mult": 1.00, "k_line": 5.5},
+          "k_per_bf": 0.25, "expected_bf": 23, "opponent_k_mult": 1.00,
+          "k_line": 5.5, "hit_allowed_rate": 0.21},
 }
 
 # weather keyed by game_id
