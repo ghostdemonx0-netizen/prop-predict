@@ -57,3 +57,20 @@ def test_pitcher_profile_no_data_defaults():
     assert p["k_per_bf"] == 0.0
     assert p["expected_bf"] == 24.0
     assert p["bf"] == 0
+
+
+def test_batter_profile_no_data_defaults():
+    p = batter_profile_from_events([], as_of="2026-06-10", player_id=4)
+    assert p["season_pa"] == 0
+    assert p["season_hr"] == 0
+    assert p["k_rate"] == 0.0
+    assert p["hit_rate"] == 0.0
+    assert p["recent_form_mult"] == pytest.approx(1.0)
+    assert p["name"] == "4"  # falls back to the id
+
+
+def test_batter_recent_form_cold_clamps_at_floor():
+    hot_season = [_ev("2026-04-01", "field_out", 105.0)] * 30
+    cold_recent = [_ev("2026-06-08", "field_out", 80.0)] * 10
+    p = batter_profile_from_events(hot_season + cold_recent, as_of="2026-06-10", player_id=1)
+    assert p["recent_form_mult"] == pytest.approx(0.8)  # clamped at the floor

@@ -21,6 +21,8 @@ def _hard_hit_rate(rows: list[dict]) -> float:
 def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int,
                                name: str = "", team: str = "", bats: str = "") -> dict:
     """events: [{game_date, events, launch_speed}, ...] for one batter-season."""
+    # Strictly-before: excludes all events on as_of itself, including same-day
+    # doubleheader game 1. Acceptable v1 simplification.
     past = [e for e in events if e["game_date"] < as_of]
     pa_rows = [e for e in past if e["events"]]
     pa = len(pa_rows)
@@ -58,7 +60,7 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
     ks = sum(1 for e in pa_rows if e["events"] in _K_EVENTS)
     hits = sum(1 for e in pa_rows if e["events"] in _HIT_EVENTS)
     hr = sum(1 for e in pa_rows if e["events"] == "home_run")
-    games = len({e["game_pk"] for e in past})
+    games = len({e["game_pk"] for e in past if e["game_pk"] is not None})
 
     return {
         "player_id": player_id,
