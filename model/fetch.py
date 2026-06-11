@@ -214,3 +214,21 @@ def get_player_meta(player_ids: list[int]) -> dict[int, dict]:
             "throws": (person.get("pitchHand") or {}).get("code", "R"),
         }
     return out
+
+
+def get_starters(game_id: int) -> dict[str, int | None]:
+    """Actual starting pitcher MLBAM ids from a game's boxscore: {"home", "away"}.
+
+    The boxscore's per-side `pitchers` list is in appearance order, so [0] is
+    the starter. Returns None for a side if unavailable. Use this for finished
+    games, whose schedule "probable pitcher" fields are blank.
+    """
+    try:
+        box = statsapi.boxscore_data(game_id)
+    except Exception:
+        return {"home": None, "away": None}
+    out: dict[str, int | None] = {"home": None, "away": None}
+    for side in ("home", "away"):
+        pitchers = box.get(side, {}).get("pitchers", []) or []
+        out[side] = int(pitchers[0]) if pitchers else None
+    return out

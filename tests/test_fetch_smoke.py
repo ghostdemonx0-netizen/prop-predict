@@ -77,3 +77,13 @@ def test_profiles_include_rates_and_hand_smoke():
     p = build_pitcher_profile(669373, 2026, name="Tarik Skubal", throws="L")
     assert 0.0 <= p["hit_allowed_rate"] <= 1.0
     assert p["throws"] == "L"
+
+
+def test_get_starters_smoke():
+    from model.fetch import get_schedule, get_starters
+    games = get_schedule("2026-06-10")
+    finished = [g for g in games if g["started"]]
+    assert finished, "need a finished game (its starters live in the boxscore)"
+    s = get_starters(finished[0]["game_id"])
+    assert set(s) == {"home", "away"}
+    assert isinstance(s["home"], int) and isinstance(s["away"], int)
