@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadProjections } from "../lib/data";
+import { loadProjections, loadIndex } from "../lib/data";
 import type { Projections } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
@@ -25,10 +25,19 @@ export default function Home() {
   const [data, setData] = useState<Projections | null>(null);
   const [mode, setMode] = useState<ViewMode>("hybrid");
   const [prop, setProp] = useState<"hr" | "k">("hr");
+  const [dates, setDates] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
   useEffect(() => {
-    loadProjections().then(setData).catch(console.error);
+    loadIndex().then((ds) => {
+      setDates(ds);
+      setSelectedDate(ds[0] ?? "");
+    });
   }, []);
+
+  useEffect(() => {
+    loadProjections(selectedDate || undefined).then(setData).catch(console.error);
+  }, [selectedDate]);
 
   if (!data) {
     return (
@@ -84,10 +93,27 @@ export default function Home() {
           </h1>
           <FlamingBall />
         </div>
-        <p className="mt-3 flex items-center gap-2" style={{ color: "var(--muted)", fontSize: "0.82rem" }}>
+        <div className="mt-3 flex items-center gap-2" style={{ color: "var(--muted)", fontSize: "0.82rem" }}>
           <span className="live-dot" />
-          <span className="num">{data.date}</span>
-        </p>
+          {dates.length > 1 ? (
+            <select
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="num"
+              style={{
+                background: "var(--bg-2)", color: "var(--text)",
+                border: "1px solid var(--line)", borderRadius: 8, padding: "0.25rem 0.5rem",
+              }}
+            >
+              {dates.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="num">{data.date}</span>
+          )}
+          <span style={{ opacity: 0.6 }}>· browse the last 7 days</span>
+        </div>
       </header>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rise" style={{ animationDelay: "60ms" }}>
