@@ -1,15 +1,14 @@
 """Wire data (via injected fetcher callables) into model projections.
 
 Fetcher callables are passed in so this module never touches the network
-and is fully unit-testable. cli.py supplies the real fetchers.
+and is fully unit-testable. cli.py / export_web.py supply the real fetchers.
 
 Fetcher contracts:
-  batters_fn(game_id) -> list of batter dicts:
-      {player_id, name, team, bats, season_hr, season_pa, expected_pa,
-       recent_form_mult, matchup_mult}
-  pitcher_fn(pitcher_id) -> pitcher dict:
-      {player_id, name, team, throws, k_per_bf, expected_bf,
-       opponent_k_mult, k_line}
+  lineups_fn(game) -> {"home": [batter_profile, ...], "away": [batter_profile, ...]}
+      batter_profile: {player_id, name, team, bats, season_hr, season_pa,
+                       expected_pa, recent_form_mult, matchup_mult, k_rate, hit_rate}
+  pitcher_fn(pitcher_id) -> {player_id, name, team, throws, k_per_bf, expected_bf,
+                             opponent_k_mult, k_line, hit_allowed_rate}
   weather_fn(game) -> {wind_speed_mph, wind_from_deg, temp_f, precip_pct}
 """
 
@@ -81,40 +80,41 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn) -> list
     return rows
 
 
-def build_strikeout_rows(slate: list[dict], pitcher_fn, weather_fn) -> list[dict]:
-    """Return strikeout projection rows for both starters of each game, sorted desc.
-
-    Weather (wind/temp/rain) is attached for display parity with HR rows even
-    though it has little effect on the strikeout projection itself.
-    """
+def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn) -> list[dict]:
+    """Strikeout rows for both starters, each with the opposing lineup matchup read."""
     rows: list[dict] = []
     for game in slate:
         if game.get("started"):
             continue
         w = _game_weather(game, weather_fn)
-        for key in ("home_pitcher_id", "away_pitcher_id"):
-            pid = game.get(key)
+        lineups = lineups_fn(game)
+        # home pitcher faces away lineup; away pitcher faces home lineup
+        for pid_key, opp_side, team in (
+            ("home_pitcher_id", "away", game.get("home", "?")),
+            ("away_pitcher_id", "home", game.get("away", "?")),
+        ):
+            pid = game.get(pid_key)
             if pid is None:
                 continue
             p = pitcher_fn(pid)
-            lam = expected_strikeouts(
-                p["k_per_bf"], p["expected_bf"], p.get("opponent_k_mult", 1.0)
-            )
+            lam = expected_strikeouts(p["k_per_bf"], p["expected_bf"], p.get("opponent_k_mult", 1.0))
             line = p.get("k_line", 5.5)
+            matchups = []
+            for b in lineups.get(opp_side, []):
+                m = matchup(
+                    b_k=b.get("k_rate", 0.22), b_hit=b.get("hit_rate", 0.22),
+                    p_k=p.get("k_per_bf", 0.22), p_hit=p.get("hit_allowed_rate", 0.22),
+                    bats=b.get("bats", "R"), throws=p.get("throws", "R"),
+                )
+                matchups.append({"name": b["name"], "bats": b.get("bats", "R"), **m})
             rows.append({
-                "prop": "K",
-                "game_id": game["game_id"],
+                "prop": "K", "game_id": game["game_id"],
                 "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
-                "player": p["name"],
-                "team": p["team"],
-                "expected_ks": lam,
-                "line": line,
-                "over_prob": poisson_over_prob(lam, line),
-                "wind_out_mph": w["wind_out_mph"],
-                "wind_mph": w["wind_mph"],
-                "wind_dir": w["wind_dir"],
-                "temp_f": w["temp_f"],
-                "precip_pct": w["precip_pct"],
+                "player": p["name"], "team": team,
+                "expected_ks": lam, "line": line, "over_prob": poisson_over_prob(lam, line),
+                "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"],
+                "wind_dir": w["wind_dir"], "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
+                "throws": p.get("throws", "R"), "matchups": matchups,
             })
     rows.sort(key=lambda r: r["over_prob"], reverse=True)
     return rows

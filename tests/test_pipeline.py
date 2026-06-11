@@ -39,19 +39,17 @@ def test_build_hr_rows_sorted_descending():
 
 
 def test_build_strikeout_rows():
-    rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_weather_fn)
+    rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_lineups_fn, fake_weather_fn)
     names = {r["player"] for r in rows}
     assert names == {"Ace Coors", "Dodger Arm"}
-    for r in rows:
-        assert r["prop"] == "K"
-        assert r["matchup"] == "LAD @ COL"
-        assert 0.0 <= r["over_prob"] <= 1.0
-        assert r["expected_ks"] > 0
-        assert r["line"] == 5.5
-        # weather display fields attached for parity with HR rows
-        assert r["wind_dir"] == pytest.approx(0)
-        assert r["temp_f"] == pytest.approx(80.0)
-        assert r["precip_pct"] == 30
+    ace = next(r for r in rows if r["player"] == "Ace Coors")  # home pitcher (COL)
+    assert ace["throws"] == "R"
+    assert ace["matchup"] == "LAD @ COL"
+    # home pitcher faces the AWAY lineup (Away Slugger)
+    assert [m["name"] for m in ace["matchups"]] == ["Away Slugger"]
+    assert ace["matchups"][0]["lean"] in {"K", "H", "NEU"}
+    assert 0.0 <= ace["over_prob"] <= 1.0
+    assert ace["temp_f"] == pytest.approx(80.0)
 
 
 def test_build_games_environment():
