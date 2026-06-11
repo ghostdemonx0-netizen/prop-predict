@@ -74,8 +74,6 @@ export default function Home() {
         <p className="mt-3 flex items-center gap-2" style={{ color: "var(--muted)", fontSize: "0.82rem" }}>
           <span className="live-dot" />
           <span className="num">{data.date}</span>
-          <span>·</span>
-          <span>updated {new Date(data.updated).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
         </p>
       </header>
 
