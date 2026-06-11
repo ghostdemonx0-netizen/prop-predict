@@ -24,6 +24,7 @@ def test_build_hr_rows_produces_expected_fields():
     assert row["player"] == "Big Bopper"
     assert row["prop"] == "HR"
     assert row["park"] == "COL"
+    assert row["matchup"] == "LAD @ COL"
     base = 1 - (1 - 30 / 600) ** 4.3
     assert 0.0 < row["probability"] <= 1.0
     assert row["probability"] > base  # Coors + wind out + heat + form + matchup all boost
@@ -53,6 +54,7 @@ def test_build_strikeout_rows():
     assert names == {"Ace Coors", "Dodger Arm"}
     for r in rows:
         assert r["prop"] == "K"
+        assert r["matchup"] == "LAD @ COL"
         assert 0.0 <= r["over_prob"] <= 1.0
         assert r["expected_ks"] > 0
         assert r["line"] == 5.5

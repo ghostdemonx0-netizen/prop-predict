@@ -10,6 +10,7 @@ export type BoardRow = {
   prob: number; // probability or over_prob
   detail: string; // e.g. "@ COL" or "5.5 Ks"
   href: string;
+  matchup?: string; // "AWAY @ HOME" — game grouping for the List view
   hand?: string; // batter (RHB/LHB/SW) or pitcher (RHP/LHP) handedness
   windOut?: number; // mph toward center field (+out / -in) — fallback if no direction
   windMph?: number; // true wind speed
@@ -127,32 +128,52 @@ export function PropBoard({ rows, mode }: { rows: BoardRow[]; mode: ViewMode }) 
     </table>
   );
 
-  const List = () => (
-    <div>
-      {rows.map((r, i) => (
-        <Link
-          key={r.player}
-          href={r.href}
-          className="rise"
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "0.7rem 0.25rem",
-            borderBottom: "1px solid var(--line)",
-            color: "var(--text)",
-            textDecoration: "none",
-            animationDelay: `${i * 35}ms`,
-          }}
-        >
-          <span style={{ fontWeight: 600 }}>
-            {r.player} <span style={{ color: "var(--muted)", fontWeight: 400 }}>{r.detail}</span>
-          </span>
-          <span className="stat">{pct(r.prob)}</span>
-        </Link>
-      ))}
-    </div>
+  const Row = (r: BoardRow) => (
+    <Link
+      key={r.player}
+      href={r.href}
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "0.6rem 0.25rem",
+        borderBottom: "1px solid var(--line)",
+        color: "var(--text)",
+        textDecoration: "none",
+      }}
+    >
+      <span style={{ fontWeight: 600 }}>
+        {r.player} <span style={{ color: "var(--muted)", fontWeight: 400 }}>{r.detail}</span>
+      </span>
+      <span className="stat">{pct(r.prob)}</span>
+    </Link>
   );
+
+  const List = () => {
+    // Group rows by matchup, preserving the global high->low order. Because
+    // `rows` arrives sorted by probability, groups appear best-game first.
+    const groups: { key: string; rows: BoardRow[] }[] = [];
+    const seen = new Map<string, number>();
+    for (const r of rows) {
+      const key = r.matchup ?? "Other";
+      if (!seen.has(key)) {
+        seen.set(key, groups.length);
+        groups.push({ key, rows: [] });
+      }
+      groups[seen.get(key)!].rows.push(r);
+    }
+    return (
+      <div>
+        <div className="eyebrow" style={{ marginBottom: "0.6rem" }}>Matchups</div>
+        {groups.map((g) => (
+          <div key={g.key} className="rise" style={{ marginBottom: "1.1rem" }}>
+            <div className="matchup-head">{g.key}</div>
+            {g.rows.map(Row)}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   if (mode === "table") return <Table />;
   if (mode === "list") return <List />;

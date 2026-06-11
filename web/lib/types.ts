@@ -12,6 +12,7 @@ export type HrRow = {
   player: string;
   team: string;
   park: string;
+  matchup?: string; // "AWAY @ HOME"
   probability: number;
   wind_out_mph: number;
   weather_mult: number;
@@ -28,6 +29,7 @@ export type HrRow = {
 export type KRow = {
   player: string;
   team: string;
+  matchup?: string; // "AWAY @ HOME"
   expected_ks: number;
   line: number;
   over_prob: number;

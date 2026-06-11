@@ -261,6 +261,17 @@ a { color: var(--green); }
 }
 .wx-chip .num { font-weight: 700; }
 
+/* ---- list matchup section header ---- */
+.matchup-head {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  padding: 0.3rem 0 0.2rem;
+  border-bottom: 1px solid var(--line-strong);
+  margin-bottom: 0.1rem;
+}
+
 /* ---- handedness + matchup spheres + lineup ---- */
 .hand {
   font-size: 0.6rem;
