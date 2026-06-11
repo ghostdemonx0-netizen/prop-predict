@@ -53,7 +53,7 @@ export default function Home() {
   const dateQ = selectedDate ? `?date=${selectedDate}` : "";
 
   const hrRows: BoardRow[] = data.hr.map((r) => ({
-    id: String(r.player_id ?? r.player),
+    id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
     player: r.player,
     team: r.team,
     prob: r.probability,
@@ -70,7 +70,7 @@ export default function Home() {
     precipPct: r.precip_pct,
   }));
   const kRows: BoardRow[] = data.strikeouts.map((r) => ({
-    id: String(r.player_id ?? r.player),
+    id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
     player: r.player,
     team: r.team,
     prob: r.over_prob,

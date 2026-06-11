@@ -25,6 +25,7 @@ export type HrRow = {
   bats?: string; // L / R / S
   vs?: Matchup; // the pitcher this batter faces
   player_id?: number;
+  game_id?: number;
   matchup_mult?: number; // platoon adjustment vs this starter
   pitcher_mult?: number; // opposing starter's HR quality
 };
@@ -44,6 +45,7 @@ export type KRow = {
   throws?: string; // L / R
   matchups?: Matchup[]; // the opposing lineup this pitcher faces
   player_id?: number;
+  game_id?: number;
 };
 
 export type Game = {
