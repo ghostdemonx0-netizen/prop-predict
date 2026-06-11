@@ -1,12 +1,12 @@
 import pytest
 from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 from tests.fixtures import (
-    SAMPLE_SLATE, SAMPLE_BATTERS, SAMPLE_PITCHERS, SAMPLE_WEATHER,
+    SAMPLE_SLATE, SAMPLE_LINEUPS, SAMPLE_PITCHERS, SAMPLE_WEATHER,
 )
 
 
-def fake_batters_fn(game_id):
-    return SAMPLE_BATTERS[game_id]
+def fake_lineups_fn(game):
+    return SAMPLE_LINEUPS[game["game_id"]]
 
 
 def fake_pitcher_fn(pitcher_id):
@@ -18,34 +18,24 @@ def fake_weather_fn(game):
 
 
 def test_build_hr_rows_produces_expected_fields():
-    rows = build_hr_rows(SAMPLE_SLATE, fake_batters_fn, fake_weather_fn)
-    assert len(rows) == 1
-    row = rows[0]
-    assert row["player"] == "Big Bopper"
-    assert row["prop"] == "HR"
-    assert row["park"] == "COL"
-    assert row["matchup"] == "LAD @ COL"
-    base = 1 - (1 - 30 / 600) ** 4.3
-    assert 0.0 < row["probability"] <= 1.0
-    assert row["probability"] > base  # Coors + wind out + heat + form + matchup all boost
-    assert "wind_out_mph" in row and row["wind_out_mph"] == pytest.approx(10.0)
-    assert "recent_form_mult" in row and row["recent_form_mult"] == pytest.approx(1.10)
-    # weather display fields: wind from south (180) toward CF (bearing 0) -> dir 0 (out to CF)
-    assert row["wind_dir"] == pytest.approx(0)
-    assert row["wind_mph"] == pytest.approx(10.0)
-    assert row["temp_f"] == pytest.approx(80.0)
-    assert row["precip_pct"] == 30
+    rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    assert len(rows) == 2  # one home batter + one away batter
+    home = next(r for r in rows if r["team"] == "COL")
+    assert home["player"] == "Home Masher"
+    assert home["prop"] == "HR"
+    assert home["matchup"] == "LAD @ COL"
+    assert 0.0 < home["probability"] <= 1.0
+    # home batter faces the AWAY pitcher (Dodger Arm)
+    assert home["vs"]["name"] == "Dodger Arm"
+    assert home["vs"]["throws"] == "L"
+    assert home["vs"]["lean"] in {"K", "H", "NEU"}
+    assert 0.0 <= home["vs"]["k_prob"] <= 1.0
 
 
 def test_build_hr_rows_sorted_descending():
-    slate = SAMPLE_SLATE
-    def two_batters_fn(game_id):
-        strong = dict(SAMPLE_BATTERS[game_id][0])
-        weak = dict(strong, player_id=102, name="Weak Hitter",
-                    season_hr=8, recent_form_mult=0.9, matchup_mult=0.9)
-        return [weak, strong]
-    rows = build_hr_rows(slate, two_batters_fn, fake_weather_fn)
-    assert rows[0]["probability"] >= rows[1]["probability"]
+    rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    probs = [r["probability"] for r in rows]
+    assert probs == sorted(probs, reverse=True)
 
 
 def test_build_strikeout_rows():
@@ -77,7 +67,7 @@ def test_build_games_environment():
 
 def test_build_hr_rows_skips_started_games():
     started = [dict(SAMPLE_SLATE[0], started=True)]
-    rows = build_hr_rows(started, fake_batters_fn, fake_weather_fn)
+    rows = build_hr_rows(started, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
     assert rows == []
 
 

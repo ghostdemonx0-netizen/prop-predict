@@ -16,6 +16,7 @@ Fetcher contracts:
 from model.parks import get_park, hr_park_factor
 from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf
 from model.projections import hr_probability, expected_strikeouts, poisson_over_prob
+from model.matchup import matchup
 
 
 def _game_weather(game: dict, weather_fn) -> dict:
@@ -34,43 +35,48 @@ def _game_weather(game: dict, weather_fn) -> dict:
     }
 
 
-def build_hr_rows(slate: list[dict], batters_fn, weather_fn) -> list[dict]:
-    """Return HR projection rows for all not-yet-started games, sorted desc."""
+def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn) -> list[dict]:
+    """HR rows for all not-yet-started games, each with its opposing-pitcher matchup."""
     rows: list[dict] = []
     for game in slate:
         if game.get("started"):
             continue
         w = _game_weather(game, weather_fn)
-        wind_out = w["wind_out_mph"]
-        weather_mult = weather_hr_multiplier(wind_out, w["temp_f"], w["park"]["dome"])
+        weather_mult = weather_hr_multiplier(w["wind_out_mph"], w["temp_f"], w["park"]["dome"])
         park_mult = hr_park_factor(game["park_team"])
-        for b in batters_fn(game["game_id"]):
-            prob = hr_probability(
-                season_hr=b["season_hr"],
-                season_pa=b["season_pa"],
-                recent_form_mult=b.get("recent_form_mult", 1.0),
-                matchup_mult=b.get("matchup_mult", 1.0),
-                park_mult=park_mult,
-                weather_mult=weather_mult,
-                expected_pa=b.get("expected_pa", 4.0),
-            )
-            rows.append({
-                "prop": "HR",
-                "game_id": game["game_id"],
-                "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
-                "player": b["name"],
-                "team": b["team"],
-                "park": game["park_team"],
-                "probability": prob,
-                "wind_out_mph": wind_out,
-                "weather_mult": weather_mult,
-                "park_mult": park_mult,
-                "recent_form_mult": b.get("recent_form_mult", 1.0),
-                "wind_mph": w["wind_mph"],
-                "wind_dir": w["wind_dir"],
-                "temp_f": w["temp_f"],
-                "precip_pct": w["precip_pct"],
-            })
+        lineups = lineups_fn(game)
+        home_p = pitcher_fn(game["home_pitcher_id"]) if game.get("home_pitcher_id") else None
+        away_p = pitcher_fn(game["away_pitcher_id"]) if game.get("away_pitcher_id") else None
+        # home batters face the away starter; away batters face the home starter
+        for side, opp in (("home", away_p), ("away", home_p)):
+            team = game.get(side, "?")
+            for b in lineups.get(side, []):
+                prob = hr_probability(
+                    season_hr=b["season_hr"], season_pa=b["season_pa"],
+                    recent_form_mult=b.get("recent_form_mult", 1.0),
+                    matchup_mult=b.get("matchup_mult", 1.0),
+                    park_mult=park_mult, weather_mult=weather_mult,
+                    expected_pa=b.get("expected_pa", 4.0),
+                )
+                vs = None
+                if opp:
+                    m = matchup(
+                        b_k=b.get("k_rate", 0.22), b_hit=b.get("hit_rate", 0.22),
+                        p_k=opp.get("k_per_bf", 0.22), p_hit=opp.get("hit_allowed_rate", 0.22),
+                        bats=b.get("bats", "R"), throws=opp.get("throws", "R"),
+                    )
+                    vs = {"name": opp["name"], "throws": opp.get("throws", "R"), **m}
+                rows.append({
+                    "prop": "HR", "game_id": game["game_id"],
+                    "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
+                    "player": b["name"], "team": team, "park": game["park_team"],
+                    "probability": prob, "wind_out_mph": w["wind_out_mph"],
+                    "weather_mult": weather_mult, "park_mult": park_mult,
+                    "recent_form_mult": b.get("recent_form_mult", 1.0),
+                    "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
+                    "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
+                    "bats": b.get("bats", "R"), "vs": vs,
+                })
     rows.sort(key=lambda r: r["probability"], reverse=True)
     return rows
 
