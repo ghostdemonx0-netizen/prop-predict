@@ -39,7 +39,7 @@ export default function Home() {
     prob: r.probability,
     detail: `@ ${r.park}`,
     href: `/player/hr/${encodeURIComponent(r.player)}`,
-    hand: batHand(r.bats),
+    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
     windDir: r.wind_dir,
