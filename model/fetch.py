@@ -150,3 +150,18 @@ def get_lineup_batter_ids(game_id: int) -> list[int]:
         order = box.get(side, {}).get("battingOrder", []) or []
         ids.extend(int(pid) for pid in order)
     return ids
+
+
+def get_player_names(player_ids: list[int]) -> dict[int, str]:
+    """Map MLBAM player ids to 'First Last' names via the MLB Stats API.
+
+    Unknown ids are omitted from the returned dict. One batched request.
+    """
+    ids = [pid for pid in player_ids if pid]
+    if not ids:
+        return {}
+    data = statsapi.get("people", {"personIds": ",".join(str(i) for i in ids)})
+    out: dict[int, str] = {}
+    for person in data.get("people", []):
+        out[int(person["id"])] = person.get("fullName", str(person["id"]))
+    return out

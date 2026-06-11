@@ -39,3 +39,10 @@ def test_build_pitcher_profile_smoke():
     prof = build_pitcher_profile(player_id=669373, season=2026)
     assert prof["k_per_bf"] > 0
     assert prof["expected_bf"] > 0
+
+
+def test_get_player_names_smoke():
+    from model.fetch import get_player_names
+    names = get_player_names([592450, 669373])  # Judge, Skubal
+    assert names[592450] == "Aaron Judge"
+    assert names[669373] == "Tarik Skubal"
