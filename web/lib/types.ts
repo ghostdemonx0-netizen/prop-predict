@@ -30,6 +30,7 @@ export type HrRow = {
   game_id?: number;
   matchup_mult?: number; // platoon adjustment vs this starter
   pitcher_mult?: number; // opposing starter's HR quality
+  bvp_mult?: number; // career batter-vs-pitcher history dial (capped ±10%)
 };
 
 export type KRow = {

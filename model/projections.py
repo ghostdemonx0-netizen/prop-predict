@@ -14,6 +14,7 @@ def hr_probability(
     park_mult: float = 1.0,
     weather_mult: float = 1.0,
     pitcher_mult: float = 1.0,
+    bvp_mult: float = 1.0,
     expected_pa: float = 4.0,
     league_hr_rate: float = LEAGUE_HR_RATE,
     regression_pa: float = 300.0,
@@ -27,13 +28,14 @@ def hr_probability(
     (calibration). Set ``regression_pa=0`` to use the raw rate.
 
     The regressed rate then gets multiplicative adjustments (each centered
-    at 1.0) and is converted into a "1 or more in ``expected_pa`` chances"
-    probability.
+    at 1.0 — park, weather, recent form, pitcher quality, platoon, and
+    career bvp history dial) and is converted into a "1 or more in
+    ``expected_pa`` chances" probability.
     """
     if season_pa <= 0:
         return 0.0
     base = (season_hr + league_hr_rate * regression_pa) / (season_pa + regression_pa)
-    rate = base * recent_form_mult * matchup_mult * park_mult * weather_mult * pitcher_mult
+    rate = base * recent_form_mult * matchup_mult * park_mult * weather_mult * pitcher_mult * bvp_mult
     rate = max(0.0, min(rate, 1.0))
     return 1 - (1 - rate) ** expected_pa
 
@@ -79,6 +81,30 @@ def expected_pa_for_slot(slot: int) -> float:
     League-average figures; out-of-range slots get a neutral 4.0.
     """
     return PA_BY_SLOT[slot] if 0 <= slot < len(PA_BY_SLOT) else 4.0
+
+
+def bvp_hr_mult(
+    hr: float,
+    pa: float,
+    *,
+    league_hr_rate: float = LEAGUE_HR_RATE,
+    regression_pa: float = 200.0,
+    min_pa: float = 1.0,
+    lo: float = 0.90,
+    hi: float = 1.10,
+) -> float:
+    """Career batter-vs-THIS-pitcher history dial (user-tuned 2026-06-11).
+
+    The career HR rate against this pitcher is regressed toward league
+    average with ``regression_pa`` phantom PAs, expressed as a multiplier
+    vs league, clamped to [0.90, 1.10] (a +/-10%% cap). Counts from the
+    first career meeting (``min_pa=1``); the shrinkage keeps tiny samples
+    near 1.0 on its own (1 PA moves the dial ~0.5%%).
+    """
+    if pa < min_pa:
+        return 1.0
+    reg = (hr + league_hr_rate * regression_pa) / (pa + regression_pa)
+    return max(lo, min(reg / league_hr_rate, hi))
 
 
 def pitcher_hr_mult(

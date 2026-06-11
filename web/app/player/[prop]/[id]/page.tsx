@@ -186,6 +186,14 @@ export default function PlayerPage({
               } ${batLabel(r.bats)}-vs-${pitLabel(r.vs.throws)} platoon matchup.`}
             />
           )}
+          {r.vs && r.vs.bvp && r.vs.bvp.pa > 0 && r.bvp_mult !== undefined && (
+            <Factor
+              icon="📜"
+              label={`History · vs ${r.vs.name}`}
+              mult={r.bvp_mult}
+              note={`${r.vs.bvp.hits}-for-${r.vs.bvp.ab} career${r.vs.bvp.hr > 0 ? ` with ${r.vs.bvp.hr} HR` : ""} — history nudges the number, capped at ±10%.`}
+            />
+          )}
         </div>
 
         <div className="panel rise" style={{ animationDelay: "180ms" }}>
@@ -197,7 +205,7 @@ export default function PlayerPage({
           <div className="panel rise" style={{ animationDelay: "240ms" }}>
             <div className="eyebrow mb-1">Pitcher matchup</div>
             <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
-              Model read from both players&apos; rates + handedness — not head-to-head history.
+              Model read from both players&apos; rates + handedness; career history adds a small capped nudge (±10%).
             </p>
             <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
               <span className="bname">

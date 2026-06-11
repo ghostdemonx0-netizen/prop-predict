@@ -123,3 +123,36 @@ def test_hr_rows_wire_pitcher_platoon_slot_and_park():
 def test_k_rows_carry_player_id():
     rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_lineups_fn, fake_weather_fn)
     assert {r["player_id"] for r in rows} == {201, 202}
+
+
+def fake_bvp_fn(batter_id, pitcher_id):
+    if batter_id == 101 and pitcher_id == 202:
+        return {"pa": 10, "ab": 10, "hits": 4, "hr": 2, "k": 1, "avg": ".400"}
+    return None
+
+
+def test_hr_rows_apply_capped_bvp_dial():
+    from model.projections import bvp_hr_mult
+    rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn, fake_bvp_fn)
+    home = next(r for r in rows if r["team"] == "COL")
+    assert home["bvp_mult"] == pytest.approx(bvp_hr_mult(2, 10))  # capped 1.10
+    assert home["vs"]["bvp"]["hr"] == 2
+    away = next(r for r in rows if r["team"] == "LAD")
+    assert away["bvp_mult"] == pytest.approx(1.0)  # no history -> neutral
+    assert away["vs"]["bvp"] is None
+
+
+def test_hr_rows_without_bvp_fn_are_neutral():
+    rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    assert all(r["bvp_mult"] == pytest.approx(1.0) for r in rows)
+
+
+def test_k_matchups_carry_bvp_display_only():
+    from model.projections import lineup_expected_ks
+    from model.matchup import strikeout_prob
+    rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_lineups_fn, fake_weather_fn, fake_bvp_fn)
+    dodger = next(r for r in rows if r["player"] == "Dodger Arm")  # pid 202 faces home lineup (101)
+    assert dodger["matchups"][0]["bvp"]["pa"] == 10
+    # K math unchanged by bvp: lambda still the pure lineup-adjusted value
+    expected = strikeout_prob(0.22, 0.25, bats="R", throws="L") * 23
+    assert dodger["expected_ks"] == pytest.approx(expected)

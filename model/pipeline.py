@@ -19,7 +19,7 @@ from model.parks import get_park, hr_park_factor
 from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf
 from model.projections import (
     hr_probability, expected_strikeouts, poisson_over_prob,
-    lineup_expected_ks, expected_pa_for_slot, pitcher_hr_mult,
+    lineup_expected_ks, expected_pa_for_slot, pitcher_hr_mult, bvp_hr_mult,
 )
 from model.matchup import matchup, hr_platoon_mult
 
@@ -40,8 +40,11 @@ def _game_weather(game: dict, weather_fn) -> dict:
     }
 
 
-def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn) -> list[dict]:
-    """HR rows for all not-yet-started games, each with its opposing-pitcher matchup."""
+def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=None) -> list[dict]:
+    """HR rows for all not-yet-started games, each with its opposing-pitcher matchup.
+
+    bvp_fn(batter_id, pitcher_id) -> {"pa","ab","hits","hr","k","avg"} | None (career head-to-head; display + capped HR dial)
+    """
     rows: list[dict] = []
     for game in slate:
         if game.get("started"):
@@ -61,10 +64,12 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn) -> list
             for slot, b in enumerate(lineups.get(side, [])):
                 platoon = hr_platoon_mult(b.get("bats", "R"), opp.get("throws", "R")) if opp else 1.0
                 p_mult = pitcher_hr_mult(opp.get("hr_allowed_rate", 0.033), opp.get("bf", 0)) if opp else 1.0
+                bvp = bvp_fn(b.get("player_id"), opp.get("player_id")) if (bvp_fn and opp) else None
+                b_mult = bvp_hr_mult(bvp["hr"], bvp["pa"]) if bvp else 1.0
                 prob = hr_probability(
                     season_hr=b["season_hr"], season_pa=b["season_pa"],
                     recent_form_mult=b.get("recent_form_mult", 1.0),
-                    matchup_mult=platoon, pitcher_mult=p_mult,
+                    matchup_mult=platoon, pitcher_mult=p_mult, bvp_mult=b_mult,
                     park_mult=eff_park, weather_mult=weather_mult,
                     expected_pa=expected_pa_for_slot(slot),
                 )
@@ -75,7 +80,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn) -> list
                         p_k=opp.get("k_per_bf", 0.22), p_hit=opp.get("hit_allowed_rate", 0.22),
                         bats=b.get("bats", "R"), throws=opp.get("throws", "R"),
                     )
-                    vs = {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R"), **m}
+                    vs = {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R"), "bvp": bvp, **m}
                 rows.append({
                     "prop": "HR", "game_id": game["game_id"],
                     "player_id": b.get("player_id"),
@@ -83,7 +88,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn) -> list
                     "player": b["name"], "team": team, "park": game["park_team"],
                     "probability": prob, "wind_out_mph": w["wind_out_mph"],
                     "weather_mult": weather_mult, "park_mult": eff_park,
-                    "matchup_mult": platoon, "pitcher_mult": p_mult,
+                    "matchup_mult": platoon, "pitcher_mult": p_mult, "bvp_mult": b_mult,
                     "recent_form_mult": b.get("recent_form_mult", 1.0),
                     "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
                     "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
@@ -93,7 +98,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn) -> list
     return rows
 
 
-def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn) -> list[dict]:
+def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn, bvp_fn=None) -> list[dict]:
     """Strikeout rows for both starters, each with the opposing lineup matchup read."""
     rows: list[dict] = []
     for game in slate:
@@ -117,7 +122,7 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn) 
                     p_k=p.get("k_per_bf", 0.22), p_hit=p.get("hit_allowed_rate", 0.22),
                     bats=b.get("bats", "R"), throws=p.get("throws", "R"),
                 )
-                matchups.append({"name": b["name"], "player_id": b.get("player_id"), "bats": b.get("bats", "R"), **m})
+                matchups.append({"name": b["name"], "player_id": b.get("player_id"), "bats": b.get("bats", "R"), "bvp": bvp_fn(b.get("player_id"), pid) if bvp_fn else None, **m})
             lam = lineup_expected_ks([m["k_prob"] for m in matchups], p["expected_bf"])
             if lam is None:
                 lam = expected_strikeouts(p["k_per_bf"], p["expected_bf"], p.get("opponent_k_mult", 1.0))
