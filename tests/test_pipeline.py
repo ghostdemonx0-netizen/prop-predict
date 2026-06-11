@@ -28,6 +28,7 @@ def test_build_hr_rows_produces_expected_fields():
     assert 0.0 < row["probability"] <= 1.0
     assert row["probability"] > base  # Coors + wind out + heat + form + matchup all boost
     assert "wind_out_mph" in row and row["wind_out_mph"] == pytest.approx(10.0)
+    assert "recent_form_mult" in row and row["recent_form_mult"] == pytest.approx(1.10)
 
 
 def test_build_hr_rows_sorted_descending():

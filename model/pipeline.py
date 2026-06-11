@@ -51,6 +51,7 @@ def build_hr_rows(slate: list[dict], batters_fn, weather_fn) -> list[dict]:
                 "wind_out_mph": wind_out,
                 "weather_mult": weather_mult,
                 "park_mult": park_mult,
+                "recent_form_mult": b.get("recent_form_mult", 1.0),
             })
     rows.sort(key=lambda r: r["probability"], reverse=True)
     return rows
