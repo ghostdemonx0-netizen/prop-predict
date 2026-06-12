@@ -116,7 +116,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
             </span>
           )}
           {r.bvp && r.bvp.pa > 0 && (
-            <span className="hand" title="career history vs this pitcher (context only — not part of the math)">
+            <span className="hand" title="career history vs this pitcher">
               {r.bvp.hits}-{r.bvp.ab}{r.bvp.hr > 0 ? ` · ${r.bvp.hr} HR` : ""}
             </span>
           )}

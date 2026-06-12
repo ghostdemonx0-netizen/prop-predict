@@ -229,7 +229,7 @@ export default function PlayerPage({
               <p className="factor-note" style={{ marginBottom: 0 }}>
                 Career vs {r.vs.name}: <strong style={{ color: "var(--text)" }}>{r.vs.bvp.hits}-for-{r.vs.bvp.ab}</strong>
                 {r.vs.bvp.hr > 0 && <> · <strong style={{ color: "var(--text)" }}>{r.vs.bvp.hr} HR</strong></>}
-                {" "}· {r.vs.bvp.k} K{r.vs.bvp.pa < 10 ? " · small sample — context only" : ""}
+                {" "}· {r.vs.bvp.k} K
               </p>
             ) : (
               <p className="factor-note" style={{ marginBottom: 0 }}>No career history against him yet.</p>
