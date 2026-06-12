@@ -31,7 +31,35 @@ function EnvSphere({ env }: { env: number }) {
   );
 }
 
-export function ParksBoard({ games, hrRows = [], kRows = [] }: { games: Game[]; hrRows?: BoardRow[]; kRows?: BoardRow[] }) {
+/** The card face: matchup, env sphere, park/weather chips (shared by both variants). */
+function Face({ g }: { g: Game }) {
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <span className="display" style={{ fontWeight: 700, fontSize: "1.02rem" }}>
+          {g.matchup}
+        </span>
+        <EnvSphere env={g.env} />
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-4" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
+        <span>🏟️ Park <b style={{ color: "var(--text)" }}>{signed(g.park_mult)}</b></span>
+        <span>🌬️ Weather <b style={{ color: "var(--text)" }}>{signed(g.weather_mult)}</b></span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-3" style={{ fontSize: "0.74rem", color: "var(--muted)" }}>
+        {typeof g.wind_dir === "number" && typeof g.wind_mph === "number" && (
+          <span className="inline-flex items-center gap-1">
+            <span style={{ display: "inline-block", fontWeight: 800, transform: `rotate(${g.wind_dir}deg)`, color: arrowColor(g.wind_dir) }}>↑</span>
+            {Math.round(g.wind_mph)}mph <span style={{ color: "var(--muted)" }}>{windText(g.wind_dir)}</span>
+          </span>
+        )}
+        {typeof g.temp_f === "number" && <span>🌡️ {Math.round(g.temp_f)}°</span>}
+        {(g.precip_pct ?? 0) >= 20 && <span style={{ color: "#7cc7ff" }}>💧 {g.precip_pct}%</span>}
+      </div>
+    </>
+  );
+}
+
+export function ParksBoard({ games, hrRows = [], kRows = [], expandable = false }: { games: Game[]; hrRows?: BoardRow[]; kRows?: BoardRow[]; expandable?: boolean }) {
   if (!games || games.length === 0) {
     return (
       <div className="panel" style={{ color: "var(--muted)", textAlign: "center" }}>
@@ -51,31 +79,18 @@ export function ParksBoard({ games, hrRows = [], kRows = [] }: { games: Game[]; 
           const boost = g.env - 1;
           const edge = boost > 0.05 ? "var(--green)" : boost < -0.05 ? "var(--red)" : "var(--amber)";
           return (
+            expandable ? (
             <details key={g.game_id} className="card rise" style={{ borderLeftColor: edge, animationDelay: `${i * 45}ms` }}>
               <summary style={{ cursor: "pointer" }}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="display" style={{ fontWeight: 700, fontSize: "1.02rem" }}>
-                  {g.matchup}
-                </span>
-                <EnvSphere env={g.env} />
-              </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-4" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
-                <span>🏟️ Park <b style={{ color: "var(--text)" }}>{signed(g.park_mult)}</b></span>
-                <span>🌬️ Weather <b style={{ color: "var(--text)" }}>{signed(g.weather_mult)}</b></span>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-3" style={{ fontSize: "0.74rem", color: "var(--muted)" }}>
-                {typeof g.wind_dir === "number" && typeof g.wind_mph === "number" && (
-                  <span className="inline-flex items-center gap-1">
-                    <span style={{ display: "inline-block", fontWeight: 800, transform: `rotate(${g.wind_dir}deg)`, color: arrowColor(g.wind_dir) }}>↑</span>
-                    {Math.round(g.wind_mph)}mph <span style={{ color: "var(--muted)" }}>{windText(g.wind_dir)}</span>
-                  </span>
-                )}
-                {typeof g.temp_f === "number" && <span>🌡️ {Math.round(g.temp_f)}°</span>}
-                {(g.precip_pct ?? 0) >= 20 && <span style={{ color: "#7cc7ff" }}>💧 {g.precip_pct}%</span>}
-              </div>
+                <Face g={g} />
               </summary>
               <GameBreakdown matchup={g.matchup} hrRows={hrRows} kRows={kRows} />
             </details>
+            ) : (
+            <div key={g.game_id} className="card rise" style={{ borderLeftColor: edge, animationDelay: `${i * 45}ms` }}>
+              <Face g={g} />
+            </div>
+            )
           );
         })}
       </div>

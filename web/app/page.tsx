@@ -153,7 +153,7 @@ export default function Home() {
       </header>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rise" style={{ animationDelay: "60ms" }}>
-        {mode === "parks" ? (
+        {mode === "parks" || mode === "hub" ? (
           <span />
         ) : (
           <div className="pillbar">
@@ -167,8 +167,8 @@ export default function Home() {
         <ViewSwitcher mode={mode} onChange={setMode} />
       </div>
 
-      {mode === "parks" ? (
-        <ParksBoard games={data.games ?? []} hrRows={hrRows} kRows={kRows} />
+      {mode === "parks" || mode === "hub" ? (
+        <ParksBoard games={data.games ?? []} hrRows={hrRows} kRows={kRows} expandable={mode === "hub"} />
       ) : (
         <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={mode} kind={prop === "hr" ? "hr" : "k"} />
       )}
