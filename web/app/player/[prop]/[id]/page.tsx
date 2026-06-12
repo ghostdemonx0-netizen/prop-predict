@@ -221,7 +221,13 @@ export default function PlayerPage({
             </p>
             <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
               <span className="bname">
-                {r.vs.name} <span className="hand">{pitLabel(r.vs.throws)}</span>
+                <Link
+                  href={`/player/k/${r.vs.player_id ?? encodeURIComponent(r.vs.name)}${date ? `?date=${date}` : ""}`}
+                  className="linklike"
+                >
+                  {r.vs.name}
+                </Link>{" "}
+                <span className="hand">{pitLabel(r.vs.throws)}</span>
               </span>
               <MatchupSphere lean={r.vs.lean} prob={r.vs.prob} />
             </div>
@@ -288,10 +294,16 @@ export default function PlayerPage({
           </p>
           <div className="lineup">
             {r.matchups.map((m, i) => (
-              <div className="lineup-row" key={m.name}>
+              <div className="lineup-row" key={m.player_id ?? m.name}>
                 <span className="ord">{i + 1}</span>
                 <span className="bname">
-                  {m.name} <span className="hand">{batLabel(m.bats)}</span>
+                  <Link
+                    href={`/player/hr/${m.player_id ?? encodeURIComponent(m.name)}${date ? `?date=${date}` : ""}`}
+                    className="linklike"
+                  >
+                    {m.name}
+                  </Link>{" "}
+                  <span className="hand">{batLabel(m.bats)}</span>
                   {m.bvp && m.bvp.pa > 0 && (
                     <span className="hand" title="career vs this pitcher">{m.bvp.hits}-{m.bvp.ab}{m.bvp.hr > 0 ? ` · ${m.bvp.hr} HR` : ""}</span>
                   )}
