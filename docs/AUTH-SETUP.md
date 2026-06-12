@@ -9,8 +9,10 @@
 
 ## B. Keys
 5. Clerk dashboard → API Keys: copy the **Development** pair into `web/.env.local` (copy `web/.env.local.example` as the template).
-6. Copy the **Production** pair into Vercel: project prop-predict → Settings → Environment Variables → add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` (Production), plus `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`.
-   - Production instance in Clerk requires the domain: Clerk dashboard → Domains → add `prop-predict.vercel.app` (follow its instructions).
+6. **DECISION POINT — Clerk production instances require a CUSTOM domain** (DNS records you control; `*.vercel.app` addresses can't be used for this). Two options:
+   - **(a) Stay on Development keys for now (recommended while invite-only/small):** put the SAME Development pair into Vercel env (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, plus `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`). Limits: ~100 users and a small "development mode" badge — fine for friends-and-family; revisit at public launch.
+   - **(b) Buy a custom domain** (e.g. proppredict.com, ~$10-15/yr): add it to Vercel (Domains) AND to Clerk (which gives CNAME records to add) — then use the Production key pair in Vercel env. This is the eventual end-state anyway; costs money, so it's the owner's call.
+
 
 ## C. Local preview (standing rule: preview before production)
 7. `cd web && npm run dev` → localhost:3000 must show the themed sign-in.
@@ -18,7 +20,7 @@
 9. Logged-out check: `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/data/latest.json` → expect 404/40x/redirect, NOT 200-with-data. ALSO open the JSON URL in a private window → must not show numbers.
 
 ## D. THE SIDE-DOOR TEST (production, after deploy)
-10. Merge `auth-protection` → main, push; deploy (`cd web && npx vercel deploy --prod`).
+10. Merge `auth-protection` → main, push; deploy (`cd web && npx vercel deploy --prod`; if this machine ever loses the link, run `npx vercel link` first).
 11. Logged out: `curl -sI https://prop-predict.vercel.app/` → not the board (redirect to sign-in).
 12. Logged out: `curl -s https://prop-predict.vercel.app/data/latest.json | head -c 200` → MUST NOT be board JSON.
     - **If this leaks** (static files bypass middleware on Vercel): activate the spec's fallback — move generated JSON out of `web/public/data` to a private dir served by a protected route handler, repoint `model/export_web.DATA_DIR`, `web/lib/data.ts` fetch paths, and the workflows' cache path. (Coded only if needed; new mini-plan at that point.)
