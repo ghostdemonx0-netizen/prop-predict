@@ -2,7 +2,7 @@
 
 import type { Game } from "../lib/types";
 import { GameBreakdown, type BoardRow } from "./PropBoard";
-import { heatColor, arrowColor, windText } from "../lib/format";
+import { heatColor, arrowColor, windText, gameTimeLabel } from "../lib/format";
 
 function signed(mult: number) {
   const v = Math.round((mult - 1) * 100);
@@ -31,14 +31,27 @@ function EnvSphere({ env }: { env: number }) {
   );
 }
 
-/** The card face: matchup, env sphere, park/weather chips (shared by both variants). */
-function Face({ g }: { g: Game }) {
+/** The card face: headline, env sphere, park/weather chips (shared by both variants). */
+function Face({ g, variant }: { g: Game; variant: "parks" | "hub" }) {
+  const time = gameTimeLabel(g.game_time);
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <span className="display" style={{ fontWeight: 700, fontSize: "1.02rem" }}>
-          {g.matchup}
-        </span>
+        {variant === "parks" ? (
+          <span>
+            <span className="display" style={{ fontWeight: 700, fontSize: "1.02rem", display: "block" }}>
+              {g.park_name ?? g.park}
+            </span>
+            <span className="num" style={{ color: "var(--muted)", fontSize: "0.78rem" }}>{g.matchup}</span>
+          </span>
+        ) : (
+          <span>
+            <span className="display" style={{ fontWeight: 700, fontSize: "1.02rem", display: "block" }}>
+              {g.matchup}
+            </span>
+            {time && <span className="num" style={{ color: "var(--muted)", fontSize: "0.78rem" }}>🕐 {time}</span>}
+          </span>
+        )}
         <EnvSphere env={g.env} />
       </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-4" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
@@ -67,28 +80,42 @@ export function ParksBoard({ games, hrRows = [], kRows = [], expandable = false 
       </div>
     );
   }
+  const ordered = expandable
+    ? [...games].sort((a, b) => (a.game_time ?? "9999").localeCompare(b.game_time ?? "9999"))
+    : games; // parks: keep best-environment-first as delivered
   return (
     <div>
-      <div className="eyebrow" style={{ marginBottom: "0.3rem" }}>Best hitting environments</div>
-      <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.8rem" }}>
-        Park + weather combined — higher means the ball carries (good for hitters), lower favors
-        pitchers. Ranked best first.
-      </p>
+      {expandable ? (
+        <>
+          <div className="eyebrow" style={{ marginBottom: "0.3rem" }}>Tonight&apos;s games · first pitch order</div>
+          <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.8rem" }}>
+            Every game on the slate — click one for the full breakdown: starters, lineups, and edges.
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="eyebrow" style={{ marginBottom: "0.3rem" }}>Park factors · best hitting environments</div>
+          <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.8rem" }}>
+            Park + weather combined — higher means the ball carries (good for hitters), lower favors
+            pitchers. Ranked best first.
+          </p>
+        </>
+      )}
       <div className="grid gap-2.5">
-        {games.map((g, i) => {
+        {ordered.map((g, i) => {
           const boost = g.env - 1;
           const edge = boost > 0.05 ? "var(--green)" : boost < -0.05 ? "var(--red)" : "var(--amber)";
           return (
             expandable ? (
             <details key={g.game_id} className="card rise" style={{ borderLeftColor: edge, animationDelay: `${i * 45}ms` }}>
               <summary style={{ cursor: "pointer" }}>
-                <Face g={g} />
+                <Face g={g} variant="hub" />
               </summary>
               <GameBreakdown matchup={g.matchup} hrRows={hrRows} kRows={kRows} />
             </details>
             ) : (
             <div key={g.game_id} className="card rise" style={{ borderLeftColor: edge, animationDelay: `${i * 45}ms` }}>
-              <Face g={g} />
+              <Face g={g} variant="parks" />
             </div>
             )
           );

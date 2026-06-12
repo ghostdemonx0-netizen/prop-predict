@@ -4,13 +4,8 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { loadProjections } from "../../../../lib/data";
 import type { Projections } from "../../../../lib/types";
-import { pct, strengthLabel, windText, arrowColor } from "../../../../lib/format";
+import { pct, strengthLabel, windText, arrowColor, gameTimeLabel } from "../../../../lib/format";
 
-function gameTime(iso?: string) {
-  if (!iso) return undefined;
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? undefined : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
-}
 function batLabel(b?: string) {
   return b === "L" ? "LHB" : b === "S" ? "Switch" : b ? "RHB" : "";
 }
@@ -157,7 +152,7 @@ export default function PlayerPage({
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
         <Back prop={prop} date={date} />
         <div className="rise">
-          <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Home Run{gameTime(r.game_time) ? ` · 🕐 ${gameTime(r.game_time)}` : ""}</p>
+          <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Home Run{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
           <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
             <span className="lo">{r.player}</span>
           </h1>
@@ -259,7 +254,7 @@ export default function PlayerPage({
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
       <Back prop={prop} date={date} />
       <div className="rise">
-        <p className="eyebrow mb-1">{r.team}{r.throws ? ` · ${pitLabel(r.throws)}` : ""} · Strikeouts{gameTime(r.game_time) ? ` · 🕐 ${gameTime(r.game_time)}` : ""}</p>
+        <p className="eyebrow mb-1">{r.team}{r.throws ? ` · ${pitLabel(r.throws)}` : ""} · Strikeouts{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
         <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
           <span className="lo">{r.player}</span>
         </h1>

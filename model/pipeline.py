@@ -166,8 +166,10 @@ def build_games(slate: list[dict], weather_fn) -> list[dict]:
         weather_mult = weather_hr_multiplier(w["wind_out_mph"], w["temp_f"], w["park"]["dome"])
         out.append({
             "game_id": game["game_id"],
+            "game_time": game.get("game_time"),
             "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
             "park": game["park_team"],
+            "park_name": w["park"]["name"],
             "park_mult": park_mult,
             "weather_mult": weather_mult,
             "env": round(park_mult * weather_mult, 3),

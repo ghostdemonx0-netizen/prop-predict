@@ -5,6 +5,7 @@ import { loadProjections, loadIndex } from "../lib/data";
 import type { Projections } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
+import { gameTimeLabel } from "../lib/format";
 import { ParksBoard } from "../components/ParksBoard";
 import { FlamingBall, ElectricBat } from "../components/Marks";
 
@@ -19,11 +20,6 @@ function oppTeam(matchup?: string, team?: string) {
   if (!parts || parts.length !== 2) return undefined;
   const [away, home] = parts;
   return team === home ? away : home;
-}
-function gameTime(iso?: string) {
-  if (!iso) return undefined;
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? undefined : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
 }
 // Standard notation: home batters read "vs AWAY", away batters read "@ HOME".
 function gameLabel(matchup?: string, team?: string) {
@@ -82,7 +78,7 @@ export default function Home() {
     prob: r.probability,
     detail: gameLabel(r.matchup, r.team) ?? `@ ${r.park}`,
     href: `/player/hr/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
-    time: gameTime(r.game_time),
+    time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
     hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
@@ -104,7 +100,7 @@ export default function Home() {
     projection: r.expected_ks.toFixed(1),
     line: r.line.toFixed(1),
     href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
-    time: gameTime(r.game_time),
+    time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
     hand: pitchHand(r.throws),

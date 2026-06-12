@@ -48,3 +48,11 @@ export function arrowColor(dir: number): string {
   const c = Math.cos((dir * Math.PI) / 180);
   return c > 0.2 ? "var(--green)" : c < -0.2 ? "var(--red)" : "var(--amber)";
 }
+
+export function gameTimeLabel(iso?: string): string | undefined {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  return isNaN(d.getTime())
+    ? undefined
+    : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+}

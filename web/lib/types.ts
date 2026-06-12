@@ -55,8 +55,10 @@ export type KRow = {
 
 export type Game = {
   game_id: number;
+  game_time?: string; // ISO start time
   matchup: string;
   park: string;
+  park_name?: string; // e.g. "Coors Field"
   park_mult: number;
   weather_mult: number;
   env: number; // park_mult * weather_mult (1.0 = neutral)

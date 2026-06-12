@@ -60,6 +60,8 @@ def test_build_games_environment():
     g = games[0]
     assert g["matchup"] == "LAD @ COL"
     assert g["park"] == "COL"
+    assert g["park_name"] == "Coors Field"
+    assert g["game_time"] == "2026-06-10T20:40:00Z"
     # COL park 1.22 x weather (10mph out, 80F -> 1.25) = 1.525
     assert g["env"] == pytest.approx(1.525, abs=1e-3)
     assert g["wind_dir"] == pytest.approx(0)
