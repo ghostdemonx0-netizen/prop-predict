@@ -8,6 +8,7 @@ import { PropBoard, type BoardRow } from "../components/PropBoard";
 import { gameTimeLabel } from "../lib/format";
 import { ParksBoard } from "../components/ParksBoard";
 import { FlamingBall, ElectricBat } from "../components/Marks";
+import { UserButton } from "@clerk/nextjs";
 
 function batHand(b?: string) {
   return b === "L" ? "LHB" : b === "S" ? "SW" : b ? "RHB" : undefined;
@@ -124,6 +125,9 @@ export default function Home() {
             <span className="lo">Prop </span><span className="hi">Predict</span>
           </h1>
           <FlamingBall />
+          <span style={{ marginLeft: "auto" }}>
+            <UserButton />
+          </span>
         </div>
         <div className="mt-3 flex items-center gap-2" style={{ color: "var(--muted)", fontSize: "0.82rem" }}>
           <span className="live-dot" />
