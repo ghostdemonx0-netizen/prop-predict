@@ -1,0 +1,37 @@
+name: morning-board
+on:
+  workflow_dispatch: {}
+  # Enabled in the final rollout step after a successful manual dispatch run:
+  # schedule:
+  #   - cron: "0 10 * * *"   # 6:00 AM ET (EDT)
+concurrency:
+  group: refresh-board
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  morning:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restore engine cache
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: engine-cache-${{ github.run_id }}
+          restore-keys: engine-cache-
+      - name: Compute board
+        id: job
+        run: python -m model.jobs morning
+      - name: Publish to Vercel
+        if: steps.job.outputs.changed == 'true'
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx vercel deploy --prod --cwd web --token ${{ secrets.VERCEL_TOKEN }} --yes
