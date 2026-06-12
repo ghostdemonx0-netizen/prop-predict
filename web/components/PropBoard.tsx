@@ -30,10 +30,14 @@ export type BoardRow = {
 };
 
 /** K/H/N matchup sphere (shared with the player pages). */
-export function MatchupSphere({ lean, prob }: { lean: string; prob: number }) {
+export function MatchupSphere({ lean, prob, size }: { lean: string; prob: number; size?: number }) {
   const cls = lean === "K" ? "k" : lean === "H" ? "h" : "neu";
   return (
-    <span className={`msphere ${cls}`} title="model matchup read — rates + handedness, history-nudged (±10% cap)">
+    <span
+      className={`msphere ${cls}`}
+      title="model matchup read — rates + handedness, history-nudged (±10% cap)"
+      style={size ? { width: size, height: size } : undefined}
+    >
       {lean === "NEU" ? (
         <span className="mp">N</span>
       ) : (
@@ -81,13 +85,18 @@ function WeatherChips({ r }: { r: BoardRow }) {
   );
 }
 
-function HeatSphere({ prob, kind }: { prob: number; kind: PropKind }) {
+// one size for every sphere column in the hub breakdown (headers + future stats too)
+export const HUB_SPHERE = 46;
+export const HUB_SLOT = 52;
+
+function HeatSphere({ prob, kind, size }: { prob: number; kind: PropKind; size?: number }) {
   const c = heatColor(prob, kind);
   return (
     <span
       className="sphere"
       title="model probability"
       style={{
+        ...(size ? { width: size, height: size } : {}),
         background: `radial-gradient(circle at 34% 30%, rgba(255,255,255,0.12), ${c} 60%, rgba(8,14,10,0.65))`,
         borderColor: c,
         color: "#eef3f0",
@@ -338,11 +347,11 @@ export function BoardRowLine({ r, kind, withLean = false }: { r: BoardRow; kind:
       </span>
       {withLean ? (
         <span style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-          <span style={{ width: 50, display: "flex", justifyContent: "center" }}>
-            {r.lean ? <MatchupSphere lean={r.lean.lean} prob={r.lean.prob} /> : null}
+          <span style={{ width: HUB_SLOT, display: "flex", justifyContent: "center" }}>
+            {r.lean ? <MatchupSphere lean={r.lean.lean} prob={r.lean.prob} size={HUB_SPHERE} /> : null}
           </span>
-          <span style={{ width: 50, display: "flex", justifyContent: "center" }}>
-            <HeatSphere prob={r.prob} kind={kind} />
+          <span style={{ width: HUB_SLOT, display: "flex", justifyContent: "center" }}>
+            <HeatSphere prob={r.prob} kind={kind} size={HUB_SPHERE} />
           </span>
         </span>
       ) : (
@@ -356,7 +365,7 @@ export function BoardRowLine({ r, kind, withLean = false }: { r: BoardRow; kind:
 /** Column headers sitting on a line with small upward ticks, over the sphere columns. */
 function SphereHeaders() {
   const cell = (label: React.ReactNode, key: string) => (
-    <div key={key} style={{ width: 50, textAlign: "center" }}>
+    <div key={key} style={{ width: HUB_SLOT, textAlign: "center" }}>
       <div style={{ fontSize: "0.6rem", letterSpacing: "0.08em", fontWeight: 700, color: "var(--muted)" }}>{label}</div>
       <div style={{ width: 1, height: 5, background: "var(--line-strong)", margin: "2px auto 0" }} />
     </div>
