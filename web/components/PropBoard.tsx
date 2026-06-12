@@ -134,8 +134,8 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
           <th style={{ whiteSpace: "nowrap", paddingLeft: 0 }}>Team</th>
           <th style={{ width: "100%" }}>Opponent</th>
           {kind === "k" && (
-            <th style={{ textAlign: "right", whiteSpace: "nowrap" }} title="the strikeout line Prop Predict sets from his typical start">
-              Our Line
+            <th style={{ textAlign: "right", whiteSpace: "nowrap" }} title="not a sportsbook line — the model sets it from his typical start">
+              Model Book Line
             </th>
           )}
           {kind === "k" && <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>Proj Ks</th>}
