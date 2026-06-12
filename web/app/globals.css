@@ -337,3 +337,8 @@ a { color: var(--green); }
 .rowlink { transition: background 0.15s ease; border-radius: 6px; }
 .rowlink:hover { background: rgba(62, 224, 127, 0.06); }
 .rowlink:hover .rl-name { color: var(--green); }
+
+/* game hub: expandable game cards glow on hover like the player rows */
+details.card > summary { transition: background 0.15s ease; border-radius: 10px; }
+details.card > summary:hover { background: rgba(62, 224, 127, 0.06); }
+details.card > summary:hover .display { color: var(--green); }
