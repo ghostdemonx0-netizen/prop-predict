@@ -332,3 +332,8 @@ a { color: var(--green); }
 @media (prefers-reduced-motion: reduce) {
   .flame, .bolt, .live-dot { animation: none; }
 }
+
+/* clickable player rows (matchup lists + game hub) */
+.rowlink { transition: background 0.15s ease; border-radius: 6px; }
+.rowlink:hover { background: rgba(62, 224, 127, 0.06); }
+.rowlink:hover .rl-name { color: var(--green); }

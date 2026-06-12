@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type React from "react";
 import type { ViewMode } from "./ViewSwitcher";
 import { pct, strengthLabel, strengthTier, heatColor, arrowColor, type PropKind } from "../lib/format";
 
@@ -25,7 +26,25 @@ export type BoardRow = {
   tempF?: number;
   precipPct?: number;
   bvp?: { pa: number; ab: number; hits: number; hr: number; k: number; avg: string } | null;
+  lean?: { lean: string; prob: number } | null; // batter-vs-pitcher matchup read (K/H/N sphere)
 };
+
+/** K/H/N matchup sphere (shared with the player pages). */
+export function MatchupSphere({ lean, prob }: { lean: string; prob: number }) {
+  const cls = lean === "K" ? "k" : lean === "H" ? "h" : "neu";
+  return (
+    <span className={`msphere ${cls}`} title="model matchup read — rates + handedness, history-nudged (±10% cap)">
+      {lean === "NEU" ? (
+        <span className="mp">N</span>
+      ) : (
+        <>
+          <span className="mp">{Math.round(prob * 100)}%</span>
+          <span className="ml">{lean}</span>
+        </>
+      )}
+    </span>
+  );
+}
 
 function WeatherChips({ r }: { r: BoardRow }) {
   // Prefer a true directional arrow; fall back to simple out/in if only windOut is known.
@@ -281,7 +300,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
 
 
 /** One player line: name + (advantage-lit) hand chip + probability sphere. */
-export function BoardRowLine({ r, kind }: { r: BoardRow; kind: PropKind }) {
+export function BoardRowLine({ r, kind, withLean = false }: { r: BoardRow; kind: PropKind; withLean?: boolean }) {
   // platoon advantage: opposite hands, and switch hitters always have it
   const advantage =
     !!r.playerHand &&
@@ -290,6 +309,7 @@ export function BoardRowLine({ r, kind }: { r: BoardRow; kind: PropKind }) {
   return (
     <Link
       href={r.href}
+      className="rowlink"
       style={{
         display: "flex",
         justifyContent: "space-between",
@@ -301,7 +321,7 @@ export function BoardRowLine({ r, kind }: { r: BoardRow; kind: PropKind }) {
       }}
     >
       <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap" }}>
-        {r.player}
+        <span className="rl-name">{r.player}</span>
         {r.playerHand && (
           <span
             className="hand"
@@ -316,18 +336,54 @@ export function BoardRowLine({ r, kind }: { r: BoardRow; kind: PropKind }) {
           </span>
         )}
       </span>
-      <HeatSphere prob={r.prob} kind={kind} />
+      {withLean ? (
+        <span style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+          <span style={{ width: 50, display: "flex", justifyContent: "center" }}>
+            {r.lean ? <MatchupSphere lean={r.lean.lean} prob={r.lean.prob} /> : null}
+          </span>
+          <span style={{ width: 50, display: "flex", justifyContent: "center" }}>
+            <HeatSphere prob={r.prob} kind={kind} />
+          </span>
+        </span>
+      ) : (
+        <HeatSphere prob={r.prob} kind={kind} />
+      )}
     </Link>
   );
 }
 
 /** Hitters split away|home (matching the AWAY @ HOME title), lit pitcher per side. */
-export function TeamSplit({ matchup, rows, kind }: { matchup: string; rows: BoardRow[]; kind: PropKind }) {
+/** Column headers sitting on a line with small upward ticks, over the sphere columns. */
+function SphereHeaders() {
+  const cell = (label: React.ReactNode, key: string) => (
+    <div key={key} style={{ width: 50, textAlign: "center" }}>
+      <div style={{ fontSize: "0.6rem", letterSpacing: "0.08em", fontWeight: 700, color: "var(--muted)" }}>{label}</div>
+      <div style={{ width: 1, height: 5, background: "var(--line-strong)", margin: "2px auto 0" }} />
+    </div>
+  );
+  return (
+    <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.4rem", borderBottom: "1px solid var(--line-strong)" }}>
+      {cell(
+        <>
+          <span style={{ color: "#ffd9d6" }}>K</span>
+          <span style={{ opacity: 0.5 }}>/</span>
+          <span style={{ color: "#c5d6e8" }}>N</span>
+          <span style={{ opacity: 0.5 }}>/</span>
+          <span style={{ color: "#bff3d2" }}>H</span>
+        </>,
+        "knh"
+      )}
+      {cell("HR", "hr")}
+    </div>
+  );
+}
+
+export function TeamSplit({ matchup, rows, kind, withLean = false }: { matchup: string; rows: BoardRow[]; kind: PropKind; withLean?: boolean }) {
   const [away, home] = matchup.split(" @ ");
   const awayRows = rows.filter((r) => r.team === away);
   const homeRows = rows.filter((r) => r.team === home);
   const split = home !== undefined && awayRows.length + homeRows.length === rows.length;
-  if (!split) return <>{rows.map((r) => <BoardRowLine key={r.id} r={r} kind={kind} />)}</>;
+  if (!split) return <>{rows.map((r) => <BoardRowLine key={r.id} r={r} kind={kind} withLean={withLean} />)}</>;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
       {[
@@ -347,7 +403,8 @@ export function TeamSplit({ matchup, rows, kind }: { matchup: string; rows: Boar
                 </span>
               )}
             </div>
-            {rs.map((r) => <BoardRowLine key={r.id} r={r} kind={kind} />)}
+            {withLean && <SphereHeaders />}
+            {rs.map((r) => <BoardRowLine key={r.id} r={r} kind={kind} withLean={withLean} />)}
           </div>
         );
       })}
@@ -392,7 +449,7 @@ export function GameBreakdown({ matchup, hrRows, kRows }: { matchup: string; hrR
       {hr.length > 0 && (
         <>
           <div className="eyebrow" style={{ margin: "0.7rem 0 0.1rem" }}>Home run board</div>
-          <TeamSplit matchup={matchup} rows={hr} kind="hr" />
+          <TeamSplit matchup={matchup} rows={hr} kind="hr" withLean />
         </>
       )}
     </div>

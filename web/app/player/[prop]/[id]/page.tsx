@@ -5,28 +5,13 @@ import Link from "next/link";
 import { loadProjections } from "../../../../lib/data";
 import type { Projections } from "../../../../lib/types";
 import { pct, strengthLabel, windText, arrowColor, gameTimeLabel } from "../../../../lib/format";
+import { MatchupSphere } from "../../../../components/PropBoard";
 
 function batLabel(b?: string) {
   return b === "L" ? "LHB" : b === "S" ? "Switch" : b ? "RHB" : "";
 }
 function pitLabel(t?: string) {
   return t === "L" ? "LHP" : t ? "RHP" : "";
-}
-
-function MatchupSphere({ lean, prob }: { lean: string; prob: number }) {
-  const cls = lean === "K" ? "k" : lean === "H" ? "h" : "neu";
-  return (
-    <span className={`msphere ${cls}`} title="model matchup read — rates + handedness, history-nudged (±10% cap)">
-      {lean === "NEU" ? (
-        <span className="mp">N</span>
-      ) : (
-        <>
-          <span className="mp">{Math.round(prob * 100)}%</span>
-          <span className="ml">{lean}</span>
-        </>
-      )}
-    </span>
-  );
 }
 
 function Back({ prop, date }: { prop?: string; date?: string }) {

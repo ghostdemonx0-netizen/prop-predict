@@ -107,26 +107,58 @@ export function ParksBoard({ games, hrRows = [], kRows = [], expandable = false 
           </div>
         </>
       )}
-      <div className="grid gap-2.5">
-        {ordered.map((g, i) => {
-          const boost = g.env - 1;
-          const edge = boost > 0.05 ? "var(--green)" : boost < -0.05 ? "var(--red)" : "var(--amber)";
-          return (
-            expandable ? (
-            <details key={g.game_id} className="card rise" style={{ borderLeftColor: edge, animationDelay: `${i * 45}ms` }}>
-              <summary style={{ cursor: "pointer" }}>
-                <Face g={g} variant="hub" />
-              </summary>
-              <GameBreakdown matchup={g.matchup} hrRows={hrRows} kRows={kRows} />
-            </details>
-            ) : (
-            <div key={g.game_id} className="card rise" style={{ borderLeftColor: edge, animationDelay: `${i * 45}ms` }}>
-              <Face g={g} variant="parks" />
+      {expandable ? (
+        <div className="grid gap-2.5">
+          {ordered.map((g, i) => {
+            const boost = g.env - 1;
+            const edge = boost > 0.05 ? "var(--green)" : boost < -0.05 ? "var(--red)" : "var(--amber)";
+            return (
+              <details key={g.game_id} className="card rise" style={{ borderLeftColor: edge, animationDelay: `${i * 45}ms` }}>
+                <summary style={{ cursor: "pointer" }}>
+                  <Face g={g} variant="hub" />
+                </summary>
+                <GameBreakdown matchup={g.matchup} hrRows={hrRows} kRows={kRows} />
+              </details>
+            );
+          })}
+        </div>
+      ) : (
+        // Parks: a compact ranked ledger — deliberately distinct from the hub's cards
+        <div className="panel rise" style={{ padding: "0.3rem 1rem" }}>
+          {ordered.map((g, i) => (
+            <div
+              key={g.game_id}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.9rem",
+                padding: "0.6rem 0",
+                borderBottom: i < ordered.length - 1 ? "1px solid var(--line)" : "none",
+              }}
+            >
+              <span className="num" style={{ color: "var(--muted)", fontSize: "0.78rem", width: "1.4rem", textAlign: "right" }}>
+                {i + 1}
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span className="display" style={{ fontWeight: 700, fontSize: "0.95rem", display: "block" }}>
+                  {g.park_name ?? g.park}
+                </span>
+                <span className="num" style={{ color: "var(--muted)", fontSize: "0.74rem" }}>{g.matchup}</span>
+              </span>
+              <span className="flex flex-wrap items-center gap-3" style={{ fontSize: "0.74rem", color: "var(--muted)", justifyContent: "flex-end" }}>
+                <span>🏟️ <b style={{ color: "var(--text)" }}>{signed(g.park_mult)}</b></span>
+                <span>🌬️ <b style={{ color: "var(--text)" }}>{signed(g.weather_mult)}</b></span>
+                {typeof g.wind_dir === "number" && typeof g.wind_mph === "number" && (
+                  <span className="inline-flex items-center gap-1">
+                    <span style={{ display: "inline-block", fontWeight: 800, transform: `rotate(${g.wind_dir}deg)`, color: arrowColor(g.wind_dir) }}>↑</span>
+                    {Math.round(g.wind_mph)}mph
+                  </span>
+                )}
+                {typeof g.temp_f === "number" && <span>🌡️ {Math.round(g.temp_f)}°</span>}
+              </span>
+              <EnvSphere env={g.env} />
             </div>
-            )
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
