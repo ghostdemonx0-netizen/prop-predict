@@ -35,3 +35,12 @@ def test_get_park_returns_independent_copy():
     a["dome"] = True
     b = get_park("ZZZ")
     assert b["dome"] is False  # mutating one result must not affect later calls
+
+
+def test_park_names_are_title_cased():
+    """Display names must read Title Case (official 'loanDepot park'-style branding gets normalized)."""
+    from model.parks import PARKS
+    for abbr, park in PARKS.items():
+        for word in park["name"].split():
+            first = word[0]
+            assert not first.isalpha() or first.isupper(), f"{abbr}: {park['name']!r}"

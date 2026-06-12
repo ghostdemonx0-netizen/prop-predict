@@ -139,9 +139,9 @@ export function ParksBoard({ games, hrRows = [], kRows = [], expandable = false 
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span className="display" style={{ fontWeight: 700, fontSize: "0.95rem", display: "block" }}>
-                  {g.park_name ?? g.park}
+                  {g.matchup}
                 </span>
-                <span className="num" style={{ color: "var(--muted)", fontSize: "0.74rem" }}>{g.matchup}</span>
+                <span className="num" style={{ color: "var(--muted)", fontSize: "0.74rem" }}>{g.park_name ?? g.park}</span>
               </span>
               <span className="flex flex-wrap items-center gap-3" style={{ fontSize: "0.74rem", color: "var(--muted)", justifyContent: "flex-end" }}>
                 <span>🏟️ <b style={{ color: "var(--text)" }}>{signed(g.park_mult)}</b></span>

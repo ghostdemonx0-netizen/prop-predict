@@ -22,7 +22,7 @@ PARKS: dict[str, dict] = {
     "KC":  {"name": "Kauffman Stadium", "hr_factor": 0.92, "cf_bearing_deg": 0, "dome": False},
     "LAA": {"name": "Angel Stadium", "hr_factor": 1.00, "cf_bearing_deg": 20, "dome": False},
     "LAD": {"name": "Dodger Stadium", "hr_factor": 1.06, "cf_bearing_deg": 25, "dome": False},
-    "MIA": {"name": "loanDepot park", "hr_factor": 0.97, "cf_bearing_deg": 30, "dome": True},
+    "MIA": {"name": "LoanDepot Park", "hr_factor": 0.97, "cf_bearing_deg": 30, "dome": True},
     "MIL": {"name": "American Family Field", "hr_factor": 1.05, "cf_bearing_deg": 0, "dome": True},
     "MIN": {"name": "Target Field", "hr_factor": 1.01, "cf_bearing_deg": 20, "dome": False},
     "NYM": {"name": "Citi Field", "hr_factor": 0.97, "cf_bearing_deg": 25, "dome": False},
