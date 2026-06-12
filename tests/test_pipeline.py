@@ -159,3 +159,10 @@ def test_history_dial_nudges_k_read_and_lambda():
     hr_rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn, fake_bvp_fn)
     home = next(r for r in hr_rows if r["team"] == "COL")
     assert home["vs"]["k_prob"] == pytest.approx(adjusted)
+
+
+def test_rows_carry_game_time():
+    hr = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    ks = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_lineups_fn, fake_weather_fn)
+    assert all(r["game_time"] == "2026-06-10T20:40:00Z" for r in hr)
+    assert all(r["game_time"] == "2026-06-10T20:40:00Z" for r in ks)

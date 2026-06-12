@@ -93,6 +93,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     vs = {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R"), "bvp": bvp, **m}
                 rows.append({
                     "prop": "HR", "game_id": game["game_id"],
+                    "game_time": game.get("game_time"),
                     "player_id": b.get("player_id"),
                     "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                     "player": b["name"], "team": team, "park": game["park_team"],
@@ -141,6 +142,7 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn, 
             line = p.get("k_line", 5.5)
             rows.append({
                 "prop": "K", "game_id": game["game_id"],
+                "game_time": game.get("game_time"),
                 "player_id": p.get("player_id"),
                 "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                 "player": p["name"], "team": team,

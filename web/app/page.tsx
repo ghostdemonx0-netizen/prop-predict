@@ -20,6 +20,11 @@ function oppTeam(matchup?: string, team?: string) {
   const [away, home] = parts;
   return team === home ? away : home;
 }
+function gameTime(iso?: string) {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? undefined : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
 // Standard notation: home batters read "vs AWAY", away batters read "@ HOME".
 function gameLabel(matchup?: string, team?: string) {
   const parts = matchup?.split(" @ ");
@@ -77,6 +82,7 @@ export default function Home() {
     prob: r.probability,
     detail: gameLabel(r.matchup, r.team) ?? `@ ${r.park}`,
     href: `/player/hr/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
+    time: gameTime(r.game_time),
     matchup: r.matchup,
     hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
     playerHand: batHand(r.bats),
@@ -97,6 +103,7 @@ export default function Home() {
     projection: r.expected_ks.toFixed(1),
     line: r.line.toFixed(1),
     href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
+    time: gameTime(r.game_time),
     matchup: r.matchup,
     hand: pitchHand(r.throws),
     playerHand: pitchHand(r.throws),

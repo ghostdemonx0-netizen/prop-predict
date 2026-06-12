@@ -12,6 +12,7 @@ export type Matchup = {
 
 export type HrRow = {
   player: string;
+  game_time?: string; // ISO start time
   team: string;
   park: string;
   matchup?: string; // "AWAY @ HOME"
@@ -35,6 +36,7 @@ export type HrRow = {
 
 export type KRow = {
   player: string;
+  game_time?: string; // ISO start time
   team: string;
   matchup?: string; // "AWAY @ HOME"
   expected_ks: number;

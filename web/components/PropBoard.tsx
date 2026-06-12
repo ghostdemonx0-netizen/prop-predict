@@ -14,6 +14,7 @@ export type BoardRow = {
   matchup?: string; // "AWAY @ HOME" — game grouping for the List view
   projection?: string; // K board: projected strikeouts, e.g. "6.8"
   line?: string; // K board: our book-style line, e.g. "4.5"
+  time?: string; // local game start time, e.g. "7:10 PM"
   hand?: string; // combined card chip, e.g. "RHB vs LHP"
   playerHand?: string; // this player's own handedness (RHB/LHB/SW or RHP/LHP)
   opponent?: { name: string; hand?: string }; // opposing pitcher (+hand) for hitters, or opposing team for pitchers
@@ -105,6 +106,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
       <div className="mt-1.5 flex items-center gap-2" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
         <span className={`badge ${strengthTier(r.prob, kind)}`}>{strengthLabel(r.prob, kind)}</span>
         <span>{r.detail}</span>
+        {r.time && <span style={{ opacity: 0.75 }}>🕐 {r.time}</span>}
       </div>
       {(r.playerHand || r.opponent) && (
         <div className="mt-1 flex flex-wrap items-center gap-1.5" style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
@@ -133,6 +135,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
           <th style={{ whiteSpace: "nowrap" }}>Player</th>
           <th style={{ whiteSpace: "nowrap", paddingLeft: 0 }}>Team</th>
           <th style={{ width: "100%" }}>Opponent</th>
+          <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Time</th>
           {kind === "k" && (
             <th style={{ textAlign: "center", whiteSpace: "nowrap" }} title="not a sportsbook line — the model sets it from his typical start">
               Model Book Line
@@ -173,6 +176,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
                 </>
               )}
             </td>
+            <td className="num" style={{ textAlign: "center", whiteSpace: "nowrap", color: "var(--muted)" }}>{r.time}</td>
             {kind === "k" && (
               <td className="num" style={{ textAlign: "center", whiteSpace: "nowrap" }}>{r.line}</td>
             )}
