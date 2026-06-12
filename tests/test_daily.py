@@ -1,6 +1,81 @@
 import json
 
 from model import daily
+from tests.fixtures import SAMPLE_SLATE, SAMPLE_LINEUPS, SAMPLE_PITCHERS, SAMPLE_WEATHER
+
+
+def _kw():
+    return dict(
+        profile_fns=(lambda g: SAMPLE_LINEUPS[1], lambda pid: SAMPLE_PITCHERS[pid]),
+        weather_fn=lambda g: SAMPLE_WEATHER[1],
+        bvp_fn=lambda b, p: None,
+        starters_fn=lambda slate: None,
+    )
+
+
+def test_refresh_today_first_run_writes_board(tmp_path, monkeypatch):
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    changed = daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0])], **_kw())
+    assert changed is True
+    data = json.loads((tmp_path / "2026-06-10.json").read_text())
+    assert len(data["hr"]) == 2 and len(data["strikeouts"]) == 2 and len(data["games"]) == 1
+    assert (tmp_path / "latest.json").exists()
+    assert json.loads((tmp_path / "index.json").read_text())["dates"] == ["2026-06-10"]
+
+
+def test_refresh_today_unchanged_inputs_return_false_and_do_not_rewrite(tmp_path, monkeypatch):
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    sched = lambda d: [dict(SAMPLE_SLATE[0])]
+    daily.refresh_today("2026-06-10", schedule_fn=sched, **_kw())
+    stamp_before = json.loads((tmp_path / "2026-06-10.json").read_text())["updated"]
+    changed = daily.refresh_today("2026-06-10", schedule_fn=sched, **_kw())
+    assert changed is False
+    assert json.loads((tmp_path / "2026-06-10.json").read_text())["updated"] == stamp_before
+
+
+def test_refresh_today_freezes_started_games(tmp_path, monkeypatch):
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0])], **_kw())
+    before = json.loads((tmp_path / "2026-06-10.json").read_text())
+    # the game starts; recomputation must NOT touch its rows (inputs could differ now)
+    kw = _kw()
+    kw["profile_fns"] = (lambda g: 1 / 0, lambda pid: 1 / 0)  # would crash if recomputed
+    changed = daily.refresh_today(
+        "2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0], started=True)], **kw)
+    after = json.loads((tmp_path / "2026-06-10.json").read_text())
+    assert changed is False  # identical content -> no rewrite, no deploy
+    assert after["hr"] == before["hr"] and after["strikeouts"] == before["strikeouts"]
+
+
+def test_refresh_today_mixes_frozen_and_fresh(tmp_path, monkeypatch):
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    g1 = dict(SAMPLE_SLATE[0])
+    g2 = dict(SAMPLE_SLATE[0], game_id=2, home="NYY", away="BOS", park_team="NYY")
+    lineups = {1: SAMPLE_LINEUPS[1], 2: SAMPLE_LINEUPS[1]}
+    kw = _kw()
+    kw["profile_fns"] = (lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid])
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [g1], **kw)
+    snap = [r for r in json.loads((tmp_path / "2026-06-10.json").read_text())["hr"] if r["game_id"] == 1]
+    changed = daily.refresh_today(
+        "2026-06-10", schedule_fn=lambda d: [dict(g1, started=True), g2], **kw)
+    assert changed is True
+    data = json.loads((tmp_path / "2026-06-10.json").read_text())
+    assert {r["game_id"] for r in data["hr"]} == {1, 2}
+    assert [r for r in data["hr"] if r["game_id"] == 1] == snap  # frozen, byte-identical
+
+
+def test_refresh_today_drops_vanished_never_started_games(tmp_path, monkeypatch):
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0])], **_kw())
+    changed = daily.refresh_today("2026-06-10", schedule_fn=lambda d: [], **_kw())
+    assert changed is True
+    data = json.loads((tmp_path / "2026-06-10.json").read_text())
+    assert data["hr"] == [] and data["strikeouts"] == [] and data["games"] == []
 
 
 def test_merge_day_replaces_same_date_rows(tmp_path):

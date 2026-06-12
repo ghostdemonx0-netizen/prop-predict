@@ -86,3 +86,60 @@ def update_events(today: str, *, fetch_day=None, cache_dir=DEFAULT_DIR) -> list[
         d += dt.timedelta(days=1)
     marker.write_text(json.dumps({"date": target.isoformat()}))
     return ingested
+
+
+def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
+                  weather_fn=None, bvp_fn=None, starters_fn=None) -> bool:
+    """Freeze-merge compute of today's board into export_web.DATA_DIR.
+
+    Started games keep their rows from the existing date file untouched
+    (frozen at the last pre-game compute); not-started games are recomputed
+    fresh. Vanished never-started games drop. Writes the date file +
+    latest.json + the rolling index ONLY when content (ignoring the
+    ``updated`` stamp) actually changed; returns that changed flag, which
+    drives the deploy-skip in CI.
+    """
+    schedule_fn = schedule_fn or fetch.get_schedule
+    data_dir = Path(export_web.DATA_DIR)
+    slate = schedule_fn(date_str)
+    fresh_slate = [g for g in slate if not g.get("started")]
+    started_ids = {g["game_id"] for g in slate if g.get("started")}
+
+    path = data_dir / f"{date_str}.json"
+    existing = json.loads(path.read_text()) if path.exists() else {}
+    frozen = {
+        "hr": [r for r in existing.get("hr", []) if r.get("game_id") in started_ids],
+        "strikeouts": [r for r in existing.get("strikeouts", []) if r.get("game_id") in started_ids],
+        "games": [r for r in existing.get("games", []) if r.get("game_id") in started_ids],
+    }
+
+    hr, ks, games = [], [], []
+    if fresh_slate:
+        (starters_fn or export_web._ensure_starters)(fresh_slate)
+        lineups_fn, pitcher_fn = profile_fns or export_web.make_profile_fns(
+            fresh_slate, int(date_str[:4]), date_str)
+        wfn = weather_fn or fetch.make_weather_fn()
+        bfn = bvp_fn or export_web.make_bvp_fn()
+        hr = build_hr_rows(fresh_slate, lineups_fn, pitcher_fn, wfn, bvp_fn=bfn)
+        ks = build_strikeout_rows(fresh_slate, pitcher_fn, lineups_fn, wfn, bvp_fn=bfn)
+        games = build_games(fresh_slate, wfn)
+
+    payload = {
+        "date": date_str,
+        "updated": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "hr": sorted(hr + frozen["hr"], key=lambda r: r["probability"], reverse=True),
+        "strikeouts": sorted(ks + frozen["strikeouts"], key=lambda r: r["over_prob"], reverse=True),
+        "games": sorted(games + frozen["games"], key=lambda g: g["env"], reverse=True),
+    }
+
+    def _body(d: dict) -> str:
+        return json.dumps({k: v for k, v in d.items() if k != "updated"}, sort_keys=True)
+
+    if existing and _body(payload) == _body(existing):
+        return False
+    data_dir.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(payload, indent=2)
+    path.write_text(text)
+    (data_dir / "latest.json").write_text(text)
+    export_web._update_index(date_str)
+    return True
