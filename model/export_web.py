@@ -34,7 +34,10 @@ def _update_index(date_str: str) -> None:
             dates = []
             print(f"warning: {index_path} unreadable - index reset to this run's date",
                   file=sys.stderr)
-    dates = sorted(set(dates) | {date_str}, reverse=True)[:7]
+    # self-heal: a date file orphaned by a crash between writes re-enters the
+    # index here instead of being pruned tomorrow
+    on_disk = {f.stem for f in DATA_DIR.glob("*.json") if _DATE_FILE.match(f.name)}
+    dates = sorted(set(dates) | {date_str} | on_disk, reverse=True)[:7]
     index_path.write_text(json.dumps({"dates": dates}, indent=2))
     keep = {f"{d}.json" for d in dates}
     for f in DATA_DIR.glob("*.json"):

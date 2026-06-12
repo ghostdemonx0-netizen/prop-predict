@@ -41,14 +41,17 @@ def test_refresh_today_freezes_started_games(tmp_path, monkeypatch):
     monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
     daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0])], **_kw())
     before = json.loads((tmp_path / "2026-06-10.json").read_text())
-    # the game starts; recomputation must NOT touch its rows (inputs could differ now)
+    # the game starts; its rows must be carried untouched (crash if recomputed)
     kw = _kw()
-    kw["profile_fns"] = (lambda g: 1 / 0, lambda pid: 1 / 0)  # would crash if recomputed
-    changed = daily.refresh_today(
-        "2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0], started=True)], **kw)
+    kw["profile_fns"] = (lambda g: 1 / 0, lambda pid: 1 / 0)
+    sched = lambda d: [dict(SAMPLE_SLATE[0], started=True)]
+    changed = daily.refresh_today("2026-06-10", schedule_fn=sched, **kw)
     after = json.loads((tmp_path / "2026-06-10.json").read_text())
-    assert changed is False  # identical content -> no rewrite, no deploy
+    assert changed is True  # one write to persist started_ids
+    assert after["started_ids"] == [1]
     assert after["hr"] == before["hr"] and after["strikeouts"] == before["strikeouts"]
+    # subsequent identical run: no churn
+    assert daily.refresh_today("2026-06-10", schedule_fn=sched, **kw) is False
 
 
 def test_refresh_today_mixes_frozen_and_fresh(tmp_path, monkeypatch):
@@ -72,11 +75,17 @@ def test_refresh_today_mixes_frozen_and_fresh(tmp_path, monkeypatch):
 def test_refresh_today_drops_vanished_never_started_games(tmp_path, monkeypatch):
     from model import export_web
     monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
-    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0])], **_kw())
-    changed = daily.refresh_today("2026-06-10", schedule_fn=lambda d: [], **_kw())
+    g1 = dict(SAMPLE_SLATE[0])
+    g2 = dict(SAMPLE_SLATE[0], game_id=2, home="NYY", away="BOS", park_team="NYY")
+    lineups = {1: SAMPLE_LINEUPS[1], 2: SAMPLE_LINEUPS[1]}
+    kw = _kw()
+    kw["profile_fns"] = (lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid])
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [g1, g2], **kw)
+    # g1 (never started) vanishes from a NON-empty schedule -> its rows drop
+    changed = daily.refresh_today("2026-06-10", schedule_fn=lambda d: [g2], **kw)
     assert changed is True
     data = json.loads((tmp_path / "2026-06-10.json").read_text())
-    assert data["hr"] == [] and data["strikeouts"] == [] and data["games"] == []
+    assert {r["game_id"] for r in data["hr"]} == {2}
 
 
 def test_merge_day_replaces_same_date_rows(tmp_path):
@@ -162,3 +171,38 @@ def test_record_run_unpublished_keeps_published_at(tmp_path):
     daily.record_run("a", published=False, cache_dir=tmp_path, now=t0 + dt.timedelta(minutes=60))
     saved = json.loads((tmp_path / "last-signature.json").read_text())
     assert saved["published_at"] == t0.isoformat()
+
+
+def test_refresh_today_empty_schedule_never_wipes_existing_record(tmp_path, monkeypatch):
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0])], **_kw())
+    before = (tmp_path / "2026-06-10.json").read_text()
+    assert daily.refresh_today("2026-06-10", schedule_fn=lambda d: [], **_kw()) is False
+    assert (tmp_path / "2026-06-10.json").read_text() == before
+
+
+def test_refresh_today_remembers_started_through_partial_schedule(tmp_path, monkeypatch):
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    g1 = dict(SAMPLE_SLATE[0])
+    g2 = dict(SAMPLE_SLATE[0], game_id=2, home="NYY", away="BOS", park_team="NYY")
+    lineups = {1: SAMPLE_LINEUPS[1], 2: SAMPLE_LINEUPS[1]}
+    kw = _kw()
+    kw["profile_fns"] = (lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid])
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [g1, g2], **kw)
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(g1, started=True), g2], **kw)
+    g1_rows = [r for r in json.loads((tmp_path / "2026-06-10.json").read_text())["hr"] if r["game_id"] == 1]
+    # flaky hour: g1 (started, frozen) missing from an otherwise-valid schedule
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [g2], **kw)
+    data = json.loads((tmp_path / "2026-06-10.json").read_text())
+    assert [r for r in data["hr"] if r["game_id"] == 1] == g1_rows  # survived
+    assert data["started_ids"] == [1]
+
+
+def test_should_skip_and_record_run_survive_corrupt_signature_file(tmp_path):
+    (tmp_path / "last-signature.json").write_text("NOT JSON{{{")
+    assert daily.should_skip("abc", cache_dir=tmp_path) is False  # never crash
+    daily.record_run("abc", published=True, cache_dir=tmp_path)   # overwrites garbage
+    saved = json.loads((tmp_path / "last-signature.json").read_text())
+    assert saved["sig"] == "abc"

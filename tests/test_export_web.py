@@ -38,11 +38,25 @@ def test_update_index_corrupt_index_resets_and_prunes_only_date_files(tmp_path, 
     monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
     (tmp_path / "index.json").write_text("NOT JSON{{{")
     (tmp_path / "latest.json").write_text("{}")
+    # 7 recent date files fill the window; 2026-06-01 is the 8th so it's pruned
+    for day in range(5, 12):  # 2026-06-05 through 2026-06-11
+        (tmp_path / f"2026-06-{day:02d}.json").write_text("{}")
     (tmp_path / "2026-06-01.json").write_text("{}")     # date file outside new window
     (tmp_path / "schema.json").write_text("{}")          # stray non-date json
     export_web._update_index("2026-06-11")
     idx = json.loads((tmp_path / "index.json").read_text())
-    assert idx["dates"] == ["2026-06-11"]
+    assert idx["dates"] == [f"2026-06-{day:02d}" for day in range(11, 4, -1)]
     assert not (tmp_path / "2026-06-01.json").exists()  # pruned (outside window)
     assert (tmp_path / "schema.json").exists()           # non-date json never deleted
     assert (tmp_path / "latest.json").exists()
+
+
+def test_update_index_self_heals_orphaned_date_files(tmp_path, monkeypatch):
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    # an orphan written by a crashed run, never indexed
+    (tmp_path / "2026-06-09.json").write_text("{}")
+    (tmp_path / "2026-06-10.json").write_text("{}")
+    export_web._update_index("2026-06-10")
+    idx = json.loads((tmp_path / "index.json").read_text())
+    assert idx["dates"] == ["2026-06-10", "2026-06-09"]  # orphan re-entered

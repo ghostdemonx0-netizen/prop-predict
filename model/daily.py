@@ -97,16 +97,30 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
     fresh. Vanished never-started games drop. Writes the date file +
     latest.json + the rolling index ONLY when content (ignoring the
     ``updated`` stamp) actually changed; returns that changed flag, which
-    drives the deploy-skip in CI.
+    drives the deploy-skip in CI. Games are remembered in ``started_ids``
+    once started, so partial schedule responses can't un-freeze them; an
+    empty schedule never wipes an existing record.
     """
     schedule_fn = schedule_fn or fetch.get_schedule
     data_dir = Path(export_web.DATA_DIR)
     slate = schedule_fn(date_str)
-    fresh_slate = [g for g in slate if not g.get("started")]
-    started_ids = {g["game_id"] for g in slate if g.get("started")}
 
     path = data_dir / f"{date_str}.json"
+    # a corrupt date file crashes loudly on purpose - silently overwriting
+    # the day's frozen record would be worse than a failed (emailed) run
     existing = json.loads(path.read_text()) if path.exists() else {}
+
+    if not slate and any(existing.get(k) for k in ("hr", "strikeouts", "games")):
+        # an empty schedule response must never wipe today's record
+        return False
+
+    # remember every game that EVER started today, so one flaky/partial
+    # schedule response can't drop a frozen game's rows permanently
+    remembered = set(existing.get("started_ids", []))
+    started_ids = {g["game_id"] for g in slate if g.get("started")} | remembered
+    fresh_slate = [g for g in slate
+                   if not g.get("started") and g["game_id"] not in remembered]
+
     frozen = {
         "hr": [r for r in existing.get("hr", []) if r.get("game_id") in started_ids],
         "strikeouts": [r for r in existing.get("strikeouts", []) if r.get("game_id") in started_ids],
@@ -127,6 +141,7 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
     payload = {
         "date": date_str,
         "updated": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "started_ids": sorted(started_ids),
         "hr": sorted(hr + frozen["hr"], key=lambda r: r["probability"], reverse=True),
         "strikeouts": sorted(ks + frozen["strikeouts"], key=lambda r: r["over_prob"], reverse=True),
         "games": sorted(games + frozen["games"], key=lambda g: g["env"], reverse=True),
@@ -162,16 +177,23 @@ def slate_signature(slate: list[dict], lineups_by_game: dict) -> str:
 
 
 def should_skip(sig: str, *, cache_dir=DEFAULT_DIR, max_age_min: int = 90, now=None) -> bool:
-    """True when nothing structural changed AND we published recently."""
+    """True when nothing structural changed AND we published recently.
+
+    This is a pure optimization cache: any corruption or surprise in the
+    saved file means "don't skip", never a crash.
+    """
     path = Path(cache_dir) / _SIGNATURE
     if not path.exists():
         return False
-    saved = json.loads(path.read_text())
-    if saved.get("sig") != sig:
+    try:
+        saved = json.loads(path.read_text())
+        if saved.get("sig") != sig:
+            return False
+        published = dt.datetime.fromisoformat(saved["published_at"])
+        now = now or dt.datetime.now(dt.timezone.utc)
+        return (now - published) < dt.timedelta(minutes=max_age_min)
+    except (json.JSONDecodeError, KeyError, ValueError, TypeError, OSError):
         return False
-    now = now or dt.datetime.now(dt.timezone.utc)
-    published = dt.datetime.fromisoformat(saved["published_at"])
-    return (now - published) < dt.timedelta(minutes=max_age_min)
 
 
 def record_run(sig: str, published: bool, *, cache_dir=DEFAULT_DIR, now=None) -> None:
@@ -180,6 +202,11 @@ def record_run(sig: str, published: bool, *, cache_dir=DEFAULT_DIR, now=None) ->
     cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / _SIGNATURE
     now = now or dt.datetime.now(dt.timezone.utc)
-    prev = json.loads(path.read_text()).get("published_at") if path.exists() else None
+    prev = None
+    if path.exists():
+        try:
+            prev = json.loads(path.read_text()).get("published_at")
+        except (json.JSONDecodeError, ValueError, OSError):
+            prev = None
     published_at = now.isoformat() if (published or not prev) else prev
     path.write_text(json.dumps({"sig": sig, "published_at": published_at}))
