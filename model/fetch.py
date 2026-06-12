@@ -4,7 +4,9 @@ pure modules stay testable offline.
 """
 
 import datetime as dt
+import json
 import time
+from pathlib import Path
 import statsapi
 import requests
 import pandas as pd
@@ -34,21 +36,47 @@ PARK_COORDS = {
 }
 
 
-def make_weather_fn():
+_NEUTRAL_WX = {"wind_speed_mph": 0.0, "wind_from_deg": 0.0, "temp_f": 70.0, "precip_pct": 0}
+
+
+def make_weather_fn(cache_dir=None):
     """Per-run memoized game-weather fetcher (one Open-Meteo call per game,
-    shared by the HR, K, and games builders)."""
+    shared by the HR, K, and games builders).
+
+    Resilient: each success is written through to .cache/wx-<game_id>.json;
+    when Open-Meteo times out even after retries (it throttles shared CI
+    runners), the last known forecast for that game is reused - a slightly
+    stale forecast beats neutral, and neutral beats crashing the whole run.
+    """
+    from model.cache import DEFAULT_DIR
+    cache_dir = Path(cache_dir or DEFAULT_DIR)
     seen: dict[int, dict] = {}
 
     def weather_fn(game: dict) -> dict:
         gid = game["game_id"]
-        if gid not in seen:
-            lat, lon = PARK_COORDS.get(game["park_team"], (39.0, -98.0))
-            if not game.get("game_time"):
-                # game time not posted yet -> neutral weather rather than crashing
-                seen[gid] = {"wind_speed_mph": 0.0, "wind_from_deg": 0.0,
-                             "temp_f": 70.0, "precip_pct": 0}
+        if gid in seen:
+            return seen[gid]
+        fallback = cache_dir / f"wx-{gid}.json"
+        if not game.get("game_time"):
+            # game time not posted yet -> neutral weather rather than crashing
+            seen[gid] = dict(_NEUTRAL_WX)
+            return seen[gid]
+        lat, lon = PARK_COORDS.get(game["park_team"], (39.0, -98.0))
+        try:
+            wx = get_weather(lat, lon, game["game_time"])
+            try:
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                fallback.write_text(json.dumps(wx))
+            except OSError:
+                pass  # fallback cache is best-effort
+        except Exception:
+            if fallback.exists():
+                wx = json.loads(fallback.read_text())
+                print(f"weather: using last known forecast for game {gid}")
             else:
-                seen[gid] = get_weather(lat, lon, game["game_time"])
+                wx = dict(_NEUTRAL_WX)
+                print(f"weather: unavailable for game {gid} - neutral assumed")
+        seen[gid] = wx
         return seen[gid]
 
     return weather_fn
@@ -117,7 +145,7 @@ def get_weather(lat: float, lon: float, when_iso: str) -> dict:
                 "end_date": date,
                 "timezone": "UTC",
             },
-            timeout=20,
+            timeout=30,
         )
         resp.raise_for_status()
         h = resp.json()["hourly"]

@@ -2,7 +2,7 @@ name: morning-board
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 10 * * *"   # 6:00 AM ET (EDT)
+    - cron: "7 10 * * *"   # 6:07 AM ET (EDT) - off the congested :00 mark
 concurrency:
   group: refresh-board
   cancel-in-progress: false

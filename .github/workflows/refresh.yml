@@ -9,9 +9,10 @@ on:
   schedule:
     # user-tuned 2026-06-12 (no-overage edition): hourly 7am-noon ET,
     # half-hourly 12:30-8pm ET (the lineup flood), hourly 9-11pm ET
-    - cron: "0 11-23 * * *"   # on the hour, 7am-7pm ET
-    - cron: "0 0-3 * * *"     # on the hour, 8pm-11pm ET
-    - cron: "30 16-23 * * *"  # half-hours, 12:30-7:30pm ET
+    # :07/:37 instead of :00/:30 - GitHub drops jobs on congested round minutes
+    - cron: "7 11-23 * * *"   # ~hourly, 7:07am-7:07pm ET
+    - cron: "7 0-3 * * *"     # ~hourly, 8:07pm-11:07pm ET
+    - cron: "37 16-23 * * *"  # half-hours, 12:37-7:37pm ET
 concurrency:
   group: refresh-board
   cancel-in-progress: false

@@ -45,3 +45,20 @@ def test_statcast_day_slims_and_is_json_safe(monkeypatch):
     assert rows[1]["launch_speed"] is None and rows[1]["events"] is None
     assert isinstance(rows[1]["batter"], int)  # no float leakage in NaN rows
     assert "extra_col" not in rows[0]
+
+
+def test_weather_fn_falls_back_to_last_known_forecast(monkeypatch, tmp_path):
+    import model.fetch as fetch
+    game = {"game_id": 7, "park_team": "COL", "game_time": "2026-06-12T20:00:00Z"}
+    good = {"wind_speed_mph": 9.0, "wind_from_deg": 180.0, "temp_f": 81.0, "precip_pct": 5}
+    # first run: success writes the per-game fallback file
+    monkeypatch.setattr(fetch, "get_weather", lambda lat, lon, t: good)
+    assert fetch.make_weather_fn(cache_dir=tmp_path)(game) == good
+    assert (tmp_path / "wx-7.json").exists()
+    # second run: API dead -> last known forecast is reused
+    def boom(lat, lon, t):
+        raise TimeoutError("open-meteo throttled")
+    monkeypatch.setattr(fetch, "get_weather", boom)
+    assert fetch.make_weather_fn(cache_dir=tmp_path)(game) == good
+    # no fallback file at all -> neutral, never a crash
+    assert fetch.make_weather_fn(cache_dir=tmp_path)({**game, "game_id": 8})["temp_f"] == 70.0
