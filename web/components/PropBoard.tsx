@@ -193,27 +193,46 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
     </table>
   );
 
-  const Row = (r: BoardRow) => (
-    <Link
-      key={r.id}
-      href={r.href}
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "0.6rem 0.25rem",
-        borderBottom: "1px solid var(--line)",
-        color: "var(--text)",
-        textDecoration: "none",
-      }}
-    >
-      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap" }}>
-        {r.player}
-        {r.playerHand && <span className="hand">{r.playerHand}</span>}
-      </span>
-      <HeatSphere prob={r.prob} kind={kind} />
-    </Link>
-  );
+  const Row = (r: BoardRow) => {
+    // platoon advantage: opposite hands, and switch hitters always have it
+    const advantage =
+      !!r.playerHand &&
+      !!r.opponent?.hand &&
+      (r.playerHand === "SW" || r.playerHand[0] !== r.opponent.hand[0]);
+    return (
+      <Link
+        key={r.id}
+        href={r.href}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0.6rem 0.25rem",
+          borderBottom: "1px solid var(--line)",
+          color: "var(--text)",
+          textDecoration: "none",
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap" }}>
+          {r.player}
+          {r.playerHand && (
+            <span
+              className="hand"
+              title={advantage ? "platoon advantage vs this pitcher" : undefined}
+              style={
+                advantage
+                  ? { color: "var(--green)", borderColor: "rgba(62, 224, 127, 0.5)", background: "rgba(62, 224, 127, 0.1)" }
+                  : undefined
+              }
+            >
+              {r.playerHand}
+            </span>
+          )}
+        </span>
+        <HeatSphere prob={r.prob} kind={kind} />
+      </Link>
+    );
+  };
 
   const List = () => {
     // Group rows by matchup (rows within a game keep high->low probability
@@ -286,7 +305,11 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
                           <span>{label}</span>
                           {opp && (
                             <span>
-                              vs {opp.name}{opp.hand && <> <span className="hand">{opp.hand}</span></>}
+                              vs{" "}
+                              <span style={{ color: "var(--text)", textShadow: "0 0 8px rgba(62, 224, 127, 0.45)" }}>
+                                {opp.name}
+                              </span>
+                              {opp.hand && <> <span className="hand">{opp.hand}</span></>}
                             </span>
                           )}
                         </div>
