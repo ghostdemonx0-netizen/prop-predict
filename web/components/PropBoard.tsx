@@ -14,7 +14,8 @@ export type BoardRow = {
   matchup?: string; // "AWAY @ HOME" — game grouping for the List view
   projection?: string; // K board: projected strikeouts, e.g. "6.8"
   line?: string; // K board: our book-style line, e.g. "4.5"
-  time?: string; // local game start time, e.g. "7:10 PM"
+  time?: string; // local game start time, e.g. "7:10 PM EDT"
+  timeSort?: string; // raw ISO start time, for first-pitch ordering
   hand?: string; // combined card chip, e.g. "RHB vs LHP"
   playerHand?: string; // this player's own handedness (RHB/LHB/SW or RHP/LHP)
   opponent?: { name: string; hand?: string }; // opposing pitcher (+hand) for hitters, or opposing team for pitchers
@@ -220,8 +221,8 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
   );
 
   const List = () => {
-    // Group rows by matchup, preserving the global high->low order. Because
-    // `rows` arrives sorted by probability, groups appear best-game first.
+    // Group rows by matchup (rows within a game keep high->low probability
+    // order), then order the games by first pitch.
     const groups: { key: string; rows: BoardRow[] }[] = [];
     const seen = new Map<string, number>();
     for (const r of rows) {
@@ -232,14 +233,47 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
       }
       groups[seen.get(key)!].rows.push(r);
     }
+    groups.sort((a, b) => (a.rows[0].timeSort ?? "9999").localeCompare(b.rows[0].timeSort ?? "9999"));
+
+    const Head = (g: { key: string; rows: BoardRow[] }) => (
+      <>
+        {g.rows[0].time && (
+          <span className="num" style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem", marginRight: "0.7rem" }}>
+            🕐 {g.rows[0].time}
+          </span>
+        )}
+        {g.key}
+      </>
+    );
+
+    if (kind === "k") {
+      // two pitchers per game — flat list stays readable
+      return (
+        <div>
+          <div className="eyebrow" style={{ marginBottom: "0.6rem" }}>Matchups · first pitch order</div>
+          {groups.map((g) => (
+            <div key={g.key} className="rise" style={{ marginBottom: "1.1rem" }}>
+              <div className="matchup-head">{Head(g)}</div>
+              {g.rows.map(Row)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    // HR side: ~18 hitters per game — collapse each game behind a dropdown
     return (
       <div>
-        <div className="eyebrow" style={{ marginBottom: "0.6rem" }}>Matchups</div>
+        <div className="eyebrow" style={{ marginBottom: "0.6rem" }}>Matchups · first pitch order</div>
         {groups.map((g) => (
-          <div key={g.key} className="rise" style={{ marginBottom: "1.1rem" }}>
-            <div className="matchup-head">{g.key}</div>
+          <details key={g.key} className="rise" style={{ marginBottom: "0.55rem" }}>
+            <summary className="matchup-head" style={{ cursor: "pointer" }}>
+              {Head(g)}
+              <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem", marginLeft: "0.7rem" }}>
+                {g.rows.length} hitters
+              </span>
+            </summary>
             {g.rows.map(Row)}
-          </div>
+          </details>
         ))}
       </div>
     );
