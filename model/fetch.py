@@ -8,7 +8,7 @@ import time
 import statsapi
 import requests
 import pandas as pd
-from pybaseball import statcast_batter, statcast_pitcher
+from pybaseball import statcast, statcast_batter, statcast_pitcher
 
 # MLB Stats API team-id -> our park abbreviation
 _TEAM_ABBR = {
@@ -140,6 +140,7 @@ def _date_window(season: int) -> tuple[str, str]:
 
 _BATTER_EVENT_COLS = ["game_date", "events", "launch_speed"]
 _PITCHER_EVENT_COLS = ["game_date", "events", "game_pk"]
+_DAY_EVENT_COLS = ["batter", "pitcher", "game_date", "events", "launch_speed", "game_pk"]
 
 
 def _slim_records(df: pd.DataFrame, cols: list[str]) -> list[dict]:
@@ -163,6 +164,16 @@ def pitcher_events(player_id: int, season: int) -> list[dict]:
     """One pitcher-season of slim Statcast rows: game_date, events, game_pk."""
     start, end = _date_window(season)
     return _slim_records(_with_retries(lambda: statcast_pitcher(start, end, player_id)), _PITCHER_EVENT_COLS)
+
+
+def statcast_day(date_str: str) -> list[dict]:
+    """One calendar day of league-wide Statcast rows, slim columns only.
+
+    The morning job appends this to the per-player event caches - one pull
+    instead of ~500 per-player pulls.
+    """
+    df = _with_retries(lambda: statcast(start_dt=date_str, end_dt=date_str))
+    return _slim_records(df, _DAY_EVENT_COLS)
 
 
 def get_lineups(game_id: int) -> dict[str, list[int]]:

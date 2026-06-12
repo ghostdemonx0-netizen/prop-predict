@@ -73,3 +73,10 @@ def test_get_bvp_smoke():
     b = get_bvp(592450, 669373)  # Aaron Judge vs Tarik Skubal
     assert b and b["pa"] > 0 and "hr" in b
     assert get_bvp(592450, 0) is None
+
+
+def test_statcast_day_smoke():
+    from model.fetch import statcast_day
+    rows = statcast_day("2026-06-10")  # a completed league day
+    assert len(rows) > 1000
+    assert {"batter", "pitcher", "game_date", "events", "launch_speed", "game_pk"} <= set(rows[0])
