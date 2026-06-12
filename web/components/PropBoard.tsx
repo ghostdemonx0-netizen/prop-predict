@@ -264,17 +264,37 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
     return (
       <div>
         <div className="eyebrow" style={{ marginBottom: "0.6rem" }}>Matchups · first pitch order</div>
-        {groups.map((g) => (
-          <details key={g.key} className="rise" style={{ marginBottom: "0.55rem" }}>
-            <summary className="matchup-head" style={{ cursor: "pointer" }}>
-              {Head(g)}
-              <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem", marginLeft: "0.7rem" }}>
-                {g.rows.length} hitters
-              </span>
-            </summary>
-            {g.rows.map(Row)}
-          </details>
-        ))}
+        {groups.map((g) => {
+          // split the hitters by side, matching the title's AWAY @ HOME order
+          const [away, home] = g.key.split(" @ ");
+          const awayRows = g.rows.filter((r) => r.team === away);
+          const homeRows = g.rows.filter((r) => r.team === home);
+          const split = home !== undefined && awayRows.length + homeRows.length === g.rows.length;
+          return (
+            <details key={g.key} className="rise" style={{ marginBottom: "0.55rem" }}>
+              <summary className="matchup-head" style={{ cursor: "pointer" }}>
+                {Head(g)}
+                <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem", marginLeft: "0.7rem" }}>
+                  {g.rows.length} hitters
+                </span>
+              </summary>
+              {split ? (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+                  <div style={{ borderRight: "1px solid var(--line-strong)", paddingRight: "0.8rem" }}>
+                    <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem" }}>{away} · away</div>
+                    {awayRows.map(Row)}
+                  </div>
+                  <div style={{ paddingLeft: "0.8rem" }}>
+                    <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem" }}>{home} · home</div>
+                    {homeRows.map(Row)}
+                  </div>
+                </div>
+              ) : (
+                g.rows.map(Row)
+              )}
+            </details>
+          );
+        })}
       </div>
     );
   };
