@@ -210,11 +210,6 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
       <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap" }}>
         {r.player}
         {r.playerHand && <span className="hand">{r.playerHand}</span>}
-        {r.opponent?.hand && (
-          <span style={{ color: "var(--muted)", fontWeight: 400 }}>
-            vs {r.opponent.name} <span className="hand">{r.opponent.hand}</span>
-          </span>
-        )}
       </span>
       <HeatSphere prob={r.prob} kind={kind} />
     </Link>
@@ -280,14 +275,25 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
               </summary>
               {split ? (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-                  <div style={{ borderRight: "1px solid var(--line-strong)", paddingRight: "0.8rem" }}>
-                    <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem" }}>{away} · away</div>
-                    {awayRows.map(Row)}
-                  </div>
-                  <div style={{ paddingLeft: "0.8rem" }}>
-                    <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem" }}>{home} · home</div>
-                    {homeRows.map(Row)}
-                  </div>
+                  {[
+                    { label: `${away} · away`, rs: awayRows, style: { borderRight: "1px solid var(--line-strong)", paddingRight: "0.8rem" } },
+                    { label: `${home} · home`, rs: homeRows, style: { paddingLeft: "0.8rem" } },
+                  ].map(({ label, rs, style }) => {
+                    const opp = rs.find((r) => r.opponent)?.opponent;
+                    return (
+                      <div key={label} style={style}>
+                        <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
+                          <span>{label}</span>
+                          {opp && (
+                            <span>
+                              vs {opp.name}{opp.hand && <> <span className="hand">{opp.hand}</span></>}
+                            </span>
+                          )}
+                        </div>
+                        {rs.map(Row)}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 g.rows.map(Row)
