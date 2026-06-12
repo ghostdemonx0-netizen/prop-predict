@@ -18,7 +18,7 @@ function MatchupSphere({ lean, prob }: { lean: string; prob: number }) {
   return (
     <span className={`msphere ${cls}`} title="model matchup read — rates + handedness, history-nudged (±10% cap)">
       <span className="mp">{Math.round(prob * 100)}%</span>
-      <span className="ml">{lean === "NEU" ? "—" : lean}</span>
+      <span className="ml">{lean === "NEU" ? "N" : lean}</span>
     </span>
   );
 }
@@ -210,7 +210,8 @@ export default function PlayerPage({
             <div className="eyebrow mb-1">Pitcher matchup</div>
             <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
               <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
-              <strong style={{ color: "#bff3d2" }}>H</strong> = likely hit
+              <strong style={{ color: "#bff3d2" }}>H</strong> = likely hit ·{" "}
+              <strong style={{ color: "#c5d6e8" }}>N</strong> = neutral
             </p>
             <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
               <span className="bname">
@@ -276,7 +277,8 @@ export default function PlayerPage({
           <div className="eyebrow mb-1">Opposing lineup — matchup read</div>
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
             <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
-            <strong style={{ color: "#bff3d2" }}>H</strong> = likely hit
+            <strong style={{ color: "#bff3d2" }}>H</strong> = likely hit ·{" "}
+              <strong style={{ color: "#c5d6e8" }}>N</strong> = neutral
           </p>
           <div className="lineup">
             {r.matchups.map((m, i) => (
