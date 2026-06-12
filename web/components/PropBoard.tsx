@@ -139,7 +139,12 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
             </th>
           )}
           {kind === "k" && <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>Proj Ks</th>}
-          <th style={{ textAlign: "right" }}>Probability</th>
+          <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+            Probability
+            {kind === "k" && (
+              <span style={{ fontWeight: 400, opacity: 0.6, fontSize: "0.85em" }}> (over Model Book Line)</span>
+            )}
+          </th>
         </tr>
       </thead>
       <tbody>
