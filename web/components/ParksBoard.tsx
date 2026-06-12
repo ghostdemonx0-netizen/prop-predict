@@ -88,17 +88,23 @@ export function ParksBoard({ games, hrRows = [], kRows = [], expandable = false 
       {expandable ? (
         <>
           <div className="eyebrow" style={{ marginBottom: "0.3rem" }}>Tonight&apos;s games · first pitch order</div>
-          <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.8rem" }}>
-            Every game on the slate — click one for the full breakdown: starters, lineups, and edges.
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "1rem", marginBottom: "0.8rem" }}>
+            <p className="factor-note" style={{ margin: 0 }}>
+              Every game on the slate — click one for the full breakdown: starters, lineups, and edges.
+            </p>
+            <span className="factor-note" style={{ margin: 0, whiteSpace: "nowrap" }}>spheres = park + weather boost</span>
+          </div>
         </>
       ) : (
         <>
           <div className="eyebrow" style={{ marginBottom: "0.3rem" }}>Park factors · best hitting environments</div>
-          <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.8rem" }}>
-            Park + weather combined — higher means the ball carries (good for hitters), lower favors
-            pitchers. Ranked best first.
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "1rem", marginBottom: "0.8rem" }}>
+            <p className="factor-note" style={{ margin: 0 }}>
+              Park + weather combined — higher means the ball carries (good for hitters), lower favors
+              pitchers. Ranked best first.
+            </p>
+            <span className="factor-note" style={{ margin: 0, whiteSpace: "nowrap" }}>spheres = park + weather boost</span>
+          </div>
         </>
       )}
       <div className="grid gap-2.5">
