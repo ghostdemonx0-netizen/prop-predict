@@ -177,7 +177,7 @@ def slate_signature(slate: list[dict], lineups_by_game: dict) -> str:
 
 
 def should_skip(sig: str, *, cache_dir=DEFAULT_DIR, max_age_min: int = 90, now=None) -> bool:
-    """True when nothing structural changed AND we published recently.
+    """True when nothing structural changed AND we verified recently.
 
     This is a pure optimization cache: any corruption or surprise in the
     saved file means "don't skip", never a crash.
@@ -197,7 +197,8 @@ def should_skip(sig: str, *, cache_dir=DEFAULT_DIR, max_age_min: int = 90, now=N
 
 
 def record_run(sig: str, published: bool, *, cache_dir=DEFAULT_DIR, now=None) -> None:
-    """Save the latest signature; published_at only advances on real publishes."""
+    """Save the latest signature; the freshness timestamp advances on real
+    publishes AND on computes that verified no change (caller passes published=True)."""
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / _SIGNATURE

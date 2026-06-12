@@ -62,7 +62,10 @@ def refresh(date_str: str | None = None) -> bool:
         daily.record_run(sig, published=False)
         return False
     changed = daily.refresh_today(date_str)
-    daily.record_run(sig, published=changed)
+    # a compute VERIFIES the board is current even when unchanged - advance
+    # the freshness window so quiet stretches skip cheaply instead of
+    # recomputing every run after 90 minutes
+    daily.record_run(sig, published=True)
     return changed
 
 

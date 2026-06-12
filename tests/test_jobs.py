@@ -63,3 +63,15 @@ def test_main_rejects_unknown_mode():
     from model import jobs
     with pytest.raises(SystemExit):
         jobs.main(["lunch"])
+
+
+def test_refresh_compute_advances_freshness_even_when_unchanged(monkeypatch):
+    from model import jobs, daily, fetch
+    monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
+    monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
+    monkeypatch.setattr(daily, "should_skip", lambda sig: False)
+    recorded = {}
+    monkeypatch.setattr(daily, "record_run", lambda sig, published: recorded.update(p=published))
+    monkeypatch.setattr(daily, "refresh_today", lambda d: False)  # computed, found no change
+    assert jobs.refresh("2026-06-12") is False
+    assert recorded["p"] is True  # freshness window still advances
