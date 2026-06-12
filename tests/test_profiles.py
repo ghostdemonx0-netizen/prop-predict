@@ -49,7 +49,7 @@ def test_pitcher_profile_from_events():
     assert p["hr_allowed_rate"] == pytest.approx(0.25)
     assert p["expected_bf"] == pytest.approx(2.0)  # 4 PA over 2 games
     assert p["bf"] == 4
-    assert p["k_line"] == 1.0 and p["throws"] == "L"  # 2 starts, 1 K each -> his own line
+    assert p["k_line"] == 0.5 and p["throws"] == "L"  # 2 starts, 1 K each: median 1 -> 0.5
 
 
 def test_pitcher_profile_no_data_defaults():
@@ -76,17 +76,18 @@ def test_batter_recent_form_cold_clamps_at_floor():
     assert p["recent_form_mult"] == pytest.approx(0.8)  # clamped at the floor
 
 
-def test_k_line_from_starts_median_rounded_to_half():
+def test_k_line_from_starts_always_ends_in_half():
     from model.profiles import k_line_from_starts
-    assert k_line_from_starts([4, 6, 7]) == 6.0          # odd count -> middle value
+    assert k_line_from_starts([4, 6, 7]) == 5.5          # median 6 -> whole numbers drop to x.5
     assert k_line_from_starts([4, 5, 6, 8]) == 5.5       # even count -> mean of middle two
-    assert k_line_from_starts([3, 3, 9]) == 3.0          # median resists one blowup start
+    assert k_line_from_starts([3, 3, 9]) == 2.5          # median 3 -> 2.5; resists one blowup
+    assert k_line_from_starts([0, 0, 1]) == 0.5          # floor: a line is never below 0.5
 
 
 def test_k_line_from_starts_uses_own_games_from_first_start():
     from model.profiles import k_line_from_starts
     assert k_line_from_starts([7, 8]) == 7.5             # 2 starts -> midpoint of the two
-    assert k_line_from_starts([3]) == 3.0                # 1 start -> that game
+    assert k_line_from_starts([3]) == 2.5                # 1 start -> that game, bumped to .5
 
 
 def test_k_line_from_starts_debut_falls_back_to_rookie_line():
@@ -105,4 +106,4 @@ def test_pitcher_profile_computes_personal_k_line():
         + [_pev("2026-05-11", "field_out", 3)] * 3
     )
     p = pitcher_profile_from_events(events, as_of="2026-06-01", player_id=9)
-    assert p["k_line"] == 1.0  # median of [2, 1, 0]
+    assert p["k_line"] == 0.5  # median of [2, 1, 0] is 1 -> 0.5

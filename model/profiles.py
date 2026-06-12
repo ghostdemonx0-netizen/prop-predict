@@ -63,7 +63,10 @@ def k_line_from_starts(ks_per_game: list[int], *, fallback: float = 4.5, min_gam
     s = sorted(ks_per_game)
     n = len(s)
     med = s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2
-    return round(med * 2) / 2
+    line = round(med * 2) / 2
+    if line == int(line):
+        line -= 0.5  # books avoid whole-number lines (no pushes); 4 -> 3.5
+    return max(0.5, line)
 
 
 def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: int,

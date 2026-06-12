@@ -134,7 +134,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
           <th style={{ whiteSpace: "nowrap", paddingLeft: 0 }}>Team</th>
           <th style={{ width: "100%" }}>Opponent</th>
           {kind === "k" && (
-            <th style={{ textAlign: "right", whiteSpace: "nowrap" }} title="not a sportsbook line — the model sets it from his typical start">
+            <th style={{ textAlign: "center", whiteSpace: "nowrap" }} title="not a sportsbook line — the model sets it from his typical start">
               Model Book Line
             </th>
           )}
@@ -167,7 +167,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
               )}
             </td>
             {kind === "k" && (
-              <td className="num" style={{ textAlign: "right", whiteSpace: "nowrap" }}>{r.line}</td>
+              <td className="num" style={{ textAlign: "center", whiteSpace: "nowrap" }}>{r.line}</td>
             )}
             {kind === "k" && (
               <td className="num" style={{ textAlign: "right", whiteSpace: "nowrap" }}>{r.projection}</td>
