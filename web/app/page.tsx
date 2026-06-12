@@ -67,10 +67,10 @@ export default function Home() {
   const updatedAt = data.updated ? new Date(data.updated) : null;
   const updatedLabel = updatedAt
     ? (updatedAt.toDateString() === new Date().toDateString()
-        ? updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+        ? updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" })
         : updatedAt.toLocaleDateString([], { month: "short", day: "numeric" }) +
           " " +
-          updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))
+          updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" }))
     : null;
 
   const dateQ = selectedDate ? `?date=${selectedDate}` : "";
