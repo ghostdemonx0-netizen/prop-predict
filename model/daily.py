@@ -30,7 +30,9 @@ def merge_day_into_caches(day_rows: list[dict], cache_dir=DEFAULT_DIR) -> int:
 
     Players with NO cache file are skipped, never created - a partial cache
     would masquerade as a full season; they get a full pull on first
-    appearance via the normal export path. Returns files updated.
+    appearance via the normal export path. ``day_rows`` must all share one
+    ``game_date`` (the caller, update_events, pulls one day at a time).
+    Returns files updated.
     """
     cache_dir = Path(cache_dir)
     by_key: dict[str, list[dict]] = {}
