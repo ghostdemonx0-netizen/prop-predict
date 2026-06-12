@@ -17,8 +17,14 @@ function MatchupSphere({ lean, prob }: { lean: string; prob: number }) {
   const cls = lean === "K" ? "k" : lean === "H" ? "h" : "neu";
   return (
     <span className={`msphere ${cls}`} title="model matchup read — rates + handedness, history-nudged (±10% cap)">
-      <span className="mp">{Math.round(prob * 100)}%</span>
-      <span className="ml">{lean === "NEU" ? "N" : lean}</span>
+      {lean === "NEU" ? (
+        <span className="mp">N</span>
+      ) : (
+        <>
+          <span className="mp">{Math.round(prob * 100)}%</span>
+          <span className="ml">{lean}</span>
+        </>
+      )}
     </span>
   );
 }
