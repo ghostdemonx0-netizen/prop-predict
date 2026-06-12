@@ -43,4 +43,5 @@ def test_statcast_day_slims_and_is_json_safe(monkeypatch):
     assert rows[0] == {"batter": 660271, "pitcher": 669373, "game_date": "2026-06-11",
                        "events": "home_run", "launch_speed": 108.4, "game_pk": 824001}
     assert rows[1]["launch_speed"] is None and rows[1]["events"] is None
+    assert isinstance(rows[1]["batter"], int)  # no float leakage in NaN rows
     assert "extra_col" not in rows[0]
