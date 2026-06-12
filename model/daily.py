@@ -143,3 +143,43 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
     (data_dir / "latest.json").write_text(text)
     export_web._update_index(date_str)
     return True
+
+
+def slate_signature(slate: list[dict], lineups_by_game: dict) -> str:
+    """Structural fingerprint of today: pitchers, lineups, started flags.
+
+    Weather is deliberately excluded - forecast drift alone doesn't merit a
+    republish more often than should_skip's freshness window.
+    """
+    snap = sorted(
+        [g["game_id"], g.get("home_pitcher_id"), g.get("away_pitcher_id"),
+         bool(g.get("started")),
+         list(lineups_by_game.get(g["game_id"], {}).get("home", [])),
+         list(lineups_by_game.get(g["game_id"], {}).get("away", []))]
+        for g in slate
+    )
+    return hashlib.md5(json.dumps(snap).encode()).hexdigest()
+
+
+def should_skip(sig: str, *, cache_dir=DEFAULT_DIR, max_age_min: int = 90, now=None) -> bool:
+    """True when nothing structural changed AND we published recently."""
+    path = Path(cache_dir) / _SIGNATURE
+    if not path.exists():
+        return False
+    saved = json.loads(path.read_text())
+    if saved.get("sig") != sig:
+        return False
+    now = now or dt.datetime.now(dt.timezone.utc)
+    published = dt.datetime.fromisoformat(saved["published_at"])
+    return (now - published) < dt.timedelta(minutes=max_age_min)
+
+
+def record_run(sig: str, published: bool, *, cache_dir=DEFAULT_DIR, now=None) -> None:
+    """Save the latest signature; published_at only advances on real publishes."""
+    cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    path = cache_dir / _SIGNATURE
+    now = now or dt.datetime.now(dt.timezone.utc)
+    prev = json.loads(path.read_text()).get("published_at") if path.exists() else None
+    published_at = now.isoformat() if (published or not prev) else prev
+    path.write_text(json.dumps({"sig": sig, "published_at": published_at}))

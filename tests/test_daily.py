@@ -1,3 +1,4 @@
+import datetime as dt
 import json
 
 from model import daily
@@ -139,3 +140,25 @@ def test_update_events_big_gap_resets_caches(tmp_path):
     assert not (tmp_path / "pit-events-2-2026.json").exists()
     marker = json.loads((tmp_path / "events-updated-through.json").read_text())
     assert marker["date"] == "2026-06-11"
+
+
+def test_signature_reacts_to_lineups_and_skip_window(tmp_path):
+    slate = [{"game_id": 1, "home_pitcher_id": 10, "away_pitcher_id": 11, "started": False}]
+    s1 = daily.slate_signature(slate, {1: {"home": [1, 2], "away": [3]}})
+    s2 = daily.slate_signature(slate, {1: {"home": [1, 2, 4], "away": [3]}})
+    s3 = daily.slate_signature([dict(slate[0], started=True)], {1: {"home": [1, 2], "away": [3]}})
+    assert s1 != s2 and s1 != s3
+    now = dt.datetime(2026, 6, 12, 18, 0, tzinfo=dt.timezone.utc)
+    daily.record_run(s1, published=True, cache_dir=tmp_path, now=now)
+    assert daily.should_skip(s1, cache_dir=tmp_path, now=now + dt.timedelta(minutes=30)) is True
+    assert daily.should_skip(s2, cache_dir=tmp_path, now=now + dt.timedelta(minutes=30)) is False
+    assert daily.should_skip(s1, cache_dir=tmp_path, now=now + dt.timedelta(minutes=120)) is False
+    assert daily.should_skip(s1, cache_dir=tmp_path / "empty", now=now) is False
+
+
+def test_record_run_unpublished_keeps_published_at(tmp_path):
+    t0 = dt.datetime(2026, 6, 12, 18, 0, tzinfo=dt.timezone.utc)
+    daily.record_run("a", published=True, cache_dir=tmp_path, now=t0)
+    daily.record_run("a", published=False, cache_dir=tmp_path, now=t0 + dt.timedelta(minutes=60))
+    saved = json.loads((tmp_path / "last-signature.json").read_text())
+    assert saved["published_at"] == t0.isoformat()
