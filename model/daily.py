@@ -52,3 +52,35 @@ def merge_day_into_caches(day_rows: list[dict], cache_dir=DEFAULT_DIR) -> int:
         path.write_text(json.dumps(kept + rows))
         updated += 1
     return updated
+
+
+def update_events(today: str, *, fetch_day=None, cache_dir=DEFAULT_DIR) -> list[str]:
+    """Bring the event caches up to date through yesterday (relative to the
+    ET date ``today``). Walks any missed days; a gap beyond _MAX_GAP_DAYS
+    deletes the event caches instead (players re-pull fully on demand -
+    slow but automatic). Returns the list of dates ingested.
+    """
+    fetch_day = fetch_day or fetch.statcast_day
+    cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    marker = cache_dir / _MARKER
+    target = dt.date.fromisoformat(today) - dt.timedelta(days=1)
+    start = target  # no marker -> just yesterday
+    if marker.exists():
+        last = dt.date.fromisoformat(json.loads(marker.read_text())["date"])
+        if last >= target:
+            return []
+        start = last + dt.timedelta(days=1)
+    if (target - start).days + 1 > _MAX_GAP_DAYS:
+        for f in list(cache_dir.glob("bat-events-*.json")) + list(cache_dir.glob("pit-events-*.json")):
+            f.unlink()
+        marker.write_text(json.dumps({"date": target.isoformat()}))
+        return ["<cache-reset>"]
+    ingested: list[str] = []
+    d = start
+    while d <= target:
+        merge_day_into_caches(fetch_day(d.isoformat()), cache_dir)
+        ingested.append(d.isoformat())
+        d += dt.timedelta(days=1)
+    marker.write_text(json.dumps({"date": target.isoformat()}))
+    return ingested
