@@ -201,7 +201,7 @@ export default function PlayerPage({
               icon="📜"
               label={`History · vs ${r.vs.name}`}
               mult={r.bvp_mult}
-              note={`${r.vs.bvp.hits}-for-${r.vs.bvp.ab} career${r.vs.bvp.hr > 0 ? ` with ${r.vs.bvp.hr} HR` : ""} — history nudges the number, capped at ±10%.`}
+              note={`${r.vs.bvp.hits}-for-${r.vs.bvp.ab} career${r.vs.bvp.hr > 0 ? ` with ${r.vs.bvp.hr} HR` : ""}.`}
             />
           )}
         </div>
