@@ -3,8 +3,9 @@
 Keys map to sanitized filenames under cache_dir. Raw per-player event lists
 are keyed ``bat-events-{pid}-{season}`` / ``pit-events-{pid}-{season}`` — no
 date in the key, because as-of date filtering happens at profile-compute time
-(see model/profiles.py). Freshness between days comes from clearing .cache/
-(the daily automation will do this each morning).
+(see model/profiles.py). Freshness: the daily automation merges yesterday's league rows into the
+event caches each morning (model/daily.update_events) and clears only the
+bvp-* pair files; a full .cache/ wipe is never needed routinely.
 """
 
 import json

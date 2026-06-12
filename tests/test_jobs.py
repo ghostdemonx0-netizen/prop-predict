@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_clear_bvp_only_touches_bvp_files(tmp_path):
     from model import jobs
     (tmp_path / "bvp-1-2.json").write_text("{}")
@@ -54,3 +57,9 @@ def test_main_emits_github_output(monkeypatch, tmp_path):
 def test_today_et_is_a_date_string():
     from model import jobs
     assert len(jobs.today_et()) == 10  # YYYY-MM-DD
+
+
+def test_main_rejects_unknown_mode():
+    from model import jobs
+    with pytest.raises(SystemExit):
+        jobs.main(["lunch"])

@@ -68,6 +68,8 @@ def refresh(date_str: str | None = None) -> bool:
 
 def main(argv: list[str]) -> None:
     mode = argv[0] if argv else "refresh"
+    if mode not in ("morning", "refresh"):
+        raise SystemExit(f"unknown mode: {mode!r} (expected morning|refresh)")
     changed = morning() if mode == "morning" else refresh()
     flag = "true" if changed else "false"
     print(f"changed={flag}")
