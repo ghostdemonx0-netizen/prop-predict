@@ -4,6 +4,7 @@ pure modules stay testable offline.
 """
 
 import datetime as dt
+import time
 import statsapi
 import requests
 import pandas as pd
@@ -57,6 +58,24 @@ def _abbr(team_id: int) -> str:
     return _TEAM_ABBR.get(team_id, "ZZZ")
 
 
+def _with_retries(producer, attempts: int = 3, base_delay: float = 2.0):
+    """Run producer(), retrying transient failures with exponential backoff.
+
+    Statcast/Open-Meteo flake under load (observed 2026-06-11/12: read
+    timeouts, garbled CSVs, rate-limit handshake failures); a couple of
+    spaced retries clears virtually all of it.
+    """
+    last = None
+    for attempt in range(attempts):
+        try:
+            return producer()
+        except Exception as e:  # network errors come in many shapes (requests, urllib3, pandas)
+            last = e
+            if attempt < attempts - 1:
+                time.sleep(base_delay * (2 ** attempt))
+    raise last
+
+
 def get_schedule(date_str: str) -> list[dict]:
     """Return the day's games as normalized dicts.
 
@@ -84,31 +103,35 @@ def get_weather(lat: float, lon: float, when_iso: str) -> dict:
     """Hourly forecast nearest the game time from Open-Meteo (no key)."""
     target = dt.datetime.fromisoformat(when_iso.replace("Z", "+00:00"))
     date = target.date().isoformat()
-    resp = requests.get(
-        "https://api.open-meteo.com/v1/forecast",
-        params={
-            "latitude": lat,
-            "longitude": lon,
-            "hourly": "temperature_2m,wind_speed_10m,wind_direction_10m,precipitation_probability",
-            "temperature_unit": "fahrenheit",
-            "wind_speed_unit": "mph",
-            "start_date": date,
-            "end_date": date,
-            "timezone": "UTC",
-        },
-        timeout=20,
-    )
-    resp.raise_for_status()
-    h = resp.json()["hourly"]
-    times = [dt.datetime.fromisoformat(t + "+00:00") for t in h["time"]]
-    idx = min(range(len(times)), key=lambda i: abs((times[i] - target).total_seconds()))
-    precip = h.get("precipitation_probability") or []
-    return {
-        "temp_f": h["temperature_2m"][idx],
-        "wind_speed_mph": h["wind_speed_10m"][idx],
-        "wind_from_deg": h["wind_direction_10m"][idx],
-        "precip_pct": precip[idx] if idx < len(precip) and precip[idx] is not None else 0,
-    }
+
+    def _pull():
+        resp = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": lat,
+                "longitude": lon,
+                "hourly": "temperature_2m,wind_speed_10m,wind_direction_10m,precipitation_probability",
+                "temperature_unit": "fahrenheit",
+                "wind_speed_unit": "mph",
+                "start_date": date,
+                "end_date": date,
+                "timezone": "UTC",
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        h = resp.json()["hourly"]
+        times = [dt.datetime.fromisoformat(t + "+00:00") for t in h["time"]]
+        idx = min(range(len(times)), key=lambda i: abs((times[i] - target).total_seconds()))
+        precip = h.get("precipitation_probability") or []
+        return {
+            "temp_f": h["temperature_2m"][idx],
+            "wind_speed_mph": h["wind_speed_10m"][idx],
+            "wind_from_deg": h["wind_direction_10m"][idx],
+            "precip_pct": precip[idx] if idx < len(precip) and precip[idx] is not None else 0,
+        }
+
+    return _with_retries(_pull)
 
 
 def _date_window(season: int) -> tuple[str, str]:
@@ -133,13 +156,13 @@ def _slim_records(df: pd.DataFrame, cols: list[str]) -> list[dict]:
 def batter_events(player_id: int, season: int) -> list[dict]:
     """One batter-season of slim Statcast rows: game_date, events, launch_speed."""
     start, end = _date_window(season)
-    return _slim_records(statcast_batter(start, end, player_id), _BATTER_EVENT_COLS)
+    return _slim_records(_with_retries(lambda: statcast_batter(start, end, player_id)), _BATTER_EVENT_COLS)
 
 
 def pitcher_events(player_id: int, season: int) -> list[dict]:
     """One pitcher-season of slim Statcast rows: game_date, events, game_pk."""
     start, end = _date_window(season)
-    return _slim_records(statcast_pitcher(start, end, player_id), _PITCHER_EVENT_COLS)
+    return _slim_records(_with_retries(lambda: statcast_pitcher(start, end, player_id)), _PITCHER_EVENT_COLS)
 
 
 def get_lineups(game_id: int) -> dict[str, list[int]]:
@@ -190,10 +213,10 @@ def get_bvp(batter_id: int, pitcher_id: int) -> dict | None:
     if not batter_id or not pitcher_id:
         return None
     try:
-        data = statsapi.get("people", {
+        data = _with_retries(lambda: statsapi.get("people", {
             "personIds": str(batter_id),
             "hydrate": f"stats(group=[hitting],type=[vsPlayerTotal],opposingPlayerId={pitcher_id},sportId=1)",
-        })
+        }))
         splits = data["people"][0].get("stats", [{}])[0].get("splits", [])
         if not splits:
             return None
