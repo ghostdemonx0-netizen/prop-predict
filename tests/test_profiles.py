@@ -74,3 +74,29 @@ def test_batter_recent_form_cold_clamps_at_floor():
     cold_recent = [_ev("2026-06-08", "field_out", 80.0)] * 10
     p = batter_profile_from_events(hot_season + cold_recent, as_of="2026-06-10", player_id=1)
     assert p["recent_form_mult"] == pytest.approx(0.8)  # clamped at the floor
+
+
+def test_k_line_from_starts_median_rounded_to_half():
+    from model.profiles import k_line_from_starts
+    assert k_line_from_starts([4, 6, 7]) == 6.0          # odd count -> middle value
+    assert k_line_from_starts([4, 5, 6, 8]) == 5.5       # even count -> mean of middle two
+    assert k_line_from_starts([3, 3, 9]) == 3.0          # median resists one blowup start
+
+
+def test_k_line_from_starts_small_sample_falls_back():
+    from model.profiles import k_line_from_starts
+    assert k_line_from_starts([7, 8]) == 5.5             # < 3 starts -> default line
+    assert k_line_from_starts([], fallback=4.5) == 4.5
+
+
+def test_pitcher_profile_computes_personal_k_line():
+    def _pev(date, events, pk):
+        return {"game_date": date, "events": events, "game_pk": pk}
+    # 3 games: 2 Ks, 1 K, 0 Ks (a no-K game must count as zero, not vanish)
+    events = (
+        [_pev("2026-05-01", "strikeout", 1)] * 2 + [_pev("2026-05-01", "single", 1)]
+        + [_pev("2026-05-06", "strikeout", 2)] + [_pev("2026-05-06", "field_out", 2)]
+        + [_pev("2026-05-11", "field_out", 3)] * 3
+    )
+    p = pitcher_profile_from_events(events, as_of="2026-06-01", player_id=9)
+    assert p["k_line"] == 1.0  # median of [2, 1, 0]

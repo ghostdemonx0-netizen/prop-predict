@@ -50,6 +50,21 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
     }
 
 
+def k_line_from_starts(ks_per_game: list[int], *, fallback: float = 5.5, min_games: int = 3) -> float:
+    """Sportsbook-style strikeout line: the pitcher's median Ks per start,
+    rounded to the nearest 0.5 (user-approved 2026-06-11, replacing the flat
+    5.5 placeholder — real prop lines are paywalled). Median, not mean, so one
+    blowup or quick hook doesn't move his "typical night". Falls back when
+    fewer than ``min_games`` starts.
+    """
+    if len(ks_per_game) < min_games:
+        return fallback
+    s = sorted(ks_per_game)
+    n = len(s)
+    med = s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2
+    return round(med * 2) / 2
+
+
 def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: int,
                                 name: str = "", team: str = "", throws: str = "",
                                 k_line: float = 5.5) -> dict:
@@ -60,7 +75,11 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
     ks = sum(1 for e in pa_rows if e["events"] in _K_EVENTS)
     hits = sum(1 for e in pa_rows if e["events"] in _HIT_EVENTS)
     hr = sum(1 for e in pa_rows if e["events"] == "home_run")
-    games = len({e["game_pk"] for e in past if e["game_pk"] is not None})
+    ks_by_game: dict = {e["game_pk"]: 0 for e in past if e["game_pk"] is not None}
+    for e in pa_rows:
+        if e["game_pk"] is not None and e["events"] in _K_EVENTS:
+            ks_by_game[e["game_pk"]] += 1
+    games = len(ks_by_game)
 
     return {
         "player_id": player_id,
@@ -70,7 +89,7 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
         "k_per_bf": (ks / pa) if pa else 0.0,
         "expected_bf": (pa / games) if games else 24.0,
         "opponent_k_mult": 1.0,
-        "k_line": k_line,
+        "k_line": k_line_from_starts(list(ks_by_game.values()), fallback=k_line),
         "hit_allowed_rate": (hits / pa) if pa else 0.0,
         "hr_allowed_rate": (hr / pa) if pa else 0.0,
         "bf": pa,
