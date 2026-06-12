@@ -23,9 +23,13 @@ function MatchupSphere({ lean, prob }: { lean: string; prob: number }) {
   );
 }
 
-function Back({ date }: { date?: string }) {
+function Back({ prop, date }: { prop?: string; date?: string }) {
+  const q = new URLSearchParams();
+  if (prop === "k") q.set("prop", "k"); // return to the strikeout board, not the default HR view
+  if (date) q.set("date", date);
+  const qs = q.toString();
   return (
-    <Link href={date ? `/?date=${date}` : "/"} className="eyebrow" style={{ textDecoration: "none" }}>
+    <Link href={qs ? `/?${qs}` : "/"} className="eyebrow" style={{ textDecoration: "none" }}>
       ← back to board
     </Link>
   );
@@ -129,7 +133,7 @@ export default function PlayerPage({
 
   const notFound = (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-5">
-      <Back date={date} />
+      <Back prop={prop} date={date} />
       <p className="panel" style={{ color: "var(--muted)" }}>No data for {name}.</p>
     </main>
   );
@@ -140,7 +144,7 @@ export default function PlayerPage({
     const parkFriendly = r.park_mult >= 1;
     return (
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-        <Back date={date} />
+        <Back prop={prop} date={date} />
         <div className="rise">
           <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Home Run</p>
           <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
@@ -234,7 +238,7 @@ export default function PlayerPage({
   const over = r.expected_ks > r.line;
   return (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-      <Back date={date} />
+      <Back prop={prop} date={date} />
       <div className="rise">
         <p className="eyebrow mb-1">{r.team}{r.throws ? ` · ${pitLabel(r.throws)}` : ""} · Strikeouts</p>
         <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>

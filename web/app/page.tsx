@@ -36,7 +36,9 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState<string>("");
 
   useEffect(() => {
-    const want = new URLSearchParams(window.location.search).get("date");
+    const params = new URLSearchParams(window.location.search);
+    const want = params.get("date");
+    if (params.get("prop") === "k") setProp("k"); // back-link from a strikeout player page
     loadIndex().then((ds) => {
       setDates(ds);
       setSelectedDate(want && ds.includes(want) ? want : ds[0] ?? "");
@@ -92,6 +94,7 @@ export default function Home() {
     team: r.team,
     prob: r.over_prob,
     detail: `${r.line} Ks`,
+    projection: r.expected_ks.toFixed(1),
     href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
     matchup: r.matchup,
     hand: pitchHand(r.throws),

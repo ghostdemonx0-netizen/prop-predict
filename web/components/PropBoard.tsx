@@ -12,6 +12,7 @@ export type BoardRow = {
   detail: string; // e.g. "@ COL" or "5.5 Ks"
   href: string;
   matchup?: string; // "AWAY @ HOME" — game grouping for the List view
+  projection?: string; // K board: projected strikeouts, e.g. "6.8"
   hand?: string; // combined card chip, e.g. "RHB vs LHP"
   playerHand?: string; // this player's own handedness (RHB/LHB/SW or RHP/LHP)
   opponent?: { name: string; hand?: string }; // opposing pitcher (+hand) for hitters, or opposing team for pitchers
@@ -131,6 +132,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
           <th style={{ whiteSpace: "nowrap" }}>Player</th>
           <th style={{ whiteSpace: "nowrap", paddingLeft: 0 }}>Team</th>
           <th style={{ width: "100%" }}>Opponent</th>
+          {kind === "k" && <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>Proj Ks</th>}
           <th style={{ textAlign: "right" }}>Probability</th>
         </tr>
       </thead>
@@ -152,6 +154,9 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
                 </>
               )}
             </td>
+            {kind === "k" && (
+              <td className="num" style={{ textAlign: "right", whiteSpace: "nowrap" }}>{r.projection}</td>
+            )}
             <td style={{ textAlign: "right" }}>
               <HeatSphere prob={r.prob} kind={kind} />
             </td>
