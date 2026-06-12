@@ -62,3 +62,20 @@ def hr_platoon_mult(bats: str, throws: str) -> float:
     """HR platoon adjustment: hitters homer more with the platoon advantage
     (opposite hands, or switch), less without it."""
     return 1.06 if batter_advantage(bats, throws) else 0.95
+
+
+def bvp_k_mult(k: float, pa: float, *, league_k_rate: float = LEAGUE_K,
+               regression_pa: float = 100.0, min_pa: float = 1.0,
+               lo: float = 0.90, hi: float = 1.10) -> float:
+    """Career history-vs-this-pitcher strikeout dial (user-approved 2026-06-12).
+
+    Same ladder shape as the HR history dial: the career K rate against this
+    pitcher is regressed toward league average with ``regression_pa`` phantom
+    PAs and capped to +/-10%. ~2 Ks per 9 career meetings (league-typical)
+    is neutral; getting owned (4-5+ per 9) caps at +10%; a long never-fooled
+    record trends toward -10%.
+    """
+    if pa < min_pa:
+        return 1.0
+    reg = (k + league_k_rate * regression_pa) / (pa + regression_pa)
+    return max(lo, min(reg / league_k_rate, hi))

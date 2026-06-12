@@ -49,7 +49,7 @@ def test_pitcher_profile_from_events():
     assert p["hr_allowed_rate"] == pytest.approx(0.25)
     assert p["expected_bf"] == pytest.approx(2.0)  # 4 PA over 2 games
     assert p["bf"] == 4
-    assert p["k_line"] == 5.5 and p["throws"] == "L"
+    assert p["k_line"] == 1.0 and p["throws"] == "L"  # 2 starts, 1 K each -> his own line
 
 
 def test_pitcher_profile_no_data_defaults():
@@ -83,10 +83,16 @@ def test_k_line_from_starts_median_rounded_to_half():
     assert k_line_from_starts([3, 3, 9]) == 3.0          # median resists one blowup start
 
 
-def test_k_line_from_starts_small_sample_falls_back():
+def test_k_line_from_starts_uses_own_games_from_first_start():
     from model.profiles import k_line_from_starts
-    assert k_line_from_starts([7, 8]) == 5.5             # < 3 starts -> default line
-    assert k_line_from_starts([], fallback=4.5) == 4.5
+    assert k_line_from_starts([7, 8]) == 7.5             # 2 starts -> midpoint of the two
+    assert k_line_from_starts([3]) == 3.0                # 1 start -> that game
+
+
+def test_k_line_from_starts_debut_falls_back_to_rookie_line():
+    from model.profiles import k_line_from_starts
+    assert k_line_from_starts([]) == 4.5                 # no MLB starts -> rookie-debut line
+    assert k_line_from_starts([], fallback=5.0) == 5.0
 
 
 def test_pitcher_profile_computes_personal_k_line():

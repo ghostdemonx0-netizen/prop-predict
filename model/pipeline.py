@@ -21,7 +21,16 @@ from model.projections import (
     hr_probability, expected_strikeouts, poisson_over_prob,
     lineup_expected_ks, expected_pa_for_slot, pitcher_hr_mult, bvp_hr_mult,
 )
-from model.matchup import matchup, hr_platoon_mult
+from model.matchup import matchup, hr_platoon_mult, bvp_k_mult, classify_lean
+
+
+def _history_adjusted(m: dict, bvp: dict | None) -> dict:
+    """Nudge a matchup read's k_prob by career history vs this pitcher
+    (capped ±10% in bvp_k_mult) and re-derive the lean to stay consistent."""
+    if not bvp or not bvp.get("pa"):
+        return m
+    kp = min(0.7, m["k_prob"] * bvp_k_mult(bvp.get("k", 0), bvp["pa"]))
+    return {**m, "k_prob": kp, **classify_lean(kp, m["hit_prob"])}
 
 
 def _game_weather(game: dict, weather_fn) -> dict:
@@ -80,6 +89,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                         p_k=opp.get("k_per_bf", 0.22), p_hit=opp.get("hit_allowed_rate", 0.22),
                         bats=b.get("bats", "R"), throws=opp.get("throws", "R"),
                     )
+                    m = _history_adjusted(m, bvp)
                     vs = {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R"), "bvp": bvp, **m}
                 rows.append({
                     "prop": "HR", "game_id": game["game_id"],
@@ -122,7 +132,9 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn, 
                     p_k=p.get("k_per_bf", 0.22), p_hit=p.get("hit_allowed_rate", 0.22),
                     bats=b.get("bats", "R"), throws=p.get("throws", "R"),
                 )
-                matchups.append({"name": b["name"], "player_id": b.get("player_id"), "bats": b.get("bats", "R"), "bvp": bvp_fn(b.get("player_id"), pid) if bvp_fn else None, **m})
+                bvp = bvp_fn(b.get("player_id"), pid) if bvp_fn else None
+                m = _history_adjusted(m, bvp)
+                matchups.append({"name": b["name"], "player_id": b.get("player_id"), "bats": b.get("bats", "R"), "bvp": bvp, **m})
             lam = lineup_expected_ks([m["k_prob"] for m in matchups], p["expected_bf"])
             if lam is None:
                 lam = expected_strikeouts(p["k_per_bf"], p["expected_bf"], p.get("opponent_k_mult", 1.0))

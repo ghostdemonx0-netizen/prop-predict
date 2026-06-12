@@ -58,3 +58,12 @@ def test_hr_platoon_mult():
     assert hr_platoon_mult("L", "R") == pytest.approx(1.06)  # advantage
     assert hr_platoon_mult("R", "R") == pytest.approx(0.95)  # same-hand
     assert hr_platoon_mult("S", "L") == pytest.approx(1.06)  # switch always has it
+
+
+def test_bvp_k_mult_ladder():
+    from model.matchup import bvp_k_mult
+    assert bvp_k_mult(0, 0) == pytest.approx(1.0)                      # never met
+    assert bvp_k_mult(2, 9) == pytest.approx(1.0, abs=0.01)            # ~2 K per 9 = league-typical
+    assert bvp_k_mult(5, 9) == pytest.approx(1.10)                     # owned -> cap
+    assert bvp_k_mult(0, 9) == pytest.approx((0.225 * 100) / 109 / 0.225)  # never fooled ~0.92
+    assert bvp_k_mult(0, 200) == pytest.approx(0.90)                   # long futility -> floor

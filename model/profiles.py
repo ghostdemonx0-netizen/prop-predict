@@ -50,12 +50,13 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
     }
 
 
-def k_line_from_starts(ks_per_game: list[int], *, fallback: float = 5.5, min_games: int = 3) -> float:
+def k_line_from_starts(ks_per_game: list[int], *, fallback: float = 4.5, min_games: int = 1) -> float:
     """Sportsbook-style strikeout line: the pitcher's median Ks per start,
-    rounded to the nearest 0.5 (user-approved 2026-06-11, replacing the flat
-    5.5 placeholder — real prop lines are paywalled). Median, not mean, so one
-    blowup or quick hook doesn't move his "typical night". Falls back when
-    fewer than ``min_games`` starts.
+    rounded to the nearest 0.5 (user-approved 2026-06-11/12, replacing the
+    flat 5.5 placeholder — real prop lines are paywalled). Median, not mean,
+    so one blowup or quick hook doesn't move his "typical night". His own
+    games count from his very first start; only a true MLB debut (no starts
+    at all) falls back, to a rookie-level 4.5.
     """
     if len(ks_per_game) < min_games:
         return fallback
@@ -67,7 +68,7 @@ def k_line_from_starts(ks_per_game: list[int], *, fallback: float = 5.5, min_gam
 
 def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: int,
                                 name: str = "", team: str = "", throws: str = "",
-                                k_line: float = 5.5) -> dict:
+                                k_line: float = 4.5) -> dict:
     """events: [{game_date, events, game_pk}, ...] for one pitcher-season."""
     past = [e for e in events if e["game_date"] < as_of]
     pa_rows = [e for e in past if e["events"]]

@@ -16,7 +16,7 @@ function pitLabel(t?: string) {
 function MatchupSphere({ lean, prob }: { lean: string; prob: number }) {
   const cls = lean === "K" ? "k" : lean === "H" ? "h" : "neu";
   return (
-    <span className={`msphere ${cls}`} title="model matchup read (not head-to-head history)">
+    <span className={`msphere ${cls}`} title="model matchup read — rates + handedness, history-nudged (±10% cap)">
       <span className="mp">{Math.round(prob * 100)}%</span>
       <span className="ml">{lean === "NEU" ? "—" : lean}</span>
     </span>
@@ -276,7 +276,7 @@ export default function PlayerPage({
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
             <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
             <strong style={{ color: "#bff3d2" }}>H</strong> = likely hit · — = no edge. Model-derived
-            from rates + handedness, not head-to-head history.
+            from rates + handedness; career history vs this pitcher adds a small capped nudge (±10%).
           </p>
           <div className="lineup">
             {r.matchups.map((m, i) => (

@@ -147,12 +147,15 @@ def test_hr_rows_without_bvp_fn_are_neutral():
     assert all(r["bvp_mult"] == pytest.approx(1.0) for r in rows)
 
 
-def test_k_matchups_carry_bvp_display_only():
-    from model.projections import lineup_expected_ks
-    from model.matchup import strikeout_prob
+def test_history_dial_nudges_k_read_and_lambda():
+    from model.matchup import strikeout_prob, bvp_k_mult
+    base = strikeout_prob(0.22, 0.25, bats="R", throws="L")
+    adjusted = base * bvp_k_mult(1, 10)  # batter 101's career: 1 K in 10 meetings
     rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_lineups_fn, fake_weather_fn, fake_bvp_fn)
-    dodger = next(r for r in rows if r["player"] == "Dodger Arm")  # pid 202 faces home lineup (101)
-    assert dodger["matchups"][0]["bvp"]["pa"] == 10
-    # K math unchanged by bvp: lambda still the pure lineup-adjusted value
-    expected = strikeout_prob(0.22, 0.25, bats="R", throws="L") * 23
-    assert dodger["expected_ks"] == pytest.approx(expected)
+    dodger = next(r for r in rows if r["player"] == "Dodger Arm")
+    assert dodger["matchups"][0]["k_prob"] == pytest.approx(adjusted)
+    assert dodger["expected_ks"] == pytest.approx(adjusted * 23)
+    # the HR card's vs-sphere shows the SAME adjusted read (consistency)
+    hr_rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn, fake_bvp_fn)
+    home = next(r for r in hr_rows if r["team"] == "COL")
+    assert home["vs"]["k_prob"] == pytest.approx(adjusted)
