@@ -13,6 +13,7 @@ export type BoardRow = {
   href: string;
   matchup?: string; // "AWAY @ HOME" — game grouping for the List view
   projection?: string; // K board: projected strikeouts, e.g. "6.8"
+  line?: string; // K board: our book-style line, e.g. "4.5"
   hand?: string; // combined card chip, e.g. "RHB vs LHP"
   playerHand?: string; // this player's own handedness (RHB/LHB/SW or RHP/LHP)
   opponent?: { name: string; hand?: string }; // opposing pitcher (+hand) for hitters, or opposing team for pitchers
@@ -132,6 +133,11 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
           <th style={{ whiteSpace: "nowrap" }}>Player</th>
           <th style={{ whiteSpace: "nowrap", paddingLeft: 0 }}>Team</th>
           <th style={{ width: "100%" }}>Opponent</th>
+          {kind === "k" && (
+            <th style={{ textAlign: "right", whiteSpace: "nowrap" }} title="the strikeout line Prop Predict sets from his typical start">
+              Our Line
+            </th>
+          )}
           {kind === "k" && <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>Proj Ks</th>}
           <th style={{ textAlign: "right" }}>Probability</th>
         </tr>
@@ -145,15 +151,24 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
             </td>
             <td style={{ color: "var(--muted)", whiteSpace: "nowrap", paddingLeft: 0 }}>{r.team}</td>
             <td style={{ color: "var(--muted)" }}>
-              <span>{r.detail}</span>
-              {r.opponent && (
+              {kind === "k" ? (
+                r.opponent && <span>vs {r.opponent.name}</span>
+              ) : (
                 <>
-                  <span style={{ opacity: 0.45 }}> · </span>
-                  {r.opponent.name}
-                  {r.opponent.hand && <span className="hand" style={{ marginLeft: 6 }}>{r.opponent.hand}</span>}
+                  <span>{r.detail}</span>
+                  {r.opponent && (
+                    <>
+                      <span style={{ opacity: 0.45 }}> · </span>
+                      {r.opponent.name}
+                      {r.opponent.hand && <span className="hand" style={{ marginLeft: 6 }}>{r.opponent.hand}</span>}
+                    </>
+                  )}
                 </>
               )}
             </td>
+            {kind === "k" && (
+              <td className="num" style={{ textAlign: "right", whiteSpace: "nowrap" }}>{r.line}</td>
+            )}
             {kind === "k" && (
               <td className="num" style={{ textAlign: "right", whiteSpace: "nowrap" }}>{r.projection}</td>
             )}
