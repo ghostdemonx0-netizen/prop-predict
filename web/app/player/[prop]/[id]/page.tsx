@@ -209,7 +209,8 @@ export default function PlayerPage({
           <div className="panel rise" style={{ animationDelay: "240ms" }}>
             <div className="eyebrow mb-1">Pitcher matchup</div>
             <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
-              Model read from both players&apos; rates + handedness; career history adds a small capped nudge (±10%).
+              <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
+              <strong style={{ color: "#bff3d2" }}>H</strong> = likely hit
             </p>
             <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
               <span className="bname">
@@ -275,8 +276,7 @@ export default function PlayerPage({
           <div className="eyebrow mb-1">Opposing lineup — matchup read</div>
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
             <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
-            <strong style={{ color: "#bff3d2" }}>H</strong> = likely hit · — = no edge. Model-derived
-            from rates + handedness; career history vs this pitcher adds a small capped nudge (±10%).
+            <strong style={{ color: "#bff3d2" }}>H</strong> = likely hit
           </p>
           <div className="lineup">
             {r.matchups.map((m, i) => (
