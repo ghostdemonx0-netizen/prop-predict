@@ -1,11 +1,10 @@
 name: refresh-board
 on:
   workflow_dispatch: {}
-  # Enabled in the final rollout step after a successful manual dispatch run:
-  # schedule:
-  #   - cron: "0 14-23 * * *"   # hourly 10am-7pm ET (EDT)
-  #   - cron: "0 0-3 * * *"     # hourly 8pm-11pm ET (EDT)
-  #   - cron: "30 19-22 * * *"  # :30 extras 3:30-6:30pm ET (lineup rush)
+  schedule:
+    - cron: "0 14-23 * * *"   # hourly 10am-7pm ET (EDT)
+    - cron: "0 0-3 * * *"     # hourly 8pm-11pm ET (EDT)
+    - cron: "30 19-22 * * *"  # :30 extras 3:30-6:30pm ET (lineup rush)
 concurrency:
   group: refresh-board
   cancel-in-progress: false

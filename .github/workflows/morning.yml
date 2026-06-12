@@ -1,9 +1,8 @@
 name: morning-board
 on:
   workflow_dispatch: {}
-  # Enabled in the final rollout step after a successful manual dispatch run:
-  # schedule:
-  #   - cron: "0 10 * * *"   # 6:00 AM ET (EDT)
+  schedule:
+    - cron: "0 10 * * *"   # 6:00 AM ET (EDT)
 concurrency:
   group: refresh-board
   cancel-in-progress: false
