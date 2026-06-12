@@ -168,7 +168,7 @@ export default function Home() {
       </div>
 
       {mode === "parks" ? (
-        <ParksBoard games={data.games ?? []} />
+        <ParksBoard games={data.games ?? []} hrRows={hrRows} kRows={kRows} />
       ) : (
         <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={mode} kind={prop === "hr" ? "hr" : "k"} />
       )}

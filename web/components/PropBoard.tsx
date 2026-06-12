@@ -193,46 +193,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
     </table>
   );
 
-  const Row = (r: BoardRow) => {
-    // platoon advantage: opposite hands, and switch hitters always have it
-    const advantage =
-      !!r.playerHand &&
-      !!r.opponent?.hand &&
-      (r.playerHand === "SW" || r.playerHand[0] !== r.opponent.hand[0]);
-    return (
-      <Link
-        key={r.id}
-        href={r.href}
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "0.6rem 0.25rem",
-          borderBottom: "1px solid var(--line)",
-          color: "var(--text)",
-          textDecoration: "none",
-        }}
-      >
-        <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap" }}>
-          {r.player}
-          {r.playerHand && (
-            <span
-              className="hand"
-              title={advantage ? "platoon advantage vs this pitcher" : undefined}
-              style={
-                advantage
-                  ? { color: "var(--green)", borderColor: "rgba(62, 224, 127, 0.5)", background: "rgba(62, 224, 127, 0.1)" }
-                  : undefined
-              }
-            >
-              {r.playerHand}
-            </span>
-          )}
-        </span>
-        <HeatSphere prob={r.prob} kind={kind} />
-      </Link>
-    );
-  };
+  const Row = (r: BoardRow) => <BoardRowLine key={r.id} r={r} kind={kind} />;
 
   const List = () => {
     // Group rows by matchup (rows within a game keep high->low probability
@@ -279,11 +240,6 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
       <div>
         <div className="eyebrow" style={{ marginBottom: "0.6rem" }}>Matchups · first pitch order</div>
         {groups.map((g) => {
-          // split the hitters by side, matching the title's AWAY @ HOME order
-          const [away, home] = g.key.split(" @ ");
-          const awayRows = g.rows.filter((r) => r.team === away);
-          const homeRows = g.rows.filter((r) => r.team === home);
-          const split = home !== undefined && awayRows.length + homeRows.length === g.rows.length;
           return (
             <details key={g.key} className="rise" style={{ marginBottom: "0.55rem" }}>
               <summary className="matchup-head" style={{ cursor: "pointer" }}>
@@ -292,35 +248,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
                   {g.rows.length} hitters
                 </span>
               </summary>
-              {split ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-                  {[
-                    { label: `${away} · away`, rs: awayRows, style: { borderRight: "1px solid var(--line-strong)", paddingRight: "0.8rem" } },
-                    { label: `${home} · home`, rs: homeRows, style: { paddingLeft: "0.8rem" } },
-                  ].map(({ label, rs, style }) => {
-                    const opp = rs.find((r) => r.opponent)?.opponent;
-                    return (
-                      <div key={label} style={style}>
-                        <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
-                          <span>{label}</span>
-                          {opp && (
-                            <span>
-                              vs{" "}
-                              <span style={{ color: "var(--text)", textShadow: "0 0 8px rgba(62, 224, 127, 0.45)" }}>
-                                {opp.name}
-                              </span>
-                              {opp.hand && <> <span className="hand">{opp.hand}</span></>}
-                            </span>
-                          )}
-                        </div>
-                        {rs.map(Row)}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                g.rows.map(Row)
-              )}
+              <TeamSplit matchup={g.key} rows={g.rows} kind={kind} />
             </details>
           );
         })}
@@ -346,6 +274,126 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
           <div className="eyebrow" style={{ marginBottom: "0.4rem" }}>Full board</div>
           <Table />
         </div>
+      )}
+    </div>
+  );
+}
+
+
+/** One player line: name + (advantage-lit) hand chip + probability sphere. */
+export function BoardRowLine({ r, kind }: { r: BoardRow; kind: PropKind }) {
+  // platoon advantage: opposite hands, and switch hitters always have it
+  const advantage =
+    !!r.playerHand &&
+    !!r.opponent?.hand &&
+    (r.playerHand === "SW" || r.playerHand[0] !== r.opponent.hand[0]);
+  return (
+    <Link
+      href={r.href}
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "0.6rem 0.25rem",
+        borderBottom: "1px solid var(--line)",
+        color: "var(--text)",
+        textDecoration: "none",
+      }}
+    >
+      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap" }}>
+        {r.player}
+        {r.playerHand && (
+          <span
+            className="hand"
+            title={advantage ? "platoon advantage vs this pitcher" : undefined}
+            style={
+              advantage
+                ? { color: "var(--green)", borderColor: "rgba(62, 224, 127, 0.5)", background: "rgba(62, 224, 127, 0.1)" }
+                : undefined
+            }
+          >
+            {r.playerHand}
+          </span>
+        )}
+      </span>
+      <HeatSphere prob={r.prob} kind={kind} />
+    </Link>
+  );
+}
+
+/** Hitters split away|home (matching the AWAY @ HOME title), lit pitcher per side. */
+export function TeamSplit({ matchup, rows, kind }: { matchup: string; rows: BoardRow[]; kind: PropKind }) {
+  const [away, home] = matchup.split(" @ ");
+  const awayRows = rows.filter((r) => r.team === away);
+  const homeRows = rows.filter((r) => r.team === home);
+  const split = home !== undefined && awayRows.length + homeRows.length === rows.length;
+  if (!split) return <>{rows.map((r) => <BoardRowLine key={r.id} r={r} kind={kind} />)}</>;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+      {[
+        { label: `${away} · away`, rs: awayRows, style: { borderRight: "1px solid var(--line-strong)", paddingRight: "0.8rem" } as const },
+        { label: `${home} · home`, rs: homeRows, style: { paddingLeft: "0.8rem" } as const },
+      ].map(({ label, rs, style }) => {
+        const opp = rs.find((r) => r.opponent)?.opponent;
+        return (
+          <div key={label} style={style}>
+            <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
+              <span>{label}</span>
+              {opp && (
+                <span>
+                  vs{" "}
+                  <span style={{ color: "var(--text)", textShadow: "0 0 8px rgba(62, 224, 127, 0.45)" }}>{opp.name}</span>
+                  {opp.hand && <> <span className="hand">{opp.hand}</span></>}
+                </span>
+              )}
+            </div>
+            {rs.map((r) => <BoardRowLine key={r.id} r={r} kind={kind} />)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Full game drilldown: both starting pitchers, then the hitters split by side. */
+export function GameBreakdown({ matchup, hrRows, kRows }: { matchup: string; hrRows: BoardRow[]; kRows: BoardRow[] }) {
+  const hr = hrRows.filter((r) => r.matchup === matchup);
+  const ks = kRows.filter((r) => r.matchup === matchup);
+  if (hr.length === 0 && ks.length === 0) {
+    return <p className="factor-note" style={{ marginBottom: 0 }}>No player projections yet — lineups may not be posted.</p>;
+  }
+  return (
+    <div style={{ marginTop: "0.4rem" }}>
+      {ks.length > 0 && (
+        <>
+          <div className="eyebrow" style={{ margin: "0.4rem 0 0.1rem" }}>Starting pitchers · over Model Book Line</div>
+          {ks.map((r) => (
+            <Link
+              key={r.id}
+              href={r.href}
+              style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "0.6rem 0.25rem", borderBottom: "1px solid var(--line)",
+                color: "var(--text)", textDecoration: "none",
+              }}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap" }}>
+                {r.player}
+                {r.playerHand && <span className="hand">{r.playerHand}</span>}
+                <span className="num" style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem" }}>
+                  line {r.line} · proj {r.projection}
+                </span>
+              </span>
+              <HeatSphere prob={r.prob} kind="k" />
+            </Link>
+          ))}
+        </>
+      )}
+      {hr.length > 0 && (
+        <>
+          <div className="eyebrow" style={{ margin: "0.7rem 0 0.1rem" }}>Home run board</div>
+          <TeamSplit matchup={matchup} rows={hr} kind="hr" />
+        </>
       )}
     </div>
   );

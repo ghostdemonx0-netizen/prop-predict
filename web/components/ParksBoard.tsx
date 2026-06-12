@@ -1,6 +1,7 @@
 "use client";
 
 import type { Game } from "../lib/types";
+import { GameBreakdown, type BoardRow } from "./PropBoard";
 import { heatColor, arrowColor, windText } from "../lib/format";
 
 function signed(mult: number) {
@@ -30,7 +31,7 @@ function EnvSphere({ env }: { env: number }) {
   );
 }
 
-export function ParksBoard({ games }: { games: Game[] }) {
+export function ParksBoard({ games, hrRows = [], kRows = [] }: { games: Game[]; hrRows?: BoardRow[]; kRows?: BoardRow[] }) {
   if (!games || games.length === 0) {
     return (
       <div className="panel" style={{ color: "var(--muted)", textAlign: "center" }}>
@@ -50,7 +51,8 @@ export function ParksBoard({ games }: { games: Game[] }) {
           const boost = g.env - 1;
           const edge = boost > 0.05 ? "var(--green)" : boost < -0.05 ? "var(--red)" : "var(--amber)";
           return (
-            <div key={g.game_id} className="card rise" style={{ borderLeftColor: edge, animationDelay: `${i * 45}ms` }}>
+            <details key={g.game_id} className="card rise" style={{ borderLeftColor: edge, animationDelay: `${i * 45}ms` }}>
+              <summary style={{ cursor: "pointer" }}>
               <div className="flex items-center justify-between gap-3">
                 <span className="display" style={{ fontWeight: 700, fontSize: "1.02rem" }}>
                   {g.matchup}
@@ -71,7 +73,9 @@ export function ParksBoard({ games }: { games: Game[] }) {
                 {typeof g.temp_f === "number" && <span>🌡️ {Math.round(g.temp_f)}°</span>}
                 {(g.precip_pct ?? 0) >= 20 && <span style={{ color: "#7cc7ff" }}>💧 {g.precip_pct}%</span>}
               </div>
-            </div>
+              </summary>
+              <GameBreakdown matchup={g.matchup} hrRows={hrRows} kRows={kRows} />
+            </details>
           );
         })}
       </div>
