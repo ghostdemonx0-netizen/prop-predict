@@ -238,7 +238,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
     const Head = (g: { key: string; rows: BoardRow[] }) => (
       <>
         {g.rows[0].time && (
-          <span className="num" style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem", marginRight: "0.7rem" }}>
+          <span className="num" style={{ float: "right", color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem" }}>
             🕐 {g.rows[0].time}
           </span>
         )}
