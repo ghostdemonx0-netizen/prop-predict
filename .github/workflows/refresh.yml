@@ -2,9 +2,11 @@ name: refresh-board
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 14-23 * * *"   # hourly 10am-7pm ET (EDT)
-    - cron: "0 0-3 * * *"     # hourly 8pm-11pm ET (EDT)
-    - cron: "30 19-22 * * *"  # :30 extras 3:30-6:30pm ET (lineup rush)
+    # user-tuned 2026-06-12: hourly 7am-noon ET, then every 30 min until 11pm ET (EDT)
+    - cron: "0 11-23 * * *"   # on the hour, 7am-7pm ET
+    - cron: "0 0-3 * * *"     # on the hour, 8pm-11pm ET
+    - cron: "30 16-23 * * *"  # half-hours, 12:30-7:30pm ET
+    - cron: "30 0-2 * * *"    # half-hours, 8:30-10:30pm ET
 concurrency:
   group: refresh-board
   cancel-in-progress: false
