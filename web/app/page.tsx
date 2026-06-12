@@ -23,7 +23,7 @@ function oppTeam(matchup?: string, team?: string) {
 function gameTime(iso?: string) {
   if (!iso) return undefined;
   const d = new Date(iso);
-  return isNaN(d.getTime()) ? undefined : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return isNaN(d.getTime()) ? undefined : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
 }
 // Standard notation: home batters read "vs AWAY", away batters read "@ HOME".
 function gameLabel(matchup?: string, team?: string) {

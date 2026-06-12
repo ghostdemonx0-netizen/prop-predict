@@ -9,7 +9,7 @@ import { pct, strengthLabel, windText, arrowColor } from "../../../../lib/format
 function gameTime(iso?: string) {
   if (!iso) return undefined;
   const d = new Date(iso);
-  return isNaN(d.getTime()) ? undefined : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return isNaN(d.getTime()) ? undefined : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
 }
 function batLabel(b?: string) {
   return b === "L" ? "LHB" : b === "S" ? "Switch" : b ? "RHB" : "";
