@@ -107,3 +107,17 @@ def test_refresh_skips_normally_when_stats_already_current(monkeypatch):
     monkeypatch.setattr(daily, "record_run", lambda sig, published: recorded.update(p=published))
     assert jobs.refresh("2026-06-13") is False
     assert recorded["p"] is False
+
+
+def test_refresh_survives_stat_update_failure(monkeypatch):
+    from model import jobs, daily, fetch
+    monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
+    monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
+    def boom(d):
+        raise TimeoutError("statcast down")
+    monkeypatch.setattr(daily, "update_events", boom)
+    monkeypatch.setattr(daily, "should_skip", lambda sig: False)
+    monkeypatch.setattr(daily, "refresh_today", lambda d: True)
+    monkeypatch.setattr(daily, "record_run", lambda sig, published: None)
+    # board still rebuilds on existing stats; the failed fold-in doesn't crash the run
+    assert jobs.refresh("2026-06-13") is True
