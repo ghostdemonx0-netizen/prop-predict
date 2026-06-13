@@ -2,7 +2,7 @@
 
 morning  - clear BvP pairs, bring stats up to date through yesterday,
            rebuild today's board, record the slate signature.
-refresh  - cheap structural change-check (early exit), else recompute today.
+refresh   - daily stat-update on the first run of each new day, then cheap structural change-check (early exit), else recompute today.
 
 Both print and (under Actions) emit changed=true|false to $GITHUB_OUTPUT so
 the workflow only deploys when the board actually moved. Any exception
@@ -56,8 +56,16 @@ def morning(date_str: str | None = None) -> bool:
 
 def refresh(date_str: str | None = None) -> bool:
     date_str = date_str or today_et()
+    # Self-healing daily stat update: the first refresh of a new day folds in
+    # yesterday's finished games (cheap no-op the rest of the day) so the
+    # system no longer depends on a separate, less-reliable morning timer.
+    stats_updated = bool(daily.update_events(date_str))
+    if stats_updated:
+        print(f"folded in new game days; bvp pairs cleared: {_clear_bvp()}")
     sig = _current_signature(date_str)
-    if daily.should_skip(sig):
+    # Skip only when nothing changed AND we didn't just refresh the stats
+    # (new stats must reach the board even if the lineup signature matches).
+    if not stats_updated and daily.should_skip(sig):
         print("no lineup/pitcher changes since last publish - skipping")
         daily.record_run(sig, published=False)
         return False

@@ -14,6 +14,7 @@ def test_refresh_skips_when_signature_fresh(monkeypatch):
     from model import jobs, daily, fetch
     monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
     monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
+    monkeypatch.setattr(daily, "update_events", lambda d: [])  # already current -> no-op
     monkeypatch.setattr(daily, "should_skip", lambda sig: True)
     recorded = {}
     monkeypatch.setattr(daily, "record_run", lambda sig, published: recorded.update(p=published))
@@ -26,6 +27,7 @@ def test_refresh_computes_when_signature_stale(monkeypatch):
     from model import jobs, daily, fetch
     monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
     monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
+    monkeypatch.setattr(daily, "update_events", lambda d: [])  # already current -> no-op
     monkeypatch.setattr(daily, "should_skip", lambda sig: False)
     recorded = {}
     monkeypatch.setattr(daily, "record_run", lambda sig, published: recorded.update(p=published))
@@ -69,9 +71,39 @@ def test_refresh_compute_advances_freshness_even_when_unchanged(monkeypatch):
     from model import jobs, daily, fetch
     monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
     monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
+    monkeypatch.setattr(daily, "update_events", lambda d: [])  # already current -> no-op
     monkeypatch.setattr(daily, "should_skip", lambda sig: False)
     recorded = {}
     monkeypatch.setattr(daily, "record_run", lambda sig, published: recorded.update(p=published))
     monkeypatch.setattr(daily, "refresh_today", lambda d: False)  # computed, found no change
     assert jobs.refresh("2026-06-12") is False
     assert recorded["p"] is True  # freshness window still advances
+
+
+def test_refresh_runs_stat_update_and_clears_bvp_on_new_day(monkeypatch):
+    from model import jobs, daily, fetch
+    monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
+    monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
+    monkeypatch.setattr(daily, "update_events", lambda d: ["2026-06-12"])  # a new day folded in
+    cleared = {"n": 0}
+    monkeypatch.setattr(jobs, "_clear_bvp", lambda: cleared.update(n=1) or 1)
+    # even though the slate signature would say "skip", new stats force a rebuild
+    monkeypatch.setattr(daily, "should_skip", lambda sig: True)
+    monkeypatch.setattr(daily, "refresh_today", lambda d: True)
+    monkeypatch.setattr(daily, "record_run", lambda sig, published: None)
+    assert jobs.refresh("2026-06-13") is True
+    assert cleared["n"] == 1  # bvp cleared on the new day
+
+
+def test_refresh_skips_normally_when_stats_already_current(monkeypatch):
+    from model import jobs, daily, fetch
+    monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
+    monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
+    monkeypatch.setattr(daily, "update_events", lambda d: [])  # already current -> no-op
+    monkeypatch.setattr(jobs, "_clear_bvp", lambda: 1 / 0)  # must NOT be called
+    monkeypatch.setattr(daily, "should_skip", lambda sig: True)
+    monkeypatch.setattr(daily, "refresh_today", lambda d: 1 / 0)  # must NOT rebuild
+    recorded = {}
+    monkeypatch.setattr(daily, "record_run", lambda sig, published: recorded.update(p=published))
+    assert jobs.refresh("2026-06-13") is False
+    assert recorded["p"] is False
