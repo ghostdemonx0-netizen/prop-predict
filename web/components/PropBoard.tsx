@@ -4,6 +4,7 @@ import Link from "next/link";
 import type React from "react";
 import type { ViewMode } from "./ViewSwitcher";
 import { pct, strengthLabel, strengthTier, heatColor, arrowColor, platoonAdvantage, type PropKind } from "../lib/format";
+import { StatusChip } from "./StatusChip";
 
 export type BoardRow = {
   id: string; // stable key: player_id when available, else name
@@ -27,6 +28,7 @@ export type BoardRow = {
   precipPct?: number;
   bvp?: { pa: number; ab: number; hits: number; hr: number; k: number; avg: string } | null;
   lean?: { lean: string; prob: number } | null; // batter-vs-pitcher matchup read (K/H/N sphere)
+  status?: string; // lineup_status (hitters) or pitcher_status (pitchers)
 };
 
 /** K/H/N matchup sphere (shared with the player pages). */
@@ -138,6 +140,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
         <span className={`badge ${strengthTier(r.prob, kind)}`}>{strengthLabel(r.prob, kind)}</span>
         <span>{r.detail}</span>
         {r.time && <span style={{ opacity: 0.75 }}>🕐 {r.time}</span>}
+        <StatusChip status={r.status} />
       </div>
       {(r.playerHand || r.opponent) && (
         <div className="mt-1 flex flex-wrap items-center gap-1.5" style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
@@ -211,6 +214,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
                   </span>
                 );
               })()}
+              <StatusChip status={r.status} />
             </td>
             <td style={{ color: "var(--muted)", whiteSpace: "nowrap", paddingLeft: 0 }}>{r.team}</td>
             <td style={{ color: "var(--muted)" }}>
@@ -419,7 +423,10 @@ export function TeamSplit({ matchup, rows, kind, withLean = false }: { matchup: 
         return (
           <div key={label} style={style}>
             <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
-              <span>{label}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                <span>{label}</span>
+                <StatusChip status={rs.find((r) => r.status)?.status} mode="pair" />
+              </span>
               {opp && (
                 <span>
                   vs{" "}
@@ -462,6 +469,7 @@ export function GameBreakdown({ matchup, hrRows, kRows }: { matchup: string; hrR
               <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap" }}>
                 {r.player}
                 {r.playerHand && <span className="hand">{r.playerHand}</span>}
+                <StatusChip status={r.status} />
                 <span className="num" style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem" }}>
                   line {r.line} · proj {r.projection}
                 </span>
