@@ -4,9 +4,9 @@
 const CONFIRMED = new Set(["confirmed"]);
 
 export function StatusChip({ status, mode = "single" }: { status?: string; mode?: "single" | "pair" }) {
-  const confirmed = !!status && CONFIRMED.has(status);
+  if (!status) return null; // no status (e.g. legacy data) -> show nothing, never a false PROJ
+  const confirmed = CONFIRMED.has(status);
   if (mode === "single") {
-    if (!status) return null;
     return (
       <span
         className={confirmed ? "chip-conf" : "chip-proj"}
