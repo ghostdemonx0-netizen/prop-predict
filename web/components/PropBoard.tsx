@@ -438,10 +438,10 @@ export function TeamSplit({ matchup, rows, kind, withLean = false }: { matchup: 
         const opp = rs.find((r) => r.opponent)?.opponent;
         return (
           <div key={label} style={style}>
-            <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
-              <span>{label}</span>
+            <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem", flexWrap: "nowrap", whiteSpace: "nowrap" }}>
+              <span style={{ flexShrink: 0 }}>{label}</span>
               {opp && (
-                <span>
+                <span style={{ letterSpacing: "normal", textTransform: "none", fontSize: "0.82rem" }}>
                   vs{" "}
                   <span style={{ color: "var(--text)", textShadow: "0 0 8px rgba(62, 224, 127, 0.45)" }}>{opp.name}</span>
                   {opp.hand && <> <span className="hand">{opp.hand}</span></>}
