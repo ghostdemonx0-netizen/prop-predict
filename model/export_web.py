@@ -59,37 +59,59 @@ def _ensure_starters(slate: list[dict]) -> None:
 def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
     """(lineups_fn, pitcher_fn) backed by the on-disk events cache.
 
-    Raw per-player Statcast events are cached once per season; profiles are
-    computed fresh per slate date so a regenerated past day only sees games
-    played before it.
+    Resolves each lineup side to the official batting order when posted, else a
+    PROJECTED order from that team's most recent game (fetch.get_recent_lineup).
+    Stamps status onto the data the pipeline reads: batter profiles get
+    ``lineup_status``, pitcher profiles get ``pitcher_status`` (via a pid map),
+    and each game dict gets home_/away_lineup_status + home_/away_pitcher_status.
+    A side/pitcher is confirmed once the official lineup is posted (the card
+    includes the starter) or the game has started; otherwise projected/probable.
     """
     pids: set[int] = set()
     lineup_cache: dict[int, dict] = {}
+    pitcher_status: dict[int, str] = {}
     for g in slate:
-        lineup_cache[g["game_id"]] = fetch.get_lineups(g["game_id"])
-        pids.update(lineup_cache[g["game_id"]]["home"] + lineup_cache[g["game_id"]]["away"])
-        for k in ("home_pitcher_id", "away_pitcher_id"):
-            if g.get(k):
-                pids.add(g[k])
+        official = fetch.get_lineups(g["game_id"])
+        sides: dict[str, list[int]] = {}
+        for side, team_key in (("home", "home_id"), ("away", "away_id")):
+            confirmed = bool(official.get(side)) or bool(g.get("started"))
+            if official.get(side):
+                sides[side] = official[side]
+            elif g.get("started"):
+                sides[side] = official.get(side, [])
+            else:
+                sides[side] = fetch.get_recent_lineup(g.get(team_key), as_of) if g.get(team_key) else []
+            g[f"{side}_lineup_status"] = "confirmed" if confirmed else "projected"
+            g[f"{side}_pitcher_status"] = "confirmed" if confirmed else "probable"
+        lineup_cache[g["game_id"]] = sides
+        pids.update(sides["home"] + sides["away"])
+        for pid_key, side in (("home_pitcher_id", "home"), ("away_pitcher_id", "away")):
+            if g.get(pid_key):
+                pids.add(g[pid_key])
+                pitcher_status[g[pid_key]] = g[f"{side}_pitcher_status"]
     meta = fetch.get_player_meta(list(pids))
 
-    def batter_fn(pid: int) -> dict:
+    def batter_fn(pid: int, status: str) -> dict:
         m = meta.get(pid, {})
         events = get_or_compute(f"bat-events-{pid}-{season}", lambda: fetch.batter_events(pid, season))
-        return profiles.batter_profile_from_events(
+        prof = profiles.batter_profile_from_events(
             events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)), bats=m.get("bats", "R"))
+        prof["lineup_status"] = status
+        return prof
 
     def pitcher_fn(pid: int) -> dict:
         m = meta.get(pid, {})
         events = get_or_compute(f"pit-events-{pid}-{season}", lambda: fetch.pitcher_events(pid, season))
-        return profiles.pitcher_profile_from_events(
+        prof = profiles.pitcher_profile_from_events(
             events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)), throws=m.get("throws", "R"))
+        prof["pitcher_status"] = pitcher_status.get(pid, "confirmed")
+        return prof
 
     def lineups_fn(game: dict) -> dict:
         lns = lineup_cache[game["game_id"]]
         return {
-            "home": [batter_fn(pid) for pid in lns["home"]],
-            "away": [batter_fn(pid) for pid in lns["away"]],
+            "home": [batter_fn(pid, game.get("home_lineup_status", "confirmed")) for pid in lns["home"]],
+            "away": [batter_fn(pid, game.get("away_lineup_status", "confirmed")) for pid in lns["away"]],
         }
 
     return lineups_fn, pitcher_fn

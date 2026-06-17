@@ -168,3 +168,24 @@ def test_rows_carry_game_time():
     ks = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_lineups_fn, fake_weather_fn)
     assert all(r["game_time"] == "2026-06-10T20:40:00Z" for r in hr)
     assert all(r["game_time"] == "2026-06-10T20:40:00Z" for r in ks)
+
+
+def test_hr_rows_carry_lineup_and_pitcher_status():
+    rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    home = next(r for r in rows if r["team"] == "COL")
+    assert home["lineup_status"] == "projected"
+    assert home["vs"]["pitcher_status"] == "probable"
+
+
+def test_k_rows_carry_status():
+    rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_lineups_fn, fake_weather_fn)
+    ace = next(r for r in rows if r["player"] == "Ace Coors")
+    assert ace["pitcher_status"] == "probable"
+    assert ace["matchups"][0]["lineup_status"] == "projected"
+
+
+def test_games_carry_side_statuses():
+    games = build_games(SAMPLE_SLATE, fake_weather_fn)
+    g = games[0]
+    assert g["home_lineup_status"] == "projected"
+    assert g["away_lineup_status"] == "confirmed"

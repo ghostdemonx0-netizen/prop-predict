@@ -105,24 +105,35 @@ def _with_retries(producer, attempts: int = 3, base_delay: float = 2.0):
 
 
 def get_schedule(date_str: str) -> list[dict]:
-    """Return the day's games as normalized dicts.
+    """Return the day's games as normalized dicts, including probable pitchers.
 
-    date_str: 'YYYY-MM-DD'. Uses MLB Stats API via the statsapi wrapper.
+    Uses the MLB Stats API schedule endpoint with probablePitcher hydration so
+    starters appear days ahead (the wrapper's plain schedule() leaves them blank
+    until game time). date_str: 'YYYY-MM-DD'.
     """
-    games = statsapi.schedule(date=date_str)
+    mdy = f"{date_str[5:7]}/{date_str[8:10]}/{date_str[0:4]}"
+    data = _with_retries(lambda: statsapi.get(
+        "schedule", {"sportId": 1, "date": mdy, "hydrate": "probablePitcher"}))
+    dates = data.get("dates", [])
+    games = dates[0].get("games", []) if dates else []
     out: list[dict] = []
     for g in games:
-        status = (g.get("status") or "").lower()
-        started = status not in ("scheduled", "pre-game", "warmup", "")
+        home = g["teams"]["home"]
+        away = g["teams"]["away"]
+        home_id = home["team"]["id"]
+        away_id = away["team"]["id"]
+        started = g.get("status", {}).get("abstractGameState") != "Preview"
         out.append({
-            "game_id": g["game_id"],
-            "home": _abbr(g["home_id"]),
-            "away": _abbr(g["away_id"]),
-            "park_team": _abbr(g["home_id"]),
-            "game_time": g.get("game_datetime"),
+            "game_id": g["gamePk"],
+            "home": _abbr(home_id),
+            "away": _abbr(away_id),
+            "home_id": home_id,
+            "away_id": away_id,
+            "park_team": _abbr(home_id),
+            "game_time": g.get("gameDate"),
             "started": started,
-            "home_pitcher_id": g.get("home_probable_pitcher_id"),
-            "away_pitcher_id": g.get("away_probable_pitcher_id"),
+            "home_pitcher_id": (home.get("probablePitcher") or {}).get("id"),
+            "away_pitcher_id": (away.get("probablePitcher") or {}).get("id"),
         })
     return out
 
@@ -218,6 +229,32 @@ def get_lineups(game_id: int) -> dict[str, list[int]]:
         order = box.get(side, {}).get("battingOrder", []) or []
         out[side] = [int(pid) for pid in order]
     return out
+
+
+def get_recent_lineup(team_id: int, before_date: str, *, lookback: int = 7,
+                      schedule_fn=None, get_lineups_fn=None) -> list[int]:
+    """The given team's most recent posted batting order before ``before_date``.
+
+    Walks that team's games newest-first over the trailing ``lookback`` days and
+    returns the first non-empty batting order found (their side of that game) -
+    used to PROJECT today's lineup until the official one posts. Empty list when
+    nothing is found in the window. schedule_fn/get_lineups_fn are injectable for
+    tests; defaults hit the MLB Stats API.
+    """
+    if get_lineups_fn is None:
+        get_lineups_fn = get_lineups
+    if schedule_fn is None:
+        def schedule_fn(s, e):
+            return statsapi.schedule(start_date=s, end_date=e, team=team_id)
+    end = dt.date.fromisoformat(before_date) - dt.timedelta(days=1)
+    start = end - dt.timedelta(days=lookback - 1)
+    games = schedule_fn(start.isoformat(), end.isoformat())
+    for g in sorted(games, key=lambda g: g["game_date"], reverse=True):
+        side = "home" if g.get("home_id") == team_id else "away"
+        order = get_lineups_fn(g["game_id"]).get(side, [])
+        if order:
+            return order
+    return []
 
 
 def get_player_meta(player_ids: list[int]) -> dict[int, dict]:
