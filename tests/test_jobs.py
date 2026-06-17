@@ -12,6 +12,7 @@ def test_clear_bvp_only_touches_bvp_files(tmp_path):
 
 def test_refresh_skips_when_signature_fresh(monkeypatch):
     from model import jobs, daily, fetch
+    monkeypatch.setattr(jobs, "_et_hour", lambda: 9)  # daytime -> fold-in gate passes
     monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
     monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
     monkeypatch.setattr(daily, "update_events", lambda d: [])  # already current -> no-op
@@ -25,6 +26,7 @@ def test_refresh_skips_when_signature_fresh(monkeypatch):
 
 def test_refresh_computes_when_signature_stale(monkeypatch):
     from model import jobs, daily, fetch
+    monkeypatch.setattr(jobs, "_et_hour", lambda: 9)  # daytime -> fold-in gate passes
     monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
     monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
     monkeypatch.setattr(daily, "update_events", lambda d: [])  # already current -> no-op
@@ -69,6 +71,7 @@ def test_main_rejects_unknown_mode():
 
 def test_refresh_compute_advances_freshness_even_when_unchanged(monkeypatch):
     from model import jobs, daily, fetch
+    monkeypatch.setattr(jobs, "_et_hour", lambda: 9)  # daytime -> fold-in gate passes
     monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
     monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
     monkeypatch.setattr(daily, "update_events", lambda d: [])  # already current -> no-op
@@ -82,6 +85,7 @@ def test_refresh_compute_advances_freshness_even_when_unchanged(monkeypatch):
 
 def test_refresh_runs_stat_update_and_clears_bvp_on_new_day(monkeypatch):
     from model import jobs, daily, fetch
+    monkeypatch.setattr(jobs, "_et_hour", lambda: 9)  # daytime -> fold-in gate passes
     monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
     monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
     monkeypatch.setattr(daily, "update_events", lambda d: ["2026-06-12"])  # a new day folded in
@@ -97,6 +101,7 @@ def test_refresh_runs_stat_update_and_clears_bvp_on_new_day(monkeypatch):
 
 def test_refresh_skips_normally_when_stats_already_current(monkeypatch):
     from model import jobs, daily, fetch
+    monkeypatch.setattr(jobs, "_et_hour", lambda: 9)  # daytime -> fold-in gate passes
     monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
     monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
     monkeypatch.setattr(daily, "update_events", lambda d: [])  # already current -> no-op
@@ -111,6 +116,7 @@ def test_refresh_skips_normally_when_stats_already_current(monkeypatch):
 
 def test_refresh_survives_stat_update_failure(monkeypatch):
     from model import jobs, daily, fetch
+    monkeypatch.setattr(jobs, "_et_hour", lambda: 9)  # daytime -> fold-in gate passes
     monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
     monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
     def boom(d):
@@ -121,3 +127,25 @@ def test_refresh_survives_stat_update_failure(monkeypatch):
     monkeypatch.setattr(daily, "record_run", lambda sig, published: None)
     # board still rebuilds on existing stats; the failed fold-in doesn't crash the run
     assert jobs.refresh("2026-06-13") is True
+
+
+def test_refresh_overnight_skips_stat_fold_but_rebuilds_board(monkeypatch):
+    # 2am ET run: _et_hour < 7, so update_events must NOT be called, but the
+    # board still rebuilds (lineups / weather still matter overnight).
+    from model import jobs, daily, fetch
+    monkeypatch.setattr(jobs, "_et_hour", lambda: 2)  # overnight
+    monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
+    monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
+    update_called = {"called": False}
+
+    def must_not_call(d):
+        update_called["called"] = True
+        return []
+
+    monkeypatch.setattr(daily, "update_events", must_not_call)
+    monkeypatch.setattr(daily, "should_skip", lambda sig: False)
+    monkeypatch.setattr(daily, "refresh_today", lambda d: True)
+    monkeypatch.setattr(daily, "record_run", lambda sig, published: None)
+    result = jobs.refresh("2026-06-13")
+    assert result is True  # board still rebuilt
+    assert update_called["called"] is False  # stat fold was skipped

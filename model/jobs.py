@@ -25,6 +25,11 @@ def today_et() -> str:
     return dt.datetime.now(ZoneInfo("America/New_York")).date().isoformat()
 
 
+def _et_hour() -> int:
+    """Current hour (0-23) in Eastern time."""
+    return dt.datetime.now(ZoneInfo("America/New_York")).hour
+
+
 def _clear_bvp(cache_dir=DEFAULT_DIR) -> int:
     """Career head-to-head moves daily for pairs that faced off; re-pulls are cheap."""
     n = 0
@@ -56,17 +61,17 @@ def morning(date_str: str | None = None) -> bool:
 
 def refresh(date_str: str | None = None) -> bool:
     date_str = date_str or today_et()
-    # Self-healing daily stat update: the first refresh of a new day folds in
-    # yesterday's finished games (cheap no-op the rest of the day) so the
-    # system no longer depends on a separate, less-reliable morning timer.
-    # A stat-fetch failure must NOT block the board rebuild (lineups/weather
-    # are what visitors watch); log it and proceed on existing stats - the
-    # next 30-min slot retries the fold-in.
-    try:
-        stats_updated = bool(daily.update_events(date_str))
-    except Exception as exc:
-        print(f"[warn] stat update failed ({exc}); rebuilding on existing stats")
-        stats_updated = False
+    # Self-healing daily stat update, gated to >=7am ET: overnight runs still
+    # build the board (empty until lineups post) but must not fold in last
+    # night's games before Baseball Savant has settled them. The marker
+    # throttles this to the first qualifying run each day. A stat-fetch
+    # failure must NOT block the board rebuild - log and proceed.
+    stats_updated = False
+    if _et_hour() >= 7:
+        try:
+            stats_updated = bool(daily.update_events(date_str))
+        except Exception as exc:
+            print(f"[warn] stat update failed ({exc}); rebuilding on existing stats")
     if stats_updated:
         print(f"folded in new game days; bvp pairs cleared: {_clear_bvp()}")
     sig = _current_signature(date_str)

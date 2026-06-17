@@ -19,6 +19,8 @@ from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
 _MARKER = "events-updated-through.json"
 _SIGNATURE = "last-signature.json"
 _MAX_GAP_DAYS = 10
+_REPULL_WINDOW = 3  # re-pull the trailing N days each fold so a day grabbed
+                    # before its stats settled self-heals on a later run
 
 _BAT_KEYS = ("game_date", "events", "launch_speed")
 _PIT_KEYS = ("game_date", "events", "game_pk")
@@ -58,21 +60,26 @@ def merge_day_into_caches(day_rows: list[dict], cache_dir=DEFAULT_DIR) -> int:
 
 def update_events(today: str, *, fetch_day=None, cache_dir=DEFAULT_DIR) -> list[str]:
     """Bring the event caches up to date through yesterday (relative to the
-    ET date ``today``). Walks any missed days; a gap beyond _MAX_GAP_DAYS
-    deletes the event caches instead (players re-pull fully on demand -
-    slow but automatic). Returns the list of dates ingested.
+    ET date ``today``). Always re-pulls a trailing _REPULL_WINDOW-day window so
+    any day grabbed before Baseball Savant settled self-heals on the next run.
+    Walks any missed days; a gap beyond _MAX_GAP_DAYS deletes the event caches
+    instead (players re-pull fully on demand - slow but automatic). Returns the
+    list of dates ingested.
     """
     fetch_day = fetch_day or fetch.statcast_day
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     marker = cache_dir / _MARKER
     target = dt.date.fromisoformat(today) - dt.timedelta(days=1)
-    start = target  # no marker -> just yesterday
+    gap_start = target  # no marker -> just the trailing window (below)
     if marker.exists():
         last = dt.date.fromisoformat(json.loads(marker.read_text())["date"])
         if last >= target:
-            return []
-        start = last + dt.timedelta(days=1)
+            return []  # already folded today (once-per-day throttle)
+        gap_start = last + dt.timedelta(days=1)
+    # always re-pull the trailing window (overwrites/heals recent days),
+    # and cover any larger gap too
+    start = min(gap_start, target - dt.timedelta(days=_REPULL_WINDOW - 1))
     if (target - start).days + 1 > _MAX_GAP_DAYS:
         for f in list(cache_dir.glob("bat-events-*.json")) + list(cache_dir.glob("pit-events-*.json")):
             f.unlink()

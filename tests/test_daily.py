@@ -114,6 +114,8 @@ def test_merge_day_updates_pitcher_caches_with_game_pk(tmp_path):
 
 
 def test_update_events_first_run_pulls_yesterday(tmp_path):
+    # No marker -> no gap_start, so start = window_start = target - 2 days (trailing 3).
+    # today=2026-06-12 -> target=06-11 -> window pulls 06-09, 06-10, 06-11.
     calls = []
 
     def fake_day(d):
@@ -121,19 +123,34 @@ def test_update_events_first_run_pulls_yesterday(tmp_path):
         return []
 
     out = daily.update_events("2026-06-12", fetch_day=fake_day, cache_dir=tmp_path)
-    assert calls == ["2026-06-11"] and out == ["2026-06-11"]
+    assert calls == ["2026-06-09", "2026-06-10", "2026-06-11"]
+    assert out == ["2026-06-09", "2026-06-10", "2026-06-11"]
     marker = json.loads((tmp_path / "events-updated-through.json").read_text())
     assert marker["date"] == "2026-06-11"
 
 
 def test_update_events_walks_a_gap(tmp_path):
+    # marker=06-08, today=06-12 -> gap_start=06-09, window_start=06-09 -> same result.
     (tmp_path / "events-updated-through.json").write_text(json.dumps({"date": "2026-06-08"}))
     calls = []
     daily.update_events("2026-06-12", fetch_day=lambda d: calls.append(d) or [], cache_dir=tmp_path)
     assert calls == ["2026-06-09", "2026-06-10", "2026-06-11"]
 
 
+def test_update_events_normal_daily_advance_repulls_window(tmp_path):
+    # marker=06-10, today=06-12 -> target=06-11, gap_start=06-11,
+    # window_start=06-09 -> min(06-11, 06-09)=06-09 -> pulls 06-09,06-10,06-11.
+    (tmp_path / "events-updated-through.json").write_text(json.dumps({"date": "2026-06-10"}))
+    calls = []
+    out = daily.update_events("2026-06-12", fetch_day=lambda d: calls.append(d) or [], cache_dir=tmp_path)
+    assert calls == ["2026-06-09", "2026-06-10", "2026-06-11"]
+    assert out == ["2026-06-09", "2026-06-10", "2026-06-11"]
+    marker = json.loads((tmp_path / "events-updated-through.json").read_text())
+    assert marker["date"] == "2026-06-11"
+
+
 def test_update_events_noop_when_current(tmp_path):
+    # marker >= target -> once-per-day throttle, fetch_day must NOT be called.
     (tmp_path / "events-updated-through.json").write_text(json.dumps({"date": "2026-06-11"}))
     out = daily.update_events("2026-06-12", fetch_day=lambda d: 1 / 0, cache_dir=tmp_path)
     assert out == []
@@ -149,6 +166,21 @@ def test_update_events_big_gap_resets_caches(tmp_path):
     assert not (tmp_path / "pit-events-2-2026.json").exists()
     marker = json.loads((tmp_path / "events-updated-through.json").read_text())
     assert marker["date"] == "2026-06-11"
+
+
+def test_update_events_self_heal_repulls_previous_day(tmp_path):
+    # marker=06-10, today=06-12 -> the window starts at 06-09, so 06-10
+    # (already ingested) gets re-pulled alongside 06-11 (new day).
+    # This self-heals a day that was grabbed before Baseball Savant settled.
+    (tmp_path / "events-updated-through.json").write_text(json.dumps({"date": "2026-06-10"}))
+    calls = []
+    out = daily.update_events("2026-06-12", fetch_day=lambda d: calls.append(d) or [], cache_dir=tmp_path)
+    # 06-10 re-pulled even though marker said it was done; 06-09 also in window.
+    assert "2026-06-10" in out
+    assert "2026-06-11" in out
+    # After this run the throttle prevents a second fold-in for today.
+    out2 = daily.update_events("2026-06-12", fetch_day=lambda d: 1 / 0, cache_dir=tmp_path)
+    assert out2 == []
 
 
 def test_signature_reacts_to_lineups_and_skip_window(tmp_path):
