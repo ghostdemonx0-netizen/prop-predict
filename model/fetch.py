@@ -118,6 +118,8 @@ def get_schedule(date_str: str) -> list[dict]:
             "game_id": g["game_id"],
             "home": _abbr(g["home_id"]),
             "away": _abbr(g["away_id"]),
+            "home_id": g["home_id"],
+            "away_id": g["away_id"],
             "park_team": _abbr(g["home_id"]),
             "game_time": g.get("game_datetime"),
             "started": started,
@@ -218,6 +220,32 @@ def get_lineups(game_id: int) -> dict[str, list[int]]:
         order = box.get(side, {}).get("battingOrder", []) or []
         out[side] = [int(pid) for pid in order]
     return out
+
+
+def get_recent_lineup(team_id: int, before_date: str, *, lookback: int = 7,
+                      schedule_fn=None, get_lineups_fn=None) -> list[int]:
+    """The given team's most recent posted batting order before ``before_date``.
+
+    Walks that team's games newest-first over the trailing ``lookback`` days and
+    returns the first non-empty batting order found (their side of that game) -
+    used to PROJECT today's lineup until the official one posts. Empty list when
+    nothing is found in the window. schedule_fn/get_lineups_fn are injectable for
+    tests; defaults hit the MLB Stats API.
+    """
+    if get_lineups_fn is None:
+        get_lineups_fn = get_lineups
+    if schedule_fn is None:
+        def schedule_fn(s, e):
+            return statsapi.schedule(start_date=s, end_date=e, team=team_id)
+    end = dt.date.fromisoformat(before_date) - dt.timedelta(days=1)
+    start = end - dt.timedelta(days=lookback - 1)
+    games = schedule_fn(start.isoformat(), end.isoformat())
+    for g in sorted(games, key=lambda g: g["game_date"], reverse=True):
+        side = "home" if g.get("home_id") == team_id else "away"
+        order = get_lineups_fn(g["game_id"]).get(side, [])
+        if order:
+            return order
+    return []
 
 
 def get_player_meta(player_ids: list[int]) -> dict[int, dict]:

@@ -80,3 +80,10 @@ def test_statcast_day_smoke():
     rows = statcast_day("2026-06-10")  # a completed league day
     assert len(rows) > 1000
     assert {"batter", "pitcher", "game_date", "events", "launch_speed", "game_pk"} <= set(rows[0])
+
+
+def test_get_recent_lineup_smoke():
+    from model.fetch import get_recent_lineup
+    order = get_recent_lineup(147, "2026-06-12")  # Yankees, mid-season
+    assert isinstance(order, list)
+    assert all(isinstance(pid, int) for pid in order)
