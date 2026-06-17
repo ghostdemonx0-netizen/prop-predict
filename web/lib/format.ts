@@ -56,3 +56,11 @@ export function gameTimeLabel(iso?: string): string | undefined {
     ? undefined
     : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
 }
+
+// A batter has the platoon edge facing the opposite hand, or as a switch hitter.
+// Hands look like "RHB"/"LHB"/"SW" (batter) and "RHP"/"LHP" (pitcher); we compare
+// the leading R/L/S. Returns false when either side is unknown.
+export function platoonAdvantage(playerHand?: string, oppHand?: string): boolean {
+  if (!playerHand || !oppHand) return false;
+  return playerHand === "SW" || playerHand[0] !== oppHand[0];
+}

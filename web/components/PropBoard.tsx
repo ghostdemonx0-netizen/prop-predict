@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type React from "react";
 import type { ViewMode } from "./ViewSwitcher";
-import { pct, strengthLabel, strengthTier, heatColor, arrowColor, type PropKind } from "../lib/format";
+import { pct, strengthLabel, strengthTier, heatColor, arrowColor, platoonAdvantage, type PropKind } from "../lib/format";
 
 export type BoardRow = {
   id: string; // stable key: player_id when available, else name
@@ -89,6 +89,8 @@ function WeatherChips({ r }: { r: BoardRow }) {
 export const HUB_SPHERE = 46;
 export const HUB_SLOT = 52;
 
+const ADV_CHIP = { color: "var(--green)", borderColor: "rgba(62, 224, 127, 0.5)", background: "rgba(62, 224, 127, 0.1)" };
+
 function HeatSphere({ prob, kind, size }: { prob: number; kind: PropKind; size?: number }) {
   const c = heatColor(prob, kind);
   return (
@@ -139,7 +141,18 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
       </div>
       {(r.playerHand || r.opponent) && (
         <div className="mt-1 flex flex-wrap items-center gap-1.5" style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
-          {r.playerHand && <span className="hand">{r.playerHand}</span>}
+          {r.playerHand && (() => {
+            const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
+            return (
+              <span
+                className="hand"
+                title={adv ? "platoon advantage vs this pitcher" : undefined}
+                style={adv ? ADV_CHIP : undefined}
+              >
+                {r.playerHand}
+              </span>
+            );
+          })()}
           {r.opponent && (
             <span className="inline-flex items-center gap-1.5">
               vs {r.opponent.name}
@@ -186,7 +199,18 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
           <tr key={r.id}>
             <td style={{ whiteSpace: "nowrap" }}>
               <Link href={r.href} className="linklike">{r.player}</Link>
-              {r.playerHand && <span className="hand" style={{ marginLeft: 6 }}>{r.playerHand}</span>}
+              {r.playerHand && (() => {
+                const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
+                return (
+                  <span
+                    className="hand"
+                    title={adv ? "platoon advantage vs this pitcher" : undefined}
+                    style={{ marginLeft: 6, ...(adv ? ADV_CHIP : {}) }}
+                  >
+                    {r.playerHand}
+                  </span>
+                );
+              })()}
             </td>
             <td style={{ color: "var(--muted)", whiteSpace: "nowrap", paddingLeft: 0 }}>{r.team}</td>
             <td style={{ color: "var(--muted)" }}>
@@ -310,11 +334,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
 
 /** One player line: name + (advantage-lit) hand chip + probability sphere. */
 export function BoardRowLine({ r, kind, withLean = false }: { r: BoardRow; kind: PropKind; withLean?: boolean }) {
-  // platoon advantage: opposite hands, and switch hitters always have it
-  const advantage =
-    !!r.playerHand &&
-    !!r.opponent?.hand &&
-    (r.playerHand === "SW" || r.playerHand[0] !== r.opponent.hand[0]);
+  const advantage = platoonAdvantage(r.playerHand, r.opponent?.hand);
   return (
     <Link
       href={r.href}
@@ -335,11 +355,7 @@ export function BoardRowLine({ r, kind, withLean = false }: { r: BoardRow; kind:
           <span
             className="hand"
             title={advantage ? "platoon advantage vs this pitcher" : undefined}
-            style={
-              advantage
-                ? { color: "var(--green)", borderColor: "rgba(62, 224, 127, 0.5)", background: "rgba(62, 224, 127, 0.1)" }
-                : undefined
-            }
+            style={advantage ? ADV_CHIP : undefined}
           >
             {r.playerHand}
           </span>

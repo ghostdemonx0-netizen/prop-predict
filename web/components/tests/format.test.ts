@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pct, strengthLabel, strengthTier, heatColor, windText, arrowColor } from "../../lib/format";
+import { pct, strengthLabel, strengthTier, heatColor, windText, arrowColor, platoonAdvantage } from "../../lib/format";
 
 describe("pct", () => {
   it("formats a 0-1 number as a percent string", () => {
@@ -41,5 +41,20 @@ describe("wind helpers", () => {
     expect(arrowColor(0)).toBe("var(--green)");
     expect(arrowColor(180)).toBe("var(--red)");
     expect(arrowColor(90)).toBe("var(--amber)");
+  });
+});
+
+describe("platoonAdvantage", () => {
+  it("true when hands oppose or batter is a switch hitter", () => {
+    expect(platoonAdvantage("LHB", "RHP")).toBe(true);
+    expect(platoonAdvantage("RHB", "LHP")).toBe(true);
+    expect(platoonAdvantage("SW", "RHP")).toBe(true);
+    expect(platoonAdvantage("SW", "LHP")).toBe(true);
+  });
+  it("false on same hand or missing info", () => {
+    expect(platoonAdvantage("RHB", "RHP")).toBe(false);
+    expect(platoonAdvantage("LHB", "LHP")).toBe(false);
+    expect(platoonAdvantage("RHB", undefined)).toBe(false);
+    expect(platoonAdvantage(undefined, "RHP")).toBe(false);
   });
 });
