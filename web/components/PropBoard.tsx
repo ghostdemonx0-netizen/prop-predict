@@ -143,7 +143,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
         <StatusChip status={r.status} />
       </div>
       {(r.playerHand || r.opponent) && (
-        <div className="mt-1 flex flex-wrap items-center gap-1.5" style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
+        <div className="mt-1 flex flex-wrap items-center gap-2" style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
           {r.playerHand && (() => {
             const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
             return (
@@ -214,7 +214,11 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
                   </span>
                 );
               })()}
-              <StatusChip status={r.status} />
+              {r.status && (
+                <span style={{ marginLeft: 6 }}>
+                  <StatusChip status={r.status} />
+                </span>
+              )}
             </td>
             <td style={{ color: "var(--muted)", whiteSpace: "nowrap", paddingLeft: 0 }}>{r.team}</td>
             <td style={{ color: "var(--muted)" }}>
@@ -296,10 +300,22 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
       <div>
         <div className="eyebrow" style={{ marginBottom: "0.6rem" }}>Matchups · first pitch order</div>
         {groups.map((g) => {
+          // game-level lineup status for the collapsed row: confirmed only when
+          // nothing is still projected; per-side detail lives in the Game Hub.
+          const groupStatus = g.rows.some((r) => r.status && r.status !== "confirmed")
+            ? "projected"
+            : g.rows.some((r) => r.status)
+            ? "confirmed"
+            : undefined;
           return (
             <details key={g.key} className="rise" style={{ marginBottom: "0.55rem" }}>
               <summary className="matchup-head" style={{ cursor: "pointer" }}>
                 {Head(g)}
+                {groupStatus && (
+                  <span style={{ marginLeft: "0.6rem" }}>
+                    <StatusChip status={groupStatus} mode="pair" />
+                  </span>
+                )}
                 <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem", marginLeft: "0.7rem" }}>
                   {g.rows.length} hitters
                 </span>
@@ -423,10 +439,7 @@ export function TeamSplit({ matchup, rows, kind, withLean = false }: { matchup: 
         return (
           <div key={label} style={style}>
             <div className="eyebrow" style={{ margin: "0.5rem 0 0.2rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                <span>{label}</span>
-                <StatusChip status={rs.find((r) => r.status)?.status} mode="pair" />
-              </span>
+              <span>{label}</span>
               {opp && (
                 <span>
                   vs{" "}
@@ -435,6 +448,11 @@ export function TeamSplit({ matchup, rows, kind, withLean = false }: { matchup: 
                 </span>
               )}
             </div>
+            {withLean && (
+              <div style={{ margin: "0 0 0.35rem" }}>
+                <StatusChip status={rs.find((r) => r.status)?.status} mode="pair" />
+              </div>
+            )}
             {withLean && <SphereHeaders />}
             {rs.map((r) => <BoardRowLine key={r.id} r={r} kind={kind} withLean={withLean} />)}
           </div>
