@@ -90,7 +90,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                         bats=b.get("bats", "R"), throws=opp.get("throws", "R"),
                     )
                     m = _history_adjusted(m, bvp)
-                    vs = {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R"), "bvp": bvp, **m}
+                    vs = {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R"), "bvp": bvp, "pitcher_status": opp.get("pitcher_status", "confirmed"), **m}
                 rows.append({
                     "prop": "HR", "game_id": game["game_id"],
                     "game_time": game.get("game_time"),
@@ -104,6 +104,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
                     "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
                     "bats": b.get("bats", "R"), "vs": vs,
+                    "lineup_status": b.get("lineup_status", "confirmed"),
                 })
     rows.sort(key=lambda r: r["probability"], reverse=True)
     return rows
@@ -135,7 +136,7 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn, 
                 )
                 bvp = bvp_fn(b.get("player_id"), pid) if bvp_fn else None
                 m = _history_adjusted(m, bvp)
-                matchups.append({"name": b["name"], "player_id": b.get("player_id"), "bats": b.get("bats", "R"), "bvp": bvp, **m})
+                matchups.append({"name": b["name"], "player_id": b.get("player_id"), "bats": b.get("bats", "R"), "bvp": bvp, "lineup_status": b.get("lineup_status", "confirmed"), **m})
             lam = lineup_expected_ks([m["k_prob"] for m in matchups], p["expected_bf"])
             if lam is None:
                 lam = expected_strikeouts(p["k_per_bf"], p["expected_bf"], p.get("opponent_k_mult", 1.0))
@@ -150,6 +151,7 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn, 
                 "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"],
                 "wind_dir": w["wind_dir"], "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
                 "throws": p.get("throws", "R"), "matchups": matchups,
+                "pitcher_status": p.get("pitcher_status", "confirmed"),
             })
     rows.sort(key=lambda r: r["over_prob"], reverse=True)
     return rows
@@ -178,6 +180,8 @@ def build_games(slate: list[dict], weather_fn) -> list[dict]:
             "wind_dir": w["wind_dir"],
             "temp_f": w["temp_f"],
             "precip_pct": w["precip_pct"],
+            "home_lineup_status": game.get("home_lineup_status", "confirmed"),
+            "away_lineup_status": game.get("away_lineup_status", "confirmed"),
         })
     out.sort(key=lambda g: g["env"], reverse=True)
     return out
