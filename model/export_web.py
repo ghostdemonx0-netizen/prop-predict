@@ -57,7 +57,7 @@ def _ensure_starters(slate: list[dict]) -> None:
 
 
 def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
-    """(lineups_fn, pitcher_fn) backed by the on-disk events cache.
+    """(lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn) backed by the on-disk events cache.
 
     Resolves each lineup side to the official batting order when posted, else a
     PROJECTED order from that team's most recent game (fetch.get_recent_lineup).
@@ -114,7 +114,73 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
             "away": [batter_fn(pid, game.get("away_lineup_status", "confirmed")) for pid in lns["away"]],
         }
 
-    return lineups_fn, pitcher_fn
+    def _events_by_season(pid: int, kind: str) -> dict:
+        fetcher = fetch.batter_events if kind == "bat" else fetch.pitcher_events
+        prefix = "bat-events" if kind == "bat" else "pit-events"
+        return {yr: get_or_compute(f"{prefix}-{pid}-{yr}", lambda yr=yr: fetcher(pid, yr))
+                for yr in (season, season - 1, season - 2)}
+
+    def batter_hist_fn(pid: int, status: str) -> dict:
+        m = meta.get(pid, {})
+        prof = profiles.blended_batter_profile(_events_by_season(pid, "bat"), as_of=as_of,
+                                               current_season=season, player_id=pid,
+                                               name=m.get("name", str(pid)), bats=m.get("bats", "R"))
+        prof["lineup_status"] = status
+        return prof
+
+    def pitcher_hist_fn(pid: int) -> dict:
+        m = meta.get(pid, {})
+        prof = profiles.blended_pitcher_profile(_events_by_season(pid, "pit"), as_of=as_of,
+                                                current_season=season, player_id=pid,
+                                                name=m.get("name", str(pid)), throws=m.get("throws", "R"))
+        prof["pitcher_status"] = pitcher_status.get(pid, "confirmed")
+        return prof
+
+    def lineups_hist_fn(game: dict) -> dict:
+        lns = lineup_cache[game["game_id"]]
+        return {
+            "home": [batter_hist_fn(pid, game.get("home_lineup_status", "confirmed")) for pid in lns["home"]],
+            "away": [batter_hist_fn(pid, game.get("away_lineup_status", "confirmed")) for pid in lns["away"]],
+        }
+
+    return lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn
+
+
+def _key(r: dict) -> tuple:
+    return (r.get("player_id"), r.get("game_id"))
+
+
+def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn,
+                             weather_fn, bvp_fn):
+    """Build current-mode rows, then attach history-mode twins (*_hist)."""
+    hr = build_hr_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
+    ks = build_strikeout_rows(slate, pitcher_fn, lineups_fn, weather_fn, bvp_fn=bvp_fn)
+    hr_h = {_key(r): r for r in build_hr_rows(slate, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
+    ks_h = {_key(r): r for r in build_strikeout_rows(slate, pitcher_hist_fn, lineups_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
+
+    def _copy_vs(dst_vs, src_vs):
+        for f in ("k_prob", "hit_prob", "lean", "prob"):
+            dst_vs[f"{f}_hist"] = src_vs.get(f)
+
+    for r in hr:
+        h = hr_h.get(_key(r))
+        if not h:
+            continue
+        r["probability_hist"] = h["probability"]
+        if r.get("vs") and h.get("vs"):
+            _copy_vs(r["vs"], h["vs"])
+    for r in ks:
+        h = ks_h.get(_key(r))
+        if not h:
+            continue
+        r["over_prob_hist"] = h["over_prob"]
+        r["expected_ks_hist"] = h["expected_ks"]
+        h_m_by_pid = {hm.get("player_id"): hm for hm in h.get("matchups", [])}
+        for m in r.get("matchups", []):
+            hm = h_m_by_pid.get(m.get("player_id"))
+            if hm is not None:
+                _copy_vs(m, hm)
+    return hr, ks
 
 
 def make_bvp_fn():
@@ -145,12 +211,11 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
             g["started"] = False
 
     _ensure_starters(slate)
-    lineups_fn, pitcher_fn = make_profile_fns(slate, season, date_str)
+    lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn = make_profile_fns(slate, season, date_str)
     weather_fn = fetch.make_weather_fn()
     bvp_fn = make_bvp_fn()
-
-    hr_rows = build_hr_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
-    k_rows = build_strikeout_rows(slate, pitcher_fn, lineups_fn, weather_fn, bvp_fn=bvp_fn)
+    hr_rows, k_rows = build_board_with_history(
+        slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn)
 
     payload = {
         "date": date_str,

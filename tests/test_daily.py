@@ -7,7 +7,8 @@ from tests.fixtures import SAMPLE_SLATE, SAMPLE_LINEUPS, SAMPLE_PITCHERS, SAMPLE
 
 def _kw():
     return dict(
-        profile_fns=(lambda g: SAMPLE_LINEUPS[1], lambda pid: SAMPLE_PITCHERS[pid]),
+        profile_fns=(lambda g: SAMPLE_LINEUPS[1], lambda pid: SAMPLE_PITCHERS[pid],
+                     lambda g: SAMPLE_LINEUPS[1], lambda pid: SAMPLE_PITCHERS[pid]),
         weather_fn=lambda g: SAMPLE_WEATHER[1],
         bvp_fn=lambda b, p: None,
         starters_fn=lambda slate: None,
@@ -43,7 +44,8 @@ def test_refresh_today_freezes_started_games(tmp_path, monkeypatch):
     before = json.loads((tmp_path / "2026-06-10.json").read_text())
     # the game starts; its rows must be carried untouched (crash if recomputed)
     kw = _kw()
-    kw["profile_fns"] = (lambda g: 1 / 0, lambda pid: 1 / 0)
+    kw["profile_fns"] = (lambda g: 1 / 0, lambda pid: 1 / 0,
+                         lambda g: 1 / 0, lambda pid: 1 / 0)
     sched = lambda d: [dict(SAMPLE_SLATE[0], started=True)]
     changed = daily.refresh_today("2026-06-10", schedule_fn=sched, **kw)
     after = json.loads((tmp_path / "2026-06-10.json").read_text())
@@ -61,7 +63,8 @@ def test_refresh_today_mixes_frozen_and_fresh(tmp_path, monkeypatch):
     g2 = dict(SAMPLE_SLATE[0], game_id=2, home="NYY", away="BOS", park_team="NYY")
     lineups = {1: SAMPLE_LINEUPS[1], 2: SAMPLE_LINEUPS[1]}
     kw = _kw()
-    kw["profile_fns"] = (lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid])
+    kw["profile_fns"] = (lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid],
+                         lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid])
     daily.refresh_today("2026-06-10", schedule_fn=lambda d: [g1], **kw)
     snap = [r for r in json.loads((tmp_path / "2026-06-10.json").read_text())["hr"] if r["game_id"] == 1]
     changed = daily.refresh_today(
@@ -79,7 +82,8 @@ def test_refresh_today_drops_vanished_never_started_games(tmp_path, monkeypatch)
     g2 = dict(SAMPLE_SLATE[0], game_id=2, home="NYY", away="BOS", park_team="NYY")
     lineups = {1: SAMPLE_LINEUPS[1], 2: SAMPLE_LINEUPS[1]}
     kw = _kw()
-    kw["profile_fns"] = (lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid])
+    kw["profile_fns"] = (lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid],
+                         lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid])
     daily.refresh_today("2026-06-10", schedule_fn=lambda d: [g1, g2], **kw)
     # g1 (never started) vanishes from a NON-empty schedule -> its rows drop
     changed = daily.refresh_today("2026-06-10", schedule_fn=lambda d: [g2], **kw)
@@ -221,7 +225,8 @@ def test_refresh_today_remembers_started_through_partial_schedule(tmp_path, monk
     g2 = dict(SAMPLE_SLATE[0], game_id=2, home="NYY", away="BOS", park_team="NYY")
     lineups = {1: SAMPLE_LINEUPS[1], 2: SAMPLE_LINEUPS[1]}
     kw = _kw()
-    kw["profile_fns"] = (lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid])
+    kw["profile_fns"] = (lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid],
+                         lambda g: lineups[g["game_id"]], lambda pid: SAMPLE_PITCHERS[pid])
     daily.refresh_today("2026-06-10", schedule_fn=lambda d: [g1, g2], **kw)
     daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(g1, started=True), g2], **kw)
     g1_rows = [r for r in json.loads((tmp_path / "2026-06-10.json").read_text())["hr"] if r["game_id"] == 1]

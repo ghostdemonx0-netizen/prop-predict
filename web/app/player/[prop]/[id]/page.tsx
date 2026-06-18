@@ -14,10 +14,11 @@ function pitLabel(t?: string) {
   return t === "L" ? "LHP" : t ? "RHP" : "";
 }
 
-function Back({ prop, date }: { prop?: string; date?: string }) {
+function Back({ prop, date, hist }: { prop?: string; date?: string; hist?: boolean }) {
   const q = new URLSearchParams();
   if (prop === "k") q.set("prop", "k"); // return to the strikeout board, not the default HR view
   if (date) q.set("date", date);
+  if (hist) q.set("source", "hist");
   const qs = q.toString();
   return (
     <Link href={qs ? `/?${qs}` : "/"} className="eyebrow" style={{ textDecoration: "none" }}>
@@ -103,12 +104,16 @@ export default function PlayerPage({
   searchParams,
 }: {
   params: Promise<{ prop: string; id: string }>;
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; source?: string }>;
 }) {
   const { prop, id } = use(params);
-  const { date } = use(searchParams);
+  const { date, source } = use(searchParams);
   const name = decodeURIComponent(id);
   const [data, setData] = useState<Projections | null>(null);
+
+  const hist = source === "hist";
+  const pick = <T,>(cur: T, h: T | undefined | null): T => (hist && h != null ? h : cur);
+  const navQ = `${date ? `?date=${date}` : ""}${hist ? `${date ? "&" : "?"}source=hist` : ""}`;
 
   useEffect(() => {
     loadProjections(date).then(setData).catch(console.error);
@@ -124,7 +129,7 @@ export default function PlayerPage({
 
   const notFound = (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-5">
-      <Back prop={prop} date={date} />
+      <Back prop={prop} date={date} hist={hist} />
       <p className="panel" style={{ color: "var(--muted)" }}>No data for {name}.</p>
     </main>
   );
@@ -135,7 +140,7 @@ export default function PlayerPage({
     const parkFriendly = r.park_mult >= 1;
     return (
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-        <Back prop={prop} date={date} />
+        <Back prop={prop} date={date} hist={hist} />
         <div className="rise">
           <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Home Run{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
           <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
@@ -144,8 +149,8 @@ export default function PlayerPage({
         </div>
 
         <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
-          <Stat value={pct(r.probability)} label="our HR probability" glow />
-          <Stat value={strengthLabel(r.probability)} label="our read" />
+          <Stat value={pct(pick(r.probability, r.probability_hist))} label="our HR probability" glow />
+          <Stat value={strengthLabel(pick(r.probability, r.probability_hist))} label="our read" />
         </div>
 
         <div className="panel rise" style={{ animationDelay: "120ms" }}>
@@ -207,14 +212,14 @@ export default function PlayerPage({
             <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
               <span className="bname">
                 <Link
-                  href={`/player/k/${r.vs.player_id ?? encodeURIComponent(r.vs.name)}${date ? `?date=${date}` : ""}`}
+                  href={`/player/k/${r.vs.player_id ?? encodeURIComponent(r.vs.name)}${navQ}`}
                   className="linklike"
                 >
                   {r.vs.name}
                 </Link>{" "}
                 <span className="hand">{pitLabel(r.vs.throws)}</span>
               </span>
-              <MatchupSphere lean={r.vs.lean} prob={r.vs.prob} />
+              <MatchupSphere lean={pick(r.vs.lean, r.vs.lean_hist)} prob={pick(r.vs.prob, r.vs.prob_hist)} />
             </div>
             {r.vs.bvp && r.vs.bvp.pa > 0 ? (
               <p className="factor-note" style={{ marginBottom: 0 }}>
@@ -233,11 +238,13 @@ export default function PlayerPage({
 
   const r = data.strikeouts.find((x) => String(x.player_id) === id) ?? data.strikeouts.find((x) => x.player === name);
   if (!r) return notFound;
-  const scale = Math.max(r.line + 3, r.expected_ks + 1);
-  const over = r.expected_ks > r.line;
+  const displayKs = pick(r.expected_ks, r.expected_ks_hist);
+  const displayOverProb = pick(r.over_prob, r.over_prob_hist);
+  const scale = Math.max(r.line + 3, displayKs + 1);
+  const over = displayKs > r.line;
   return (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-      <Back prop={prop} date={date} />
+      <Back prop={prop} date={date} hist={hist} />
       <div className="rise">
         <p className="eyebrow mb-1">{r.team}{r.throws ? ` · ${pitLabel(r.throws)}` : ""} · Strikeouts{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
         <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
@@ -246,18 +253,18 @@ export default function PlayerPage({
       </div>
 
       <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
-        <Stat value={pct(r.over_prob)} label={`over ${r.line} Ks`} glow />
-        <Stat value={r.expected_ks.toFixed(1)} label="projected Ks" />
+        <Stat value={pct(displayOverProb)} label={`over ${r.line} Ks`} glow />
+        <Stat value={displayKs.toFixed(1)} label="projected Ks" />
       </div>
 
       <div className="panel rise" style={{ animationDelay: "120ms" }}>
         <div className="eyebrow mb-3">Projection vs the line</div>
         <div style={{ position: "relative", height: "12px", background: "rgba(120,200,150,0.08)", borderRadius: 999 }}>
-          <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${(r.expected_ks / scale) * 100}%`, background: over ? "var(--green)" : "var(--red)", borderRadius: 999 }} />
+          <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${(displayKs / scale) * 100}%`, background: over ? "var(--green)" : "var(--red)", borderRadius: 999 }} />
           <span style={{ position: "absolute", left: `${(r.line / scale) * 100}%`, top: -4, bottom: -4, width: "2px", background: "var(--text)" }} title="the line" />
         </div>
         <p className="factor-note">
-          We project <strong style={{ color: "var(--text)" }}>{r.expected_ks.toFixed(1)} Ks</strong>; the line is{" "}
+          We project <strong style={{ color: "var(--text)" }}>{displayKs.toFixed(1)} Ks</strong>; the line is{" "}
           <strong style={{ color: "var(--text)" }}>{r.line}</strong> (the white marker) — so we lean{" "}
           <strong style={{ color: over ? "var(--green)" : "var(--red)" }}>{over ? "OVER" : "UNDER"}</strong>.
         </p>
@@ -283,7 +290,7 @@ export default function PlayerPage({
                 <span className="ord">{i + 1}</span>
                 <span className="bname">
                   <Link
-                    href={`/player/hr/${m.player_id ?? encodeURIComponent(m.name)}${date ? `?date=${date}` : ""}`}
+                    href={`/player/hr/${m.player_id ?? encodeURIComponent(m.name)}${navQ}`}
                     className="linklike"
                   >
                     {m.name}
@@ -293,7 +300,7 @@ export default function PlayerPage({
                     <span className="hand" title="career vs this pitcher">{m.bvp.hits}-{m.bvp.ab}{m.bvp.hr > 0 ? ` · ${m.bvp.hr} HR` : ""}</span>
                   )}
                 </span>
-                <MatchupSphere lean={m.lean} prob={m.prob} />
+                <MatchupSphere lean={pick(m.lean, m.lean_hist)} prob={pick(m.prob, m.prob_hist)} />
               </div>
             ))}
           </div>

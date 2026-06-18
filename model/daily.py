@@ -10,11 +10,12 @@ public pick log needs). model/backfill.py stays a manual dev tool.
 import datetime as dt
 import hashlib
 import json
+import re as _re
 from pathlib import Path
 
 from model import export_web, fetch
 from model.cache import DEFAULT_DIR, _safe
-from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
+from model.pipeline import build_games
 
 _MARKER = "events-updated-through.json"
 _SIGNATURE = "last-signature.json"
@@ -24,6 +25,20 @@ _REPULL_WINDOW = 3  # re-pull the trailing N days each fold so a day grabbed
 
 _BAT_KEYS = ("game_date", "events", "launch_speed")
 _PIT_KEYS = ("game_date", "events", "game_pk")
+
+
+def sweep_stale_season_caches(current_season: int, *, keep: int = 3, cache_dir=DEFAULT_DIR) -> list[str]:
+    """Delete season-event caches older than the keep-year window (re-downloadable)."""
+    cache_dir = Path(cache_dir)
+    cutoff = current_season - keep  # delete years <= cutoff
+    deleted = []
+    pat = _re.compile(r"-(\d{4})\.json$")
+    for f in list(cache_dir.glob("bat-events-*.json")) + list(cache_dir.glob("pit-events-*.json")):
+        m = pat.search(f.name)
+        if m and int(m.group(1)) <= cutoff:
+            f.unlink(missing_ok=True)
+            deleted.append(str(f))
+    return deleted
 
 
 def merge_day_into_caches(day_rows: list[dict], cache_dir=DEFAULT_DIR) -> int:
@@ -92,6 +107,7 @@ def update_events(today: str, *, fetch_day=None, cache_dir=DEFAULT_DIR) -> list[
         ingested.append(d.isoformat())
         d += dt.timedelta(days=1)
     marker.write_text(json.dumps({"date": target.isoformat()}))
+    sweep_stale_season_caches(int(today[:4]), cache_dir=cache_dir)
     return ingested
 
 
@@ -137,12 +153,12 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
     hr, ks, games = [], [], []
     if fresh_slate:
         (starters_fn or export_web._ensure_starters)(fresh_slate)
-        lineups_fn, pitcher_fn = profile_fns or export_web.make_profile_fns(
-            fresh_slate, int(date_str[:4]), date_str)
+        fns = profile_fns or export_web.make_profile_fns(fresh_slate, int(date_str[:4]), date_str)
+        lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn = fns
         wfn = weather_fn or fetch.make_weather_fn()
         bfn = bvp_fn or export_web.make_bvp_fn()
-        hr = build_hr_rows(fresh_slate, lineups_fn, pitcher_fn, wfn, bvp_fn=bfn)
-        ks = build_strikeout_rows(fresh_slate, pitcher_fn, lineups_fn, wfn, bvp_fn=bfn)
+        hr, ks = export_web.build_board_with_history(
+            fresh_slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, wfn, bfn)
         games = build_games(fresh_slate, wfn)
 
     payload = {

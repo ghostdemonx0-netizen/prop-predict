@@ -37,7 +37,7 @@ def main(date_str: str) -> None:
     slate = fetch.get_schedule(date_str)
     # Starters are not back-resolved from boxscores here; for finished dates
     # use export_web.main(include_started=True) instead.
-    lineups_fn, pitcher_fn = make_profile_fns(slate, int(date_str[:4]), date_str)
+    lineups_fn, pitcher_fn, *_ = make_profile_fns(slate, int(date_str[:4]), date_str)
     weather_fn = fetch.make_weather_fn()
 
     hr_rows = build_hr_rows(slate, lineups_fn, pitcher_fn, weather_fn)

@@ -75,7 +75,7 @@ def test_make_profile_fns_projects_and_tags_status(monkeypatch):
                         lambda ev, **k: {"player_id": k["player_id"], "name": str(k["player_id"]), "bats": "R", "season_hr": 1, "season_pa": 100, "recent_form_mult": 1.0, "k_rate": 0.2, "hit_rate": 0.2})
     monkeypatch.setattr(export_web.profiles, "pitcher_profile_from_events",
                         lambda ev, **k: {"player_id": k["player_id"], "name": str(k["player_id"]), "throws": "R", "k_per_bf": 0.2, "expected_bf": 24, "hit_allowed_rate": 0.2, "hr_allowed_rate": 0.03, "bf": 400, "k_line": 5.5})
-    lineups_fn, pitcher_fn = export_web.make_profile_fns(slate, 2026, "2026-06-10")
+    lineups_fn, pitcher_fn, *_ = export_web.make_profile_fns(slate, 2026, "2026-06-10")
     g = slate[0]
     assert g["home_lineup_status"] == "projected" and g["away_lineup_status"] == "confirmed"
     assert g["home_pitcher_status"] == "probable" and g["away_pitcher_status"] == "confirmed"

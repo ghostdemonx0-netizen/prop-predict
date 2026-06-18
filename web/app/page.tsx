@@ -48,11 +48,13 @@ export default function Home() {
   const [prop, setProp] = useState<"hr" | "k">("hr");
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [source, setSource] = useState<"current" | "hist">("current");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const want = params.get("date");
     if (params.get("prop") === "k") setProp("k"); // back-link from a strikeout player page
+    if (params.get("source") === "hist") setSource("hist");
     loadIndex().then((ds) => {
       setDates(ds);
       setSelectedDate(want && ds.includes(want) ? want : ds[0] ?? "");
@@ -82,13 +84,13 @@ export default function Home() {
           updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" }))
     : null;
 
-  const dateQ = selectedDate ? `?date=${selectedDate}` : "";
+  const dateQ = `${selectedDate ? `?date=${selectedDate}` : ""}${source === "hist" ? `${selectedDate ? "&" : "?"}source=hist` : ""}`;
 
   const hrRows: BoardRow[] = data.hr.map((r) => ({
     id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
     player: r.player,
     team: r.team,
-    prob: r.probability,
+    prob: source === "hist" ? (r.probability_hist ?? r.probability) : r.probability,
     detail: gameLabel(r.matchup, r.team) ?? `@ ${r.park}`,
     href: `/player/hr/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
     time: gameTimeLabel(r.game_time),
@@ -98,9 +100,13 @@ export default function Home() {
     playerHand: batHand(r.bats),
     opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
     bvp: r.vs?.bvp,
-    lean: r.vs ? { lean: r.vs.lean, prob: r.vs.prob } : null,
-    hitProb: r.vs?.hit_prob,
-    kProb: r.vs?.k_prob,
+    lean: r.vs
+      ? (source === "hist" && r.vs.lean_hist != null && r.vs.prob_hist != null
+          ? { lean: r.vs.lean_hist, prob: r.vs.prob_hist }
+          : { lean: r.vs.lean, prob: r.vs.prob })
+      : null,
+    hitProb: source === "hist" ? (r.vs?.hit_prob_hist ?? r.vs?.hit_prob) : r.vs?.hit_prob,
+    kProb: source === "hist" ? (r.vs?.k_prob_hist ?? r.vs?.k_prob) : r.vs?.k_prob,
     status: r.lineup_status,
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
@@ -112,9 +118,9 @@ export default function Home() {
     id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
     player: r.player,
     team: r.team,
-    prob: r.over_prob,
+    prob: source === "hist" ? (r.over_prob_hist ?? r.over_prob) : r.over_prob,
     detail: `line ${r.line.toFixed(1)}`,
-    projection: r.expected_ks.toFixed(1),
+    projection: (source === "hist" ? (r.expected_ks_hist ?? r.expected_ks) : r.expected_ks).toFixed(1),
     line: r.line.toFixed(1),
     href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
     time: gameTimeLabel(r.game_time),
@@ -130,6 +136,11 @@ export default function Home() {
     tempF: r.temp_f,
     precipPct: r.precip_pct,
   }));
+
+  // Re-sort by the displayed probability so History mode reorders the list to
+  // match its numbers (current mode is already in this order, so it's unchanged).
+  hrRows.sort((a, b) => b.prob - a.prob);
+  kRows.sort((a, b) => b.prob - a.prob);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">
@@ -169,28 +180,51 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="mb-6 flex flex-col items-center gap-2.5 rise" style={{ animationDelay: "60ms" }}>
-        {/* top level: Props · Parks · Game Hub · Top Plays */}
-        <div className="pillbar">
-          {SECTIONS.map((s) => (
-            <button key={s.id} onClick={() => setSection(s.id)} data-active={section === s.id} className="pill">
-              {s.label}
-            </button>
-          ))}
-        </div>
-        {/* under Props: which prop, then which view */}
-        {section === "props" && (
-          <>
+      <div className="mb-6 rise" style={{ animationDelay: "60ms" }}>
+        <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.625rem" }}>
+          {/* compact weighting toggle, pinned far-left on the selectors line */}
+          <div
+            style={{ position: "absolute", left: 0, top: 0, display: "flex", flexDirection: "column", gap: "0.15rem", lineHeight: 1.1 }}
+            title="Current = this season only. History = the last 3 seasons blended 5/4/3 for a steadier baseline. Park, weather, matchup and recent form stay live either way."
+          >
+            <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Weighting</span>
             <div className="pillbar">
-              {(["hr", "k"] as const).map((p) => (
-                <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
-                  {p === "hr" ? "Home Runs" : "Strikeouts"}
+              {([["current", "Current szn"], ["hist", "History 3yr"]] as const).map(([v, label]) => (
+                <button
+                  key={v}
+                  onClick={() => setSource(v)}
+                  data-active={source === v}
+                  className="pill"
+                  style={{ padding: "0.16rem 0.4rem", fontSize: "0.58rem" }}
+                >
+                  {label}
                 </button>
               ))}
             </div>
-            <ViewSwitcher mode={view} onChange={setView} />
-          </>
-        )}
+          </div>
+
+          {/* top level: Props · Parks · Game Hub · Top Plays (centered) */}
+          <div className="pillbar">
+            {SECTIONS.map((s) => (
+              <button key={s.id} onClick={() => setSection(s.id)} data-active={section === s.id} className="pill">
+                {s.label}
+              </button>
+            ))}
+          </div>
+          {/* under Props: which prop, then which view */}
+          {section === "props" && (
+            <>
+              <div className="pillbar">
+                {(["hr", "k"] as const).map((p) => (
+                  <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
+                    {p === "hr" ? "Home Runs" : "Strikeouts"}
+                  </button>
+                ))}
+              </div>
+              <ViewSwitcher mode={view} onChange={setView} />
+            </>
+          )}
+        </div>
       </div>
 
       {section === "parks" || section === "hub" ? (
