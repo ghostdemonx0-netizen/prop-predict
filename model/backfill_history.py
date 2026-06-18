@@ -16,9 +16,8 @@ def prime_prior_seasons(player_ids: list[int], current_season: int, *, batter: b
 
 
 if __name__ == "__main__":
-    season = int(sys.argv[1]) if len(sys.argv) > 1 else int(fetch.get_schedule.__defaults__ or [0])
+    season = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     # warm prior seasons for everyone on today's slate (extend to more days as needed)
-    from model import export_web
     import datetime as dt
     today = dt.date.today().isoformat()
     slate = fetch.get_schedule(today)
