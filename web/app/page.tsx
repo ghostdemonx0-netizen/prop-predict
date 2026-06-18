@@ -347,7 +347,12 @@ export default function Home() {
         <PropBoard
           rows={prop === "hr" ? hrRows : prop === "k" ? kRows : prop === "hits" ? hitsRows : tbRows}
           mode={view}
-          kind={prop === "k" ? "k" : "hr"}
+          kind={
+            prop === "k" ? "k"
+            : prop === "hits" ? (`hits${threshold.hits}` as "hits1" | "hits2" | "hits3")
+            : prop === "tb"   ? (`tb${threshold.tb}`   as "tb2"   | "tb3"   | "tb4")
+            : "hr"
+          }
         />
       )}
 
