@@ -110,6 +110,10 @@ export default function PlayerPage({
   const name = decodeURIComponent(id);
   const [data, setData] = useState<Projections | null>(null);
 
+  const source = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("source");
+  const hist = source === "hist";
+  const pick = <T,>(cur: T, h: T | undefined): T => (hist && h !== undefined ? h : cur);
+
   useEffect(() => {
     loadProjections(date).then(setData).catch(console.error);
   }, [date]);
@@ -144,8 +148,8 @@ export default function PlayerPage({
         </div>
 
         <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
-          <Stat value={pct(r.probability)} label="our HR probability" glow />
-          <Stat value={strengthLabel(r.probability)} label="our read" />
+          <Stat value={pct(pick(r.probability, r.probability_hist))} label="our HR probability" glow />
+          <Stat value={strengthLabel(pick(r.probability, r.probability_hist))} label="our read" />
         </div>
 
         <div className="panel rise" style={{ animationDelay: "120ms" }}>
@@ -214,7 +218,7 @@ export default function PlayerPage({
                 </Link>{" "}
                 <span className="hand">{pitLabel(r.vs.throws)}</span>
               </span>
-              <MatchupSphere lean={r.vs.lean} prob={r.vs.prob} />
+              <MatchupSphere lean={pick(r.vs.lean, r.vs.lean_hist)} prob={pick(r.vs.prob, r.vs.prob_hist)} />
             </div>
             {r.vs.bvp && r.vs.bvp.pa > 0 ? (
               <p className="factor-note" style={{ marginBottom: 0 }}>
@@ -233,8 +237,10 @@ export default function PlayerPage({
 
   const r = data.strikeouts.find((x) => String(x.player_id) === id) ?? data.strikeouts.find((x) => x.player === name);
   if (!r) return notFound;
-  const scale = Math.max(r.line + 3, r.expected_ks + 1);
-  const over = r.expected_ks > r.line;
+  const displayKs = pick(r.expected_ks, r.expected_ks_hist);
+  const displayOverProb = pick(r.over_prob, r.over_prob_hist);
+  const scale = Math.max(r.line + 3, displayKs + 1);
+  const over = displayKs > r.line;
   return (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
       <Back prop={prop} date={date} />
@@ -246,18 +252,18 @@ export default function PlayerPage({
       </div>
 
       <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
-        <Stat value={pct(r.over_prob)} label={`over ${r.line} Ks`} glow />
-        <Stat value={r.expected_ks.toFixed(1)} label="projected Ks" />
+        <Stat value={pct(displayOverProb)} label={`over ${r.line} Ks`} glow />
+        <Stat value={displayKs.toFixed(1)} label="projected Ks" />
       </div>
 
       <div className="panel rise" style={{ animationDelay: "120ms" }}>
         <div className="eyebrow mb-3">Projection vs the line</div>
         <div style={{ position: "relative", height: "12px", background: "rgba(120,200,150,0.08)", borderRadius: 999 }}>
-          <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${(r.expected_ks / scale) * 100}%`, background: over ? "var(--green)" : "var(--red)", borderRadius: 999 }} />
+          <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${(displayKs / scale) * 100}%`, background: over ? "var(--green)" : "var(--red)", borderRadius: 999 }} />
           <span style={{ position: "absolute", left: `${(r.line / scale) * 100}%`, top: -4, bottom: -4, width: "2px", background: "var(--text)" }} title="the line" />
         </div>
         <p className="factor-note">
-          We project <strong style={{ color: "var(--text)" }}>{r.expected_ks.toFixed(1)} Ks</strong>; the line is{" "}
+          We project <strong style={{ color: "var(--text)" }}>{displayKs.toFixed(1)} Ks</strong>; the line is{" "}
           <strong style={{ color: "var(--text)" }}>{r.line}</strong> (the white marker) — so we lean{" "}
           <strong style={{ color: over ? "var(--green)" : "var(--red)" }}>{over ? "OVER" : "UNDER"}</strong>.
         </p>
@@ -293,7 +299,7 @@ export default function PlayerPage({
                     <span className="hand" title="career vs this pitcher">{m.bvp.hits}-{m.bvp.ab}{m.bvp.hr > 0 ? ` · ${m.bvp.hr} HR` : ""}</span>
                   )}
                 </span>
-                <MatchupSphere lean={m.lean} prob={m.prob} />
+                <MatchupSphere lean={pick(m.lean, m.lean_hist)} prob={pick(m.prob, m.prob_hist)} />
               </div>
             ))}
           </div>

@@ -83,7 +83,7 @@ export default function Home() {
           updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" }))
     : null;
 
-  const dateQ = selectedDate ? `?date=${selectedDate}` : "";
+  const dateQ = `${selectedDate ? `?date=${selectedDate}` : ""}${source === "hist" ? `${selectedDate ? "&" : "?"}source=hist` : ""}`;
 
   const hrRows: BoardRow[] = data.hr.map((r) => ({
     id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
