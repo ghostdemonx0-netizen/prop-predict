@@ -100,8 +100,8 @@ export default function Home() {
     opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
     bvp: r.vs?.bvp,
     lean: r.vs
-      ? (source === "hist"
-          ? { lean: r.vs.lean_hist ?? r.vs.lean, prob: r.vs.prob_hist ?? r.vs.prob }
+      ? (source === "hist" && r.vs.lean_hist != null && r.vs.prob_hist != null
+          ? { lean: r.vs.lean_hist, prob: r.vs.prob_hist }
           : { lean: r.vs.lean, prob: r.vs.prob })
       : null,
     hitProb: source === "hist" ? (r.vs?.hit_prob_hist ?? r.vs?.hit_prob) : r.vs?.hit_prob,
