@@ -57,7 +57,7 @@ def _ensure_starters(slate: list[dict]) -> None:
 
 
 def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
-    """(lineups_fn, pitcher_fn) backed by the on-disk events cache.
+    """(lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn) backed by the on-disk events cache.
 
     Resolves each lineup side to the official batting order when posted, else a
     PROJECTED order from that team's most recent game (fetch.get_recent_lineup).
