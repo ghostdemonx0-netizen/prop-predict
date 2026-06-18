@@ -1,0 +1,40 @@
+name: curated-plays
+on:
+  workflow_run:
+    workflows: ["refresh-board", "morning-board"]
+    types: [completed]
+  workflow_dispatch: {}
+concurrency:
+  group: curated-plays
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  plays:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # On the chained trigger, only run if the refresh actually succeeded.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restore board from the refresh build cache
+        uses: actions/cache/restore@v5
+        with:
+          # the refresh workflow saves web/public/data under engine-cache-<run_id>;
+          # restore-keys prefix grabs the newest published board (read-only here).
+          path: |
+            web/public/data
+          key: board-readonly-${{ github.run_id }}
+          restore-keys: engine-cache-
+      - name: Curate + deliver plays
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          PLAYS_TO_EMAIL: ${{ secrets.PLAYS_TO_EMAIL }}
+          PLAYS_FROM_EMAIL: ${{ secrets.PLAYS_FROM_EMAIL }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python -m model.plays_deliver
