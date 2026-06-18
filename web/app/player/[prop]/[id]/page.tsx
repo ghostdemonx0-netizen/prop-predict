@@ -103,16 +103,16 @@ export default function PlayerPage({
   searchParams,
 }: {
   params: Promise<{ prop: string; id: string }>;
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; source?: string }>;
 }) {
   const { prop, id } = use(params);
-  const { date } = use(searchParams);
+  const { date, source } = use(searchParams);
   const name = decodeURIComponent(id);
   const [data, setData] = useState<Projections | null>(null);
 
-  const source = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("source");
   const hist = source === "hist";
-  const pick = <T,>(cur: T, h: T | undefined): T => (hist && h !== undefined ? h : cur);
+  const pick = <T,>(cur: T, h: T | undefined | null): T => (hist && h != null ? h : cur);
+  const navQ = `${date ? `?date=${date}` : ""}${hist ? `${date ? "&" : "?"}source=hist` : ""}`;
 
   useEffect(() => {
     loadProjections(date).then(setData).catch(console.error);
@@ -211,7 +211,7 @@ export default function PlayerPage({
             <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
               <span className="bname">
                 <Link
-                  href={`/player/k/${r.vs.player_id ?? encodeURIComponent(r.vs.name)}${date ? `?date=${date}` : ""}`}
+                  href={`/player/k/${r.vs.player_id ?? encodeURIComponent(r.vs.name)}${navQ}`}
                   className="linklike"
                 >
                   {r.vs.name}
@@ -289,7 +289,7 @@ export default function PlayerPage({
                 <span className="ord">{i + 1}</span>
                 <span className="bname">
                   <Link
-                    href={`/player/hr/${m.player_id ?? encodeURIComponent(m.name)}${date ? `?date=${date}` : ""}`}
+                    href={`/player/hr/${m.player_id ?? encodeURIComponent(m.name)}${navQ}`}
                     className="linklike"
                   >
                     {m.name}
