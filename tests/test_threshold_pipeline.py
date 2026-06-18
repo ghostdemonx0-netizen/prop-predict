@@ -172,6 +172,16 @@ def test_pitcher_factor_favorable_gt_1_tb():
     assert r["pitcher_factor"] > 1.0, f"expected pitcher_factor > 1 for hittable pitcher on TB, got {r['pitcher_factor']}"
 
 
+def test_pitcher_factor_tough_lt_1_tb():
+    """An ace produces pitcher_factor < 1 on a TB row (bases EV uses Σ i·p_i, not any-hit)."""
+    batter = _typical_batter()
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_tough()
+    rows = build_total_bases_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    r = rows[0]
+    assert r["pitcher_factor"] < 1.0, f"expected pitcher_factor < 1 for ace on TB, got {r['pitcher_factor']}"
+
+
 def test_pitcher_factor_neutral_approx_1():
     """A league-average pitcher should yield pitcher_factor close to 1.0."""
     batter = _typical_batter()
@@ -179,7 +189,9 @@ def test_pitcher_factor_neutral_approx_1():
     pf = lambda pid: _pit_neutral()
     rows = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=None)
     r = rows[0]
-    # Neutral pitcher with R/R platoon (platoon_mult ~= 1.0 for R vs R) should be near 1
+    # R-vs-R is a same-hand matchup, so a small platoon penalty (~0.93) is baked
+    # into pitcher_factor even for a league-average pitcher. The ±15% window is
+    # deliberately sized to accommodate that — "near 1", not exactly 1.
     assert 0.85 <= r["pitcher_factor"] <= 1.15, f"neutral pitcher_factor={r['pitcher_factor']} far from 1.0"
 
 
