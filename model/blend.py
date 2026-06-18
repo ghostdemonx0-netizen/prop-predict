@@ -20,6 +20,8 @@ def marcel_blend(per_season: list[tuple[float, float]], weights: tuple = WEIGHTS
     if w_pa <= 0:
         return (0.0, 0.0)
     top = weights[0]
+    if top == 0:
+        raise ValueError("weights[0] must be non-zero (it is the normalization divisor)")
     return (w_made / top, w_pa / top)
 
 

@@ -1,4 +1,5 @@
 import math
+import pytest
 from model.blend import marcel_blend, regress, WEIGHTS
 
 def test_weights_are_543():
@@ -29,7 +30,7 @@ def test_blend_no_data_returns_zeros():
     assert marcel_blend([(0, 0), (0, 0), (0, 0)]) == (0.0, 0.0)
 
 def test_regress_pulls_thin_sample_toward_league():
-    # 0 made in 0 pa -> exactly league
+    # thin sample (R dominates) lands at league rate via the formula
     assert math.isclose(regress(0, 0, 0.033, 300), 0.033)
 
 def test_regress_big_sample_barely_moves():
@@ -37,3 +38,15 @@ def test_regress_big_sample_barely_moves():
     r = regress(72, 1440, 0.033, 300)
     assert math.isclose(r, (72 + 0.033 * 300) / (1440 + 300))
     assert 0.044 < r < 0.048  # close to observed 5%, lightly pulled down
+
+def test_regress_zero_denom_hits_guard():
+    # pa + r == 0 -> guard branch returns league_rate exactly
+    assert regress(5.0, 0.0, 0.033, 0.0) == 0.033
+
+def test_blend_short_list_equals_zero_padding():
+    # zip-truncation: a 1-season list must equal the zero-padded 3-season form
+    assert marcel_blend([(10, 200)]) == marcel_blend([(10, 200), (0, 0), (0, 0)])
+
+def test_blend_zero_top_weight_raises():
+    with pytest.raises(ValueError):
+        marcel_blend([(10, 200), (5, 100), (0, 0)], weights=(0, 4, 3))
