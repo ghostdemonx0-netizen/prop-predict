@@ -18,10 +18,15 @@ from math import sqrt
 from model.parks import get_park, hr_park_factor
 from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf
 from model.projections import (
-    hr_probability, expected_strikeouts, poisson_over_prob,
+    hr_probability, hr_rate_per_pa, expected_strikeouts, poisson_over_prob,
     lineup_expected_ks, expected_pa_for_slot, pitcher_hr_mult, bvp_hr_mult,
 )
 from model.matchup import matchup, hr_platoon_mult, bvp_k_mult, classify_lean
+from model.counts import count_ge_prob
+from model.blend import regress
+
+_LG_1B, _LG_2B, _LG_3B = 0.138, 0.045, 0.005
+_COMP_R = 200.0
 
 
 def _history_adjusted(m: dict, bvp: dict | None) -> dict:
@@ -185,3 +190,77 @@ def build_games(slate: list[dict], weather_fn) -> list[dict]:
         })
     out.sort(key=lambda g: g["env"], reverse=True)
     return out
+
+
+def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp):
+    """Per-PA [p0,p1,p2,p3,p4] (0..4 bases). HR reuses the adjusted HR rate;
+    1B/2B/3B are regressed + matchup/platoon/recent-form (park/weather HR-only, v1)."""
+    pa = b.get("season_pa", 0)
+    # matchup hit factor (platoon/log5) applied to non-HR hit components
+    if opp:
+        m = matchup(b_k=b.get("k_rate", 0.22), b_hit=b.get("hit_rate", 0.22),
+                    p_k=opp.get("k_per_bf", 0.22), p_hit=opp.get("hit_allowed_rate", 0.22),
+                    bats=b.get("bats", "R"), throws=opp.get("throws", "R"))
+        hit_factor = (m["hit_prob"] / b["hit_rate"]) if b.get("hit_rate") else 1.0
+        platoon = hr_platoon_mult(b.get("bats", "R"), opp.get("throws", "R"))
+        p_mult = pitcher_hr_mult(opp.get("hr_allowed_rate", 0.033), opp.get("bf", 0))
+        b_mult = bvp_hr_mult(bvp["hr"], bvp["pa"]) if bvp else 1.0
+    else:
+        hit_factor = platoon = p_mult = b_mult = 1.0
+    form = b.get("recent_form_mult", 1.0)
+    p1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * hit_factor * form
+    p2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * hit_factor * form
+    p3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * hit_factor * form
+    p4 = hr_rate_per_pa(b.get("season_hr", 0), pa, recent_form_mult=form, matchup_mult=platoon,
+                        park_mult=eff_park, weather_mult=weather_mult, pitcher_mult=p_mult, bvp_mult=b_mult)
+    p1, p2, p3, p4 = (max(0.0, x) for x in (p1, p2, p3, p4))
+    total = p1 + p2 + p3 + p4
+    if total > 1.0:  # keep a valid distribution
+        p1, p2, p3, p4 = (x / total for x in (p1, p2, p3, p4))
+        total = 1.0
+    return [1 - total, p1, p2, p3, p4]
+
+
+def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, thresholds, units):
+    rows = []
+    for game in slate:
+        if game.get("started"):
+            continue
+        w = _game_weather(game, weather_fn)
+        weather_mult = weather_hr_multiplier(w["wind_out_mph"], w["temp_f"], w["park"]["dome"])
+        park_mult = hr_park_factor(game["park_team"])
+        lineups = lineups_fn(game)
+        home_p = pitcher_fn(game["home_pitcher_id"]) if game.get("home_pitcher_id") else None
+        away_p = pitcher_fn(game["away_pitcher_id"]) if game.get("away_pitcher_id") else None
+        for side, opp in (("home", away_p), ("away", home_p)):
+            team = game.get(side, "?")
+            eff_park = park_mult / sqrt(hr_park_factor(team))
+            for slot, b in enumerate(lineups.get(side, [])):
+                bvp = bvp_fn(b.get("player_id"), opp.get("player_id")) if (bvp_fn and opp) else None
+                vec = _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp)
+                outcomes = [vec[0], vec[1] + vec[2] + vec[3] + vec[4]] if units == "hits" else vec
+                epa = expected_pa_for_slot(slot)
+                row = {
+                    "prop": prop, "game_id": game["game_id"], "game_time": game.get("game_time"),
+                    "player_id": b.get("player_id"), "player": b["name"], "team": team,
+                    "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
+                    "bats": b.get("bats", "R"),
+                    "vs": {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R")} if opp else None,
+                    "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
+                    "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
+                }
+                for label, nthresh in thresholds:
+                    row[label] = count_ge_prob(outcomes, epa, nthresh)
+                rows.append(row)
+    rows.sort(key=lambda r: r[thresholds[0][0]], reverse=True)
+    return rows
+
+
+def build_hits_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=None):
+    return _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn,
+                           prop="HITS", thresholds=[("p_ge1", 1), ("p_ge2", 2), ("p_ge3", 3)], units="hits")
+
+
+def build_total_bases_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=None):
+    return _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn,
+                           prop="TB", thresholds=[("p_ge2", 2), ("p_ge3", 3), ("p_ge4", 4)], units="bases")
