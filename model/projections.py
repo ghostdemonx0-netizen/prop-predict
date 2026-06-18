@@ -5,6 +5,27 @@ import math
 LEAGUE_HR_RATE = 0.033  # league-average HR per plate appearance
 
 
+def hr_rate_per_pa(
+    season_hr: float,
+    season_pa: float,
+    *,
+    recent_form_mult: float = 1.0,
+    matchup_mult: float = 1.0,
+    park_mult: float = 1.0,
+    weather_mult: float = 1.0,
+    pitcher_mult: float = 1.0,
+    bvp_mult: float = 1.0,
+    league_hr_rate: float = LEAGUE_HR_RATE,
+    regression_pa: float = 300.0,
+) -> float:
+    """Clamped per-PA HR probability after regression + multiplicative adjustments."""
+    if season_pa <= 0:
+        return 0.0
+    base = (season_hr + league_hr_rate * regression_pa) / (season_pa + regression_pa)
+    rate = base * recent_form_mult * matchup_mult * park_mult * weather_mult * pitcher_mult * bvp_mult
+    return max(0.0, min(rate, 1.0))
+
+
 def hr_probability(
     season_hr: float,
     season_pa: float,
@@ -34,9 +55,10 @@ def hr_probability(
     """
     if season_pa <= 0:
         return 0.0
-    base = (season_hr + league_hr_rate * regression_pa) / (season_pa + regression_pa)
-    rate = base * recent_form_mult * matchup_mult * park_mult * weather_mult * pitcher_mult * bvp_mult
-    rate = max(0.0, min(rate, 1.0))
+    rate = hr_rate_per_pa(season_hr, season_pa, recent_form_mult=recent_form_mult,
+                          matchup_mult=matchup_mult, park_mult=park_mult, weather_mult=weather_mult,
+                          pitcher_mult=pitcher_mult, bvp_mult=bvp_mult,
+                          league_hr_rate=league_hr_rate, regression_pa=regression_pa)
     return 1 - (1 - rate) ** expected_pa
 
 

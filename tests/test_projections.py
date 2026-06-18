@@ -1,9 +1,22 @@
 import math
 import pytest
 from model.projections import (
-    hr_probability, expected_strikeouts, poisson_over_prob,
+    hr_probability, hr_rate_per_pa, expected_strikeouts, poisson_over_prob,
     lineup_expected_ks, pitcher_hr_mult, expected_pa_for_slot, bvp_hr_mult,
 )
+
+
+def test_hr_rate_per_pa_matches_internal_rate():
+    # base = (10 + 0.033*300)/(300+300) = 19.9/600
+    r = hr_rate_per_pa(10, 300)
+    assert abs(r - (10 + 0.033 * 300) / 600) < 1e-9
+
+
+def test_hr_probability_unchanged_decomposition():
+    # hr_probability == 1-(1-rate)^pa with the same per-PA rate
+    r = hr_rate_per_pa(20, 400, park_mult=1.1, weather_mult=1.05)
+    assert abs(hr_probability(20, 400, park_mult=1.1, weather_mult=1.05, expected_pa=4.2)
+               - (1 - (1 - r) ** 4.2)) < 1e-12
 
 
 def test_hr_probability_baseline_no_adjustments():
