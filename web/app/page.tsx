@@ -48,6 +48,7 @@ export default function Home() {
   const [prop, setProp] = useState<"hr" | "k">("hr");
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [source, setSource] = useState<"current" | "hist">("current");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -88,7 +89,7 @@ export default function Home() {
     id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
     player: r.player,
     team: r.team,
-    prob: r.probability,
+    prob: source === "hist" ? (r.probability_hist ?? r.probability) : r.probability,
     detail: gameLabel(r.matchup, r.team) ?? `@ ${r.park}`,
     href: `/player/hr/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
     time: gameTimeLabel(r.game_time),
@@ -98,9 +99,13 @@ export default function Home() {
     playerHand: batHand(r.bats),
     opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
     bvp: r.vs?.bvp,
-    lean: r.vs ? { lean: r.vs.lean, prob: r.vs.prob } : null,
-    hitProb: r.vs?.hit_prob,
-    kProb: r.vs?.k_prob,
+    lean: r.vs
+      ? (source === "hist"
+          ? { lean: r.vs.lean_hist ?? r.vs.lean, prob: r.vs.prob_hist ?? r.vs.prob }
+          : { lean: r.vs.lean, prob: r.vs.prob })
+      : null,
+    hitProb: source === "hist" ? (r.vs?.hit_prob_hist ?? r.vs?.hit_prob) : r.vs?.hit_prob,
+    kProb: source === "hist" ? (r.vs?.k_prob_hist ?? r.vs?.k_prob) : r.vs?.k_prob,
     status: r.lineup_status,
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
@@ -112,9 +117,9 @@ export default function Home() {
     id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
     player: r.player,
     team: r.team,
-    prob: r.over_prob,
+    prob: source === "hist" ? (r.over_prob_hist ?? r.over_prob) : r.over_prob,
     detail: `line ${r.line.toFixed(1)}`,
-    projection: r.expected_ks.toFixed(1),
+    projection: (source === "hist" ? (r.expected_ks_hist ?? r.expected_ks) : r.expected_ks).toFixed(1),
     line: r.line.toFixed(1),
     href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
     time: gameTimeLabel(r.game_time),
@@ -176,6 +181,11 @@ export default function Home() {
             <button key={s.id} onClick={() => setSection(s.id)} data-active={section === s.id} className="pill">
               {s.label}
             </button>
+          ))}
+        </div>
+        <div className="pillbar" title="History blends the last 3 seasons (5/4/3) for a steadier baseline — situational factors stay live">
+          {([["current", "Current"], ["hist", "History (3-yr)"]] as const).map(([v, label]) => (
+            <button key={v} onClick={() => setSource(v)} data-active={source === v} className="pill">{label}</button>
           ))}
         </div>
         {/* under Props: which prop, then which view */}
