@@ -82,10 +82,44 @@ export type Game = {
   away_lineup_status?: string;
 };
 
+export type HitsRow = {
+  player: string;
+  team: string;
+  matchup?: string;
+  game_time?: string;
+  player_id?: number;
+  game_id?: number;
+  bats?: string;
+  vs?: Matchup;
+  lineup_status?: string;
+  wind_out_mph?: number;
+  wind_mph?: number;
+  wind_dir?: number;
+  temp_f?: number;
+  precip_pct?: number;
+  p_ge1: number;
+  p_ge2: number;
+  p_ge3: number;
+  p_ge1_hist?: number;
+  p_ge2_hist?: number;
+  p_ge3_hist?: number;
+};
+
+export type TbRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | "p_ge2_hist" | "p_ge3_hist"> & {
+  p_ge2: number;
+  p_ge3: number;
+  p_ge4: number;
+  p_ge2_hist?: number;
+  p_ge3_hist?: number;
+  p_ge4_hist?: number;
+};
+
 export type Projections = {
   date: string;
   updated: string;
   hr: HrRow[];
   strikeouts: KRow[];
   games?: Game[];
+  hits?: HitsRow[];
+  total_bases?: TbRow[];
 };

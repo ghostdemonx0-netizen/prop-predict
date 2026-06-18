@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { loadProjections, loadIndex } from "../lib/data";
-import type { Projections } from "../lib/types";
+import type { Projections, HitsRow, TbRow } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
 import { TopPlays } from "../components/TopPlays";
@@ -45,7 +45,8 @@ export default function Home() {
   const [data, setData] = useState<Projections | null>(null);
   const [section, setSection] = useState<Section>("props");
   const [view, setView] = useState<ViewMode>("hybrid");
-  const [prop, setProp] = useState<"hr" | "k">("hr");
+  const [prop, setProp] = useState<"hr" | "k" | "hits" | "tb">("hr");
+  const [threshold, setThreshold] = useState<{ hits: 1 | 2 | 3; tb: 2 | 3 | 4 }>({ hits: 1, tb: 2 });
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [source, setSource] = useState<"current" | "hist">("current");
@@ -53,7 +54,11 @@ export default function Home() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const want = params.get("date");
-    if (params.get("prop") === "k") setProp("k"); // back-link from a strikeout player page
+    const propParam = params.get("prop");
+    if (propParam === "k") setProp("k");
+    else if (propParam === "hits") setProp("hits");
+    else if (propParam === "tb") setProp("tb");
+    // back-link from player pages
     if (params.get("source") === "hist") setSource("hist");
     loadIndex().then((ds) => {
       setDates(ds);
@@ -137,10 +142,84 @@ export default function Home() {
     precipPct: r.precip_pct,
   }));
 
+  // Helper: pick p_geN source-aware (hist fallback to current)
+  function hitsProb(r: HitsRow, n: 1 | 2 | 3): number {
+    const base = n === 1 ? r.p_ge1 : n === 2 ? r.p_ge2 : r.p_ge3;
+    if (source !== "hist") return base;
+    const hist = n === 1 ? r.p_ge1_hist : n === 2 ? r.p_ge2_hist : r.p_ge3_hist;
+    return hist ?? base;
+  }
+  function tbProb(r: TbRow, n: 2 | 3 | 4): number {
+    const base = n === 2 ? r.p_ge2 : n === 3 ? r.p_ge3 : r.p_ge4;
+    if (source !== "hist") return base;
+    const hist = n === 2 ? r.p_ge2_hist : n === 3 ? r.p_ge3_hist : r.p_ge4_hist;
+    return hist ?? base;
+  }
+
+  const hitsRows: BoardRow[] = (data.hits ?? []).map((r) => ({
+    id: `hits-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
+    player: r.player,
+    team: r.team,
+    prob: hitsProb(r, threshold.hits),
+    detail: `${threshold.hits}+ hits`,
+    href: `/player/hits/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
+    time: gameTimeLabel(r.game_time),
+    timeSort: r.game_time,
+    matchup: r.matchup,
+    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
+    playerHand: batHand(r.bats),
+    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
+    bvp: r.vs?.bvp,
+    lean: r.vs
+      ? (source === "hist" && r.vs.lean_hist != null && r.vs.prob_hist != null
+          ? { lean: r.vs.lean_hist, prob: r.vs.prob_hist }
+          : { lean: r.vs.lean, prob: r.vs.prob })
+      : null,
+    hitProb: source === "hist" ? (r.vs?.hit_prob_hist ?? r.vs?.hit_prob) : r.vs?.hit_prob,
+    kProb: source === "hist" ? (r.vs?.k_prob_hist ?? r.vs?.k_prob) : r.vs?.k_prob,
+    status: r.lineup_status,
+    windOut: r.wind_out_mph,
+    windMph: r.wind_mph,
+    windDir: r.wind_dir,
+    tempF: r.temp_f,
+    precipPct: r.precip_pct,
+  }));
+
+  const tbRows: BoardRow[] = (data.total_bases ?? []).map((r) => ({
+    id: `tb-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
+    player: r.player,
+    team: r.team,
+    prob: tbProb(r, threshold.tb),
+    detail: `${threshold.tb}+ bases`,
+    href: `/player/tb/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
+    time: gameTimeLabel(r.game_time),
+    timeSort: r.game_time,
+    matchup: r.matchup,
+    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
+    playerHand: batHand(r.bats),
+    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
+    bvp: r.vs?.bvp,
+    lean: r.vs
+      ? (source === "hist" && r.vs.lean_hist != null && r.vs.prob_hist != null
+          ? { lean: r.vs.lean_hist, prob: r.vs.prob_hist }
+          : { lean: r.vs.lean, prob: r.vs.prob })
+      : null,
+    hitProb: source === "hist" ? (r.vs?.hit_prob_hist ?? r.vs?.hit_prob) : r.vs?.hit_prob,
+    kProb: source === "hist" ? (r.vs?.k_prob_hist ?? r.vs?.k_prob) : r.vs?.k_prob,
+    status: r.lineup_status,
+    windOut: r.wind_out_mph,
+    windMph: r.wind_mph,
+    windDir: r.wind_dir,
+    tempF: r.temp_f,
+    precipPct: r.precip_pct,
+  }));
+
   // Re-sort by the displayed probability so History mode reorders the list to
   // match its numbers (current mode is already in this order, so it's unchanged).
   hrRows.sort((a, b) => b.prob - a.prob);
   kRows.sort((a, b) => b.prob - a.prob);
+  hitsRows.sort((a, b) => b.prob - a.prob);
+  tbRows.sort((a, b) => b.prob - a.prob);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">
@@ -215,12 +294,45 @@ export default function Home() {
           {section === "props" && (
             <>
               <div className="pillbar">
-                {(["hr", "k"] as const).map((p) => (
+                {([
+                  ["hr", "Home Runs"],
+                  ["k", "Strikeouts"],
+                  ["hits", "Hits"],
+                  ["tb", "Total Bases"],
+                ] as const).map(([p, label]) => (
                   <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
-                    {p === "hr" ? "Home Runs" : "Strikeouts"}
+                    {label}
                   </button>
                 ))}
               </div>
+              {prop === "hits" && (
+                <div className="pillbar">
+                  {([1, 2, 3] as const).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setThreshold((t) => ({ ...t, hits: n }))}
+                      data-active={threshold.hits === n}
+                      className="pill"
+                    >
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              )}
+              {prop === "tb" && (
+                <div className="pillbar">
+                  {([2, 3, 4] as const).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setThreshold((t) => ({ ...t, tb: n }))}
+                      data-active={threshold.tb === n}
+                      className="pill"
+                    >
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              )}
               <ViewSwitcher mode={view} onChange={setView} />
             </>
           )}
@@ -232,7 +344,11 @@ export default function Home() {
       ) : section === "topplays" ? (
         <TopPlays hrRows={hrRows} kRows={kRows} />
       ) : (
-        <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={view} kind={prop === "hr" ? "hr" : "k"} />
+        <PropBoard
+          rows={prop === "hr" ? hrRows : prop === "k" ? kRows : prop === "hits" ? hitsRows : tbRows}
+          mode={view}
+          kind={prop === "k" ? "k" : "hr"}
+        />
       )}
 
       <footer className="mt-12" style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
