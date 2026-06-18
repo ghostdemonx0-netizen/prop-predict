@@ -194,7 +194,12 @@ def build_games(slate: list[dict], weather_fn) -> list[dict]:
 
 def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp):
     """Per-PA [p0,p1,p2,p3,p4] (0..4 bases). HR reuses the adjusted HR rate;
-    1B/2B/3B are regressed + matchup/platoon/recent-form (park/weather HR-only, v1)."""
+    1B/2B/3B are regressed + matchup/platoon/recent-form (park/weather HR-only, v1).
+
+    Returns (actual_vec, neutral_vec) where neutral_vec uses league-average pitcher
+    and no platoon/bvp so only park/weather/form remain (matchup adjustments cancel
+    in the pitcher_factor ratio).
+    """
     pa = b.get("season_pa", 0)
     # matchup hit factor (platoon/log5) applied to non-HR hit components
     if opp:
@@ -218,7 +223,23 @@ def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp):
     if total > 1.0:  # keep a valid distribution
         p1, p2, p3, p4 = (x / total for x in (p1, p2, p3, p4))
         total = 1.0
-    return [1 - total, p1, p2, p3, p4]
+    actual_vec = [1 - total, p1, p2, p3, p4]
+
+    # Neutral vector: same batter form + park/weather, but league-average pitcher
+    # (no platoon, no pitcher quality, no bvp) so the ratio isolates pitcher effect.
+    n1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * form
+    n2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * form
+    n3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * form
+    n4 = hr_rate_per_pa(b.get("season_hr", 0), pa, recent_form_mult=form,
+                        park_mult=eff_park, weather_mult=weather_mult)
+    n1, n2, n3, n4 = (max(0.0, x) for x in (n1, n2, n3, n4))
+    ntotal = n1 + n2 + n3 + n4
+    if ntotal > 1.0:
+        n1, n2, n3, n4 = (x / ntotal for x in (n1, n2, n3, n4))
+        ntotal = 1.0
+    neutral_vec = [1 - ntotal, n1, n2, n3, n4]
+
+    return actual_vec, neutral_vec
 
 
 def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, thresholds, units):
@@ -237,8 +258,18 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
             eff_park = park_mult / sqrt(hr_park_factor(team))
             for slot, b in enumerate(lineups.get(side, [])):
                 bvp = bvp_fn(b.get("player_id"), opp.get("player_id")) if (bvp_fn and opp) else None
-                vec = _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp)
-                outcomes = [vec[0], vec[1] + vec[2] + vec[3] + vec[4]] if units == "hits" else vec
+                actual_vec, neutral_vec = _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp)
+                outcomes = [actual_vec[0], actual_vec[1] + actual_vec[2] + actual_vec[3] + actual_vec[4]] if units == "hits" else actual_vec
+
+                # Compute pitcher_factor as the ratio of actual expected value to neutral
+                if units == "hits":
+                    actual_ev = actual_vec[1] + actual_vec[2] + actual_vec[3] + actual_vec[4]
+                    neutral_ev = neutral_vec[1] + neutral_vec[2] + neutral_vec[3] + neutral_vec[4]
+                else:  # "bases"
+                    actual_ev = actual_vec[1] + 2 * actual_vec[2] + 3 * actual_vec[3] + 4 * actual_vec[4]
+                    neutral_ev = neutral_vec[1] + 2 * neutral_vec[2] + 3 * neutral_vec[3] + 4 * neutral_vec[4]
+                pitcher_factor = (actual_ev / neutral_ev) if neutral_ev > 0 else 1.0
+
                 epa = expected_pa_for_slot(slot)
                 vs = None
                 if opp:
@@ -255,6 +286,8 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                     "bats": b.get("bats", "R"),
                     "lineup_status": b.get("lineup_status", "confirmed"),
+                    "recent_form_mult": b.get("recent_form_mult", 1.0),
+                    "pitcher_factor": pitcher_factor,
                     "vs": vs,
                     "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
                     "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],

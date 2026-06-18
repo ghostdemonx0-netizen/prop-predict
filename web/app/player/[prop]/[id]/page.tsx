@@ -278,12 +278,33 @@ export default function PlayerPage({
         </div>
 
         <div className="panel rise" style={{ animationDelay: "180ms" }}>
+          <div className="eyebrow mb-1">What&apos;s driving it</div>
+          <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
+            How much each factor raises (green) or lowers (red) his normal probability.
+          </p>
+          <Factor
+            icon="🔥"
+            label="Recent form"
+            mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)}
+            note={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) > 1 ? "Hot lately — making contact at a higher rate than his season norm." : pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
+          />
+          {r.vs && (
+            <Factor
+              icon="⚾"
+              label={`Pitcher · hit quality · ${r.vs.name}`}
+              mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
+              note="How hittable this pitcher is, plus the L/R platoon."
+            />
+          )}
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "240ms" }}>
           <div className="eyebrow mb-3">Conditions</div>
           <WeatherStrip tempF={r.temp_f} windMph={r.wind_mph} windDir={r.wind_dir} precipPct={r.precip_pct} />
         </div>
 
         {r.vs && (
-          <div className="panel rise" style={{ animationDelay: "240ms" }}>
+          <div className="panel rise" style={{ animationDelay: "300ms" }}>
             <div className="eyebrow mb-1">Pitcher matchup</div>
             <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
               <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
@@ -351,12 +372,33 @@ export default function PlayerPage({
         </div>
 
         <div className="panel rise" style={{ animationDelay: "180ms" }}>
+          <div className="eyebrow mb-1">What&apos;s driving it</div>
+          <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
+            How much each factor raises (green) or lowers (red) his normal probability.
+          </p>
+          <Factor
+            icon="🔥"
+            label="Recent form"
+            mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)}
+            note={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) > 1 ? "Hot lately — making contact and driving the ball at a higher rate than his season norm." : pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
+          />
+          {r.vs && (
+            <Factor
+              icon="⚾"
+              label={`Pitcher · contact + power · ${r.vs.name}`}
+              mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
+              note="Combines how hittable he is with his power (extra-base/HR) suppression, plus platoon."
+            />
+          )}
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "240ms" }}>
           <div className="eyebrow mb-3">Conditions</div>
           <WeatherStrip tempF={r.temp_f} windMph={r.wind_mph} windDir={r.wind_dir} precipPct={r.precip_pct} />
         </div>
 
         {r.vs && (
-          <div className="panel rise" style={{ animationDelay: "240ms" }}>
+          <div className="panel rise" style={{ animationDelay: "300ms" }}>
             <div className="eyebrow mb-1">Pitcher matchup</div>
             <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
               <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}

@@ -81,3 +81,116 @@ def test_slugger_vs_slap_hitter_total_bases():
     assert slugger_row["p_ge4"] > slap_row["p_ge4"], (
         f"slugger p_ge4={slugger_row['p_ge4']:.4f} should exceed slap p_ge4={slap_row['p_ge4']:.4f}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Tests for new recent_form_mult + pitcher_factor fields (task 10b)
+# ---------------------------------------------------------------------------
+
+def _pit_favorable():
+    """Hittable pitcher: high hit_allowed_rate, no-HR-suppression."""
+    return {"player_id": 300, "name": "easy", "team": "EEE", "throws": "R",
+            "k_per_bf": 0.15, "expected_bf": 24, "opponent_k_mult": 1.0, "k_line": 4.5,
+            "hit_allowed_rate": 0.32, "hr_allowed_rate": 0.050, "bf": 400}
+
+
+def _pit_tough():
+    """Ace: low hit_allowed_rate, strong HR-suppression."""
+    return {"player_id": 301, "name": "ace", "team": "TTT", "throws": "R",
+            "k_per_bf": 0.30, "expected_bf": 24, "opponent_k_mult": 1.0, "k_line": 7.5,
+            "hit_allowed_rate": 0.18, "hr_allowed_rate": 0.020, "bf": 400}
+
+
+def _pit_neutral():
+    """League-average pitcher: the pitcher_factor ratio should be close to 1.0."""
+    return {"player_id": 302, "name": "avg", "team": "NNN", "throws": "R",
+            "k_per_bf": 0.22, "expected_bf": 24, "opponent_k_mult": 1.0, "k_line": 5.5,
+            "hit_allowed_rate": 0.22, "hr_allowed_rate": 0.033, "bf": 400}
+
+
+def _typical_batter(pid=1):
+    return {"player_id": pid, "name": str(pid), "team": "AAA", "bats": "R",
+            "season_pa": 400, "season_1b": 90, "season_2b": 25, "season_3b": 3,
+            "season_hr": 20, "recent_form_mult": 1.0, "k_rate": 0.22, "hit_rate": 0.270}
+
+
+def test_hits_row_carries_recent_form_mult_and_pitcher_factor():
+    """hits/tb rows must expose recent_form_mult and pitcher_factor as floats."""
+    batter = {**_typical_batter(), "recent_form_mult": 1.15}
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_neutral()
+    rows = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    assert rows, "expected at least one row"
+    r = rows[0]
+    assert "recent_form_mult" in r, "recent_form_mult missing from hits row"
+    assert "pitcher_factor" in r, "pitcher_factor missing from hits row"
+    assert isinstance(r["recent_form_mult"], (int, float))
+    assert isinstance(r["pitcher_factor"], (int, float))
+    assert r["recent_form_mult"] == 1.15
+
+
+def test_tb_row_carries_recent_form_mult_and_pitcher_factor():
+    """Same check for total_bases rows."""
+    batter = {**_typical_batter(), "recent_form_mult": 0.90}
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_neutral()
+    rows = build_total_bases_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    assert rows, "expected at least one row"
+    r = rows[0]
+    assert "recent_form_mult" in r
+    assert "pitcher_factor" in r
+    assert r["recent_form_mult"] == 0.90
+
+
+def test_pitcher_factor_favorable_gt_1_hits():
+    """A hittable pitcher produces pitcher_factor > 1 on a hits row."""
+    batter = _typical_batter()
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_favorable()
+    rows = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    r = rows[0]
+    assert r["pitcher_factor"] > 1.0, f"expected pitcher_factor > 1 for hittable pitcher, got {r['pitcher_factor']}"
+
+
+def test_pitcher_factor_tough_lt_1_hits():
+    """An ace produces pitcher_factor < 1 on a hits row."""
+    batter = _typical_batter()
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_tough()
+    rows = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    r = rows[0]
+    assert r["pitcher_factor"] < 1.0, f"expected pitcher_factor < 1 for ace, got {r['pitcher_factor']}"
+
+
+def test_pitcher_factor_favorable_gt_1_tb():
+    """A hittable pitcher produces pitcher_factor > 1 on a TB row."""
+    batter = _typical_batter()
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_favorable()
+    rows = build_total_bases_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    r = rows[0]
+    assert r["pitcher_factor"] > 1.0, f"expected pitcher_factor > 1 for hittable pitcher on TB, got {r['pitcher_factor']}"
+
+
+def test_pitcher_factor_neutral_approx_1():
+    """A league-average pitcher should yield pitcher_factor close to 1.0."""
+    batter = _typical_batter()
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_neutral()
+    rows = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    r = rows[0]
+    # Neutral pitcher with R/R platoon (platoon_mult ~= 1.0 for R vs R) should be near 1
+    assert 0.85 <= r["pitcher_factor"] <= 1.15, f"neutral pitcher_factor={r['pitcher_factor']} far from 1.0"
+
+
+def test_pitcher_factor_no_pitcher_defaults_to_1():
+    """With no opposing pitcher (opp=None), pitcher_factor should be 1.0."""
+    batter = _typical_batter()
+    slate_no_pit = [{"game_id": 1, "home": "AAA", "away": "BBB", "park_team": "AAA",
+                     "started": False}]  # no pitcher IDs
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_neutral()
+    rows = build_hits_rows(slate_no_pit, lf, pf, _w, bvp_fn=None)
+    # With no pitcher assigned, opp is None so actual_ev = neutral_ev => factor = 1.0
+    if rows:
+        assert rows[0]["pitcher_factor"] == 1.0

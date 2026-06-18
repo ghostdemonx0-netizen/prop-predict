@@ -97,6 +97,10 @@ export type HitsRow = {
   wind_dir?: number;
   temp_f?: number;
   precip_pct?: number;
+  recent_form_mult?: number;
+  pitcher_factor?: number;
+  recent_form_mult_hist?: number;
+  pitcher_factor_hist?: number;
   p_ge1: number;
   p_ge2: number;
   p_ge3: number;
