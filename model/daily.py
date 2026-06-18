@@ -36,7 +36,7 @@ def sweep_stale_season_caches(current_season: int, *, keep: int = 3, cache_dir=D
     for f in list(cache_dir.glob("bat-events-*.json")) + list(cache_dir.glob("pit-events-*.json")):
         m = pat.search(f.name)
         if m and int(m.group(1)) <= cutoff:
-            f.unlink()
+            f.unlink(missing_ok=True)
             deleted.append(str(f))
     return deleted
 
