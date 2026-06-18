@@ -53,6 +53,7 @@ function LeaderSection({
   rows,
   count,
   render,
+  controls,
 }: {
   title: string;
   sub: string;
@@ -60,16 +61,24 @@ function LeaderSection({
   rows: BoardRow[];
   count: Count;
   render: (r: BoardRow) => React.ReactNode;
+  controls?: React.ReactNode;
 }) {
   const shown = count === "All" ? rows : rows.slice(0, count as number);
   return (
     <details className="rise" style={{ marginBottom: "0.55rem" }}>
-      <summary className="matchup-head" style={{ cursor: "pointer" }} title={tip}>
-        {title}
-        <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem", marginLeft: "0.6rem" }}>
-          · {sub}
-          {rows.length > 0 ? ` · ${rows.length}` : ""}
+      <summary
+        className="matchup-head"
+        style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}
+        title={tip}
+      >
+        <span>
+          {title}
+          <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem", marginLeft: "0.6rem" }}>
+            · {sub}
+            {rows.length > 0 ? ` · ${rows.length}` : ""}
+          </span>
         </span>
+        {controls}
       </summary>
       {rows.length === 0 ? (
         <p className="factor-note" style={{ margin: "0.4rem 0 0" }}>Nothing to show yet — lineups may not be posted.</p>
@@ -81,7 +90,16 @@ function LeaderSection({
 }
 
 /** A leaderboard tab: best plays grouped into collapsible categories. Pure display. */
-export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind }: { hrRows: BoardRow[]; kRows: BoardRow[]; hitsRows: BoardRow[]; tbRows: BoardRow[]; hitsKind: PropKind; tbKind: PropKind }) {
+export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, threshold, setThreshold }: {
+  hrRows: BoardRow[];
+  kRows: BoardRow[];
+  hitsRows: BoardRow[];
+  tbRows: BoardRow[];
+  hitsKind: PropKind;
+  tbKind: PropKind;
+  threshold: { hits: 1 | 2 | 3; tb: 2 | 3 | 4 };
+  setThreshold: React.Dispatch<React.SetStateAction<{ hits: 1 | 2 | 3; tb: 2 | 3 | 4 }>>;
+}) {
   const [count, setCount] = useState<Count>(10);
   const topContact = hrRows
     .filter((r) => typeof r.hitProb === "number")
@@ -147,6 +165,25 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind }: 
         rows={hitsRows}
         count={count}
         render={(r) => <BoardRowLine key={r.id} r={r} kind={hitsKind} />}
+        controls={
+          <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
+            {([1, 2, 3] as const).map((n) => (
+              <button
+                key={n}
+                className="pill"
+                data-active={threshold.hits === n}
+                style={{ padding: "0.16rem 0.45rem", fontSize: "0.62rem" }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setThreshold((t) => ({ ...t, hits: n }));
+                }}
+              >
+                {n}+
+              </button>
+            ))}
+          </div>
+        }
       />
       <LeaderSection
         title="Top Total Bases"
@@ -155,6 +192,25 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind }: 
         rows={tbRows}
         count={count}
         render={(r) => <BoardRowLine key={r.id} r={r} kind={tbKind} />}
+        controls={
+          <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
+            {([2, 3, 4] as const).map((n) => (
+              <button
+                key={n}
+                className="pill"
+                data-active={threshold.tb === n}
+                style={{ padding: "0.16rem 0.45rem", fontSize: "0.62rem" }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setThreshold((t) => ({ ...t, tb: n }));
+                }}
+              >
+                {n}+
+              </button>
+            ))}
+          </div>
+        }
       />
     </div>
   );

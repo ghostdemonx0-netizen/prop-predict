@@ -360,6 +360,8 @@ export default function Home() {
           tbRows={tbRows}
           hitsKind={`hits${threshold.hits}` as "hits1" | "hits2" | "hits3"}
           tbKind={`tb${threshold.tb}` as "tb2" | "tb3" | "tb4"}
+          threshold={threshold}
+          setThreshold={setThreshold}
         />
       ) : (
         <PropBoard
