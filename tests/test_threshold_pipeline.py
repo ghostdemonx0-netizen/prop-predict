@@ -387,10 +387,12 @@ def test_tb_park_weather_factor_coors_gt_1():
 
 
 def test_tb_park_weather_factor_neutral_approx_1():
-    """A neutral park (AAA) should produce park_weather_factor ≈ 1.0 (within 0.5%)."""
+    """A neutral park AND neutral weather should produce park_weather_factor ≈ 1.0.
+    (park_weather_factor includes weather, so a non-neutral park OR warm/windy
+    weather legitimately moves it off 1.0 — this test isolates the neutral case.)"""
     lf = lambda g: {"home": [_bat(10, 400, 90, 25, 3, 20)], "away": []}
     pf = lambda pid: _pit_neutral()
-    rows = build_total_bases_rows(_slate_park("AAA"), lf, pf, _w_warm, bvp_fn=None)
+    rows = build_total_bases_rows(_slate_park("AAA"), lf, pf, _w, bvp_fn=None)
     r = next(r for r in rows if r["player_id"] == 10)
     assert abs(r["park_weather_factor"] - 1.0) <= 0.005, (
         f"Neutral park_weather_factor={r['park_weather_factor']:.6f} should be ≈ 1.0"
@@ -398,14 +400,15 @@ def test_tb_park_weather_factor_neutral_approx_1():
 
 
 def test_hits_row_park_weather_factor_is_1():
-    """Hits rows should have park_weather_factor == 1.0 (hits are park-neutral)."""
+    """Hits rows should carry park_weather_factor == 1.0 (hits are park-neutral)."""
     lf = lambda g: {"home": [_bat(10, 400, 90, 25, 3, 20)], "away": []}
     pf = lambda pid: _pit_neutral()
     rows = build_hits_rows(_slate_park("COL"), lf, pf, _w_warm, bvp_fn=None)
     assert rows, "expected at least one hits row"
     r = rows[0]
-    assert r.get("park_weather_factor", 1.0) == 1.0, (
-        f"Hits row park_weather_factor should be 1.0, got {r.get('park_weather_factor')}"
+    assert "park_weather_factor" in r, "Hits row missing park_weather_factor key"
+    assert r["park_weather_factor"] == 1.0, (
+        f"Hits row park_weather_factor should be 1.0, got {r['park_weather_factor']}"
     )
 
 
