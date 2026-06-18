@@ -21,6 +21,14 @@ def test_board_includes_hits_tb_with_hist():
     assert all(f"p_ge{n}_hist" in hits[0] for n in (1, 2, 3))
     # all TB twins present
     assert all(f"p_ge{n}_hist" in tb[0] for n in (2, 3, 4))
+    # vs hist twins present on hits and tb
+    hits_vs = hits[0].get("vs")
+    tb_vs = tb[0].get("vs")
+    assert hits_vs is not None, "hits row should have vs"
+    assert tb_vs is not None, "tb row should have vs"
+    for field in ("lean_hist", "prob_hist", "k_prob_hist", "hit_prob_hist"):
+        assert field in hits_vs, f"hits vs missing {field}"
+        assert field in tb_vs, f"tb vs missing {field}"
 
 
 def test_threshold_missing_twin_graceful():

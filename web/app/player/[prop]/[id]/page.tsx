@@ -5,6 +5,7 @@ import Link from "next/link";
 import { loadProjections } from "../../../../lib/data";
 import type { Projections } from "../../../../lib/types";
 import { pct, strengthLabel, windText, arrowColor, gameTimeLabel } from "../../../../lib/format";
+import type { PropKind } from "../../../../lib/format";
 import { MatchupSphere } from "../../../../components/PropBoard";
 
 function batLabel(b?: string) {
@@ -250,6 +251,7 @@ export default function PlayerPage({
     const p2 = pick(r.p_ge2, r.p_ge2_hist);
     const p3 = pick(r.p_ge3, r.p_ge3_hist);
     const activeProb = hitsThreshold === 1 ? p1 : hitsThreshold === 2 ? p2 : p3;
+    const hitsKind = (`hits${hitsThreshold}`) as PropKind;
     return (
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
         <Back prop={prop} date={date} hist={hist} threshold={thresholdParam} />
@@ -271,7 +273,7 @@ export default function PlayerPage({
           <p className="factor-note" style={{ marginTop: 0 }}>
             At the selected threshold ({hitsThreshold}+), we give him a{" "}
             <strong style={{ color: "var(--text)" }}>{pct(activeProb)}</strong> chance.{" "}
-            {strengthLabel(activeProb)}
+            {strengthLabel(activeProb, hitsKind)}
           </p>
         </div>
 
@@ -322,6 +324,7 @@ export default function PlayerPage({
     const p3 = pick(r.p_ge3, r.p_ge3_hist);
     const p4 = pick(r.p_ge4, r.p_ge4_hist);
     const activeProb = tbThreshold === 2 ? p2 : tbThreshold === 3 ? p3 : p4;
+    const tbKind = (`tb${tbThreshold}`) as PropKind;
     return (
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
         <Back prop={prop} date={date} hist={hist} threshold={thresholdParam} />
@@ -343,7 +346,7 @@ export default function PlayerPage({
           <p className="factor-note" style={{ marginTop: 0 }}>
             At the selected threshold ({tbThreshold}+), we give him a{" "}
             <strong style={{ color: "var(--text)" }}>{pct(activeProb)}</strong> chance.{" "}
-            {strengthLabel(activeProb)}
+            {strengthLabel(activeProb, tbKind)}
           </p>
         </div>
 

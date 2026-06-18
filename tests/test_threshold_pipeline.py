@@ -29,6 +29,12 @@ def test_hits_rows_thresholds_monotonic():
     r = rows[0]
     assert r["prop"] == "HITS"
     assert 0 <= r["p_ge3"] <= r["p_ge2"] <= r["p_ge1"] <= 1  # monotonic
+    # vs must carry full matchup read (lean is "K"/"H"/"NEU"; prob/k_prob/hit_prob are floats)
+    assert r["vs"] is not None, "vs should be set when pitcher present"
+    assert r["vs"]["lean"] in ("K", "H", "NEU"), f"unexpected lean: {r['vs']['lean']}"
+    for field in ("prob", "k_prob", "hit_prob"):
+        assert field in r["vs"], f"vs missing {field}"
+        assert isinstance(r["vs"][field], (int, float)), f"vs.{field} not a number"
 
 
 def test_total_bases_rows_present_and_monotonic():
@@ -38,6 +44,12 @@ def test_total_bases_rows_present_and_monotonic():
     r = rows[0]
     assert r["prop"] == "TB"
     assert 0 <= r["p_ge4"] <= r["p_ge3"] <= r["p_ge2"] <= 1
+    # vs must carry full matchup read (lean is "K"/"H"/"NEU"; prob/k_prob/hit_prob are floats)
+    assert r["vs"] is not None, "vs should be set when pitcher present"
+    assert r["vs"]["lean"] in ("K", "H", "NEU"), f"unexpected lean: {r['vs']['lean']}"
+    for field in ("prob", "k_prob", "hit_prob"):
+        assert field in r["vs"], f"vs missing {field}"
+        assert isinstance(r["vs"][field], (int, float)), f"vs.{field} not a number"
 
 
 def test_low_hit_rate_batter_valid_distribution():

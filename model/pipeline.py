@@ -240,13 +240,22 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                 vec = _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp)
                 outcomes = [vec[0], vec[1] + vec[2] + vec[3] + vec[4]] if units == "hits" else vec
                 epa = expected_pa_for_slot(slot)
+                vs = None
+                if opp:
+                    m = matchup(
+                        b_k=b.get("k_rate", 0.22), b_hit=b.get("hit_rate", 0.22),
+                        p_k=opp.get("k_per_bf", 0.22), p_hit=opp.get("hit_allowed_rate", 0.22),
+                        bats=b.get("bats", "R"), throws=opp.get("throws", "R"),
+                    )
+                    m = _history_adjusted(m, bvp)
+                    vs = {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R"), "bvp": bvp, "pitcher_status": opp.get("pitcher_status", "confirmed"), **m}
                 row = {
                     "prop": prop, "game_id": game["game_id"], "game_time": game.get("game_time"),
                     "player_id": b.get("player_id"), "player": b["name"], "team": team,
                     "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                     "bats": b.get("bats", "R"),
                     "lineup_status": b.get("lineup_status", "confirmed"),
-                    "vs": {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R")} if opp else None,
+                    "vs": vs,
                     "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
                     "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
                 }

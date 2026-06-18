@@ -197,6 +197,8 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
         for field in _hits_thresholds:
             if field in h:
                 r[f"{field}_hist"] = h[field]
+        if r.get("vs") and h.get("vs"):
+            _copy_vs(r["vs"], h["vs"])
     for r in tb:
         h = tb_h.get(_key(r))
         if not h:
@@ -204,6 +206,8 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
         for field in _tb_thresholds:
             if field in h:
                 r[f"{field}_hist"] = h[field]
+        if r.get("vs") and h.get("vs"):
+            _copy_vs(r["vs"], h["vs"])
 
     return hr, ks, hits, tb
 
