@@ -67,6 +67,8 @@ final_rate = (effective_made + league_rate · R) / (effective_pa + R)
 
 R values are starting points, validated/tuned with tests during implementation; the user can revisit. **Current-season-only mode keeps today's behavior exactly: HR keeps its existing pull-to-average; K and hit stay raw.** Adding the K/hit net to *current* mode is a deliberate **roadmap item** for after the user evaluates history mode.
 
+> **Equivalence note (reconciles the earlier whiteboard formula):** normalizing by 5 then regressing with `R` is *mathematically identical* to regressing the raw weighted totals directly with an anchor of `5·R` — i.e. `final = (W_made + league·A) / (W_pa + A)` with `A = 1500` for HR. Same result; the normalized form just lets us reuse the model's existing, already-trusted per-season constants (300 for HR).
+
 ### Edge cases
 
 - **Limited history (rookies, young players, injuries):** use whatever seasons exist. A true rookie with only the current season blends just that one (weight 5), then gets pulled to average — i.e., history mode ≈ current mode for him. Never breaks; degrades smoothly.
@@ -79,6 +81,7 @@ R values are starting points, validated/tuned with tests during implementation; 
 
 - **New pure module** (e.g., `model/blend.py`): `marcel_blend(per_season_totals, weights=(5,4,3))` → `(effective_made, effective_pa)`, plus a `regress(made, pa, league_rate, R)` helper. Pure, fully unit-tested.
 - **Prior-season data:** reuse `fetch.batter_events(pid, season-1/-2)` and `fetch.pitcher_events(...)`, cached as `bat-events-{pid}-{year}` / `pit-events-{pid}-{year}`. Prior seasons are static → cached permanently (one-time pull, then free). The current season cache continues refreshing via the rolling window.
+- **One-time backfill** of the two prior seasons for all relevant players is chunky; run it **off-budget** (locally or a one-off long-timeout workflow), not inside a normal 30-min run. After that, daily runs only ever touch the current day.
 - **Blended profiles:** a history-mode profile builder combines per-season `*_from_events` counts into blended rates, reusing `profiles.py` to count each season, then applying `blend.py`.
 - The existing pure projection functions (`hr_probability`, `matchup`, `expected_strikeouts`, etc.) are **unchanged** — they just receive blended base rates instead of single-season ones.
 
@@ -98,6 +101,15 @@ The robot computes both modes every run; the heavy cost (prior-season pulls) is 
 - A small global **`Current · History (3-yr)`** toggle, applied to all projection numbers wherever they appear (Props, Game Hub, Top Plays). Placement: in the selector area near the section/prop pills. **Default: Current season** (preserves today's behavior).
 - When set to History, every displayed projection reads the `*_hist` field instead of the current one. Player-page breakdowns show the blended base rate; situational multipliers display identically (they're shared).
 - A short tooltip/label explains: "blends the last 3 seasons (5/4/3) for a steadier baseline — situational factors stay live."
+
+## Season rollover & cache lifecycle
+
+Weights key off **recency relative to the slate year** (Y, Y−1, Y−2), never hardcoded years — so the window auto-shifts every Jan 1 with **no re-download**:
+
+- The just-finished season is already fully cached from its daily folds; it simply changes role (current → last-year) and picks up the lighter weight automatically. The new current season accumulates fresh via the same incremental daily fold. **This is the spring cold-start rescue** — April of a new year is carried by the prior two full seasons instead of near-empty data.
+- **Never delete in-window prior-season caches** — they're frozen and reused.
+- **Auto-sweep:** bake a cleanup into rollover that deletes season-event caches **older than the 3-year window** (safe — re-downloadable). The season that falls out of the window becomes an orphaned cache to remove.
+- **Two independent cache systems** (keep separate): (a) season caches `bat/pit-events-{pid}-{year}` = our rolling 3-yr skill-rate window (oldest swept); (b) `bvp-*` head-to-head = MLB's all-time record, re-queried/cleared daily, never rolls or expires. The rollover touches only (a).
 
 ## Testing
 
