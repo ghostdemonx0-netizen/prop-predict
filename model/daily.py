@@ -133,7 +133,7 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
     # the day's frozen record would be worse than a failed (emailed) run
     existing = json.loads(path.read_text()) if path.exists() else {}
 
-    if not slate and any(existing.get(k) for k in ("hr", "strikeouts", "games")):
+    if not slate and any(existing.get(k) for k in ("hr", "strikeouts", "hits", "total_bases", "games")):
         # an empty schedule response must never wipe today's record
         return False
 
