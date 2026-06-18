@@ -114,7 +114,36 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
             "away": [batter_fn(pid, game.get("away_lineup_status", "confirmed")) for pid in lns["away"]],
         }
 
-    return lineups_fn, pitcher_fn
+    def _events_by_season(pid: int, kind: str) -> dict:
+        fetcher = fetch.batter_events if kind == "bat" else fetch.pitcher_events
+        prefix = "bat-events" if kind == "bat" else "pit-events"
+        return {yr: get_or_compute(f"{prefix}-{pid}-{yr}", lambda yr=yr: fetcher(pid, yr))
+                for yr in (season, season - 1, season - 2)}
+
+    def batter_hist_fn(pid: int, status: str) -> dict:
+        m = meta.get(pid, {})
+        prof = profiles.blended_batter_profile(_events_by_season(pid, "bat"), as_of=as_of,
+                                               current_season=season, player_id=pid,
+                                               name=m.get("name", str(pid)), bats=m.get("bats", "R"))
+        prof["lineup_status"] = status
+        return prof
+
+    def pitcher_hist_fn(pid: int) -> dict:
+        m = meta.get(pid, {})
+        prof = profiles.blended_pitcher_profile(_events_by_season(pid, "pit"), as_of=as_of,
+                                                current_season=season, player_id=pid,
+                                                name=m.get("name", str(pid)), throws=m.get("throws", "R"))
+        prof["pitcher_status"] = pitcher_status.get(pid, "confirmed")
+        return prof
+
+    def lineups_hist_fn(game: dict) -> dict:
+        lns = lineup_cache[game["game_id"]]
+        return {
+            "home": [batter_hist_fn(pid, game.get("home_lineup_status", "confirmed")) for pid in lns["home"]],
+            "away": [batter_hist_fn(pid, game.get("away_lineup_status", "confirmed")) for pid in lns["away"]],
+        }
+
+    return lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn
 
 
 def make_bvp_fn():
