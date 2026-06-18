@@ -23,6 +23,8 @@ def count_distribution(outcome_probs: list[float], expected_pa: float) -> list[f
     Fractional PAs: floor(expected_pa) guaranteed PAs plus one PA that occurs
     with probability frac (else contributes 0 units).
     """
+    if not outcome_probs:
+        raise ValueError("outcome_probs must be non-empty")
     if expected_pa <= 0:
         return [1.0]
     full = int(expected_pa)

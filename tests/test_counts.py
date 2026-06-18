@@ -26,3 +26,16 @@ def test_fractional_pa():
 def test_distribution_sums_to_one():
     d = count_distribution([0.5, 0.3, 0.2], 3.2)
     assert math.isclose(sum(d), 1.0, abs_tol=1e-9)
+
+def test_n_beyond_range_returns_zero():
+    # max possible is 2 units over 2 PAs of 0/1 -> P(>=3) == 0 (exercises the else branch)
+    assert count_ge_prob([0.7, 0.3], 2.0, 3) == 0.0
+
+def test_integer_pa_no_spurious_extra_pa():
+    # 3 integer PAs of 0/1 -> max 3 units -> distribution length 4 (no ghost 4th PA)
+    assert len(count_distribution([0.7, 0.3], 3.0)) == 4
+
+def test_empty_outcome_probs_raises():
+    import pytest
+    with pytest.raises(ValueError):
+        count_distribution([], 3.0)
