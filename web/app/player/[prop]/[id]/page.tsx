@@ -21,6 +21,7 @@ function Back({ prop, date, hist, threshold }: { prop?: string; date?: string; h
   if (prop === "tb") q.set("prop", "tb");
   if (date) q.set("date", date);
   if (hist) q.set("source", "hist");
+  if (threshold && (prop === "hits" || prop === "tb")) q.set("threshold", threshold);
   const qs = q.toString();
   return (
     <Link href={qs ? `/?${qs}` : "/"} className="eyebrow" style={{ textDecoration: "none" }}>

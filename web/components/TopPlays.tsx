@@ -4,7 +4,7 @@ import { useState } from "react";
 import type React from "react";
 import Link from "next/link";
 import { BoardRowLine, MatchupSphere, ADV_CHIP, type BoardRow } from "./PropBoard";
-import { platoonAdvantage } from "../lib/format";
+import { platoonAdvantage, type PropKind } from "../lib/format";
 
 const COUNTS = [10, 25, 50, "All"] as const;
 type Count = (typeof COUNTS)[number];
@@ -81,7 +81,7 @@ function LeaderSection({
 }
 
 /** A leaderboard tab: best plays grouped into collapsible categories. Pure display. */
-export function TopPlays({ hrRows, kRows, hitsRows, tbRows }: { hrRows: BoardRow[]; kRows: BoardRow[]; hitsRows: BoardRow[]; tbRows: BoardRow[] }) {
+export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind }: { hrRows: BoardRow[]; kRows: BoardRow[]; hitsRows: BoardRow[]; tbRows: BoardRow[]; hitsKind: PropKind; tbKind: PropKind }) {
   const [count, setCount] = useState<Count>(10);
   const topContact = hrRows
     .filter((r) => typeof r.hitProb === "number")
@@ -143,7 +143,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows }: { hrRows: BoardRow
         tip="Batters most likely to reach the selected hits threshold (1+, 2+, or 3+). Ranked by the threshold probability shown on the board."
         rows={hitsRows}
         count={count}
-        render={(r) => <BoardRowLine key={r.id} r={r} kind="hits1" />}
+        render={(r) => <BoardRowLine key={r.id} r={r} kind={hitsKind} />}
       />
       <LeaderSection
         title="Top Total Bases"
@@ -151,7 +151,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows }: { hrRows: BoardRow
         tip="Batters most likely to reach the selected total bases threshold (2+, 3+, or 4+). Ranked by the threshold probability shown on the board."
         rows={tbRows}
         count={count}
-        render={(r) => <BoardRowLine key={r.id} r={r} kind="tb2" />}
+        render={(r) => <BoardRowLine key={r.id} r={r} kind={tbKind} />}
       />
     </div>
   );

@@ -58,6 +58,14 @@ export default function Home() {
     if (propParam === "k") setProp("k");
     else if (propParam === "hits") setProp("hits");
     else if (propParam === "tb") setProp("tb");
+    // back-link from player pages: restore threshold
+    const tp = params.get("threshold");
+    if (propParam === "hits" && (tp === "1" || tp === "2" || tp === "3")) {
+      setThreshold((t) => ({ ...t, hits: Number(tp) as 1 | 2 | 3 }));
+    }
+    if (propParam === "tb" && (tp === "2" || tp === "3" || tp === "4")) {
+      setThreshold((t) => ({ ...t, tb: Number(tp) as 2 | 3 | 4 }));
+    }
     // back-link from player pages
     if (params.get("source") === "hist") setSource("hist");
     loadIndex().then((ds) => {
@@ -345,7 +353,14 @@ export default function Home() {
       {section === "parks" || section === "hub" ? (
         <ParksBoard games={data.games ?? []} hrRows={hrRows} kRows={kRows} expandable={section === "hub"} />
       ) : section === "topplays" ? (
-        <TopPlays hrRows={hrRows} kRows={kRows} hitsRows={hitsRows} tbRows={tbRows} />
+        <TopPlays
+          hrRows={hrRows}
+          kRows={kRows}
+          hitsRows={hitsRows}
+          tbRows={tbRows}
+          hitsKind={`hits${threshold.hits}` as "hits1" | "hits2" | "hits3"}
+          tbKind={`tb${threshold.tb}` as "tb2" | "tb3" | "tb4"}
+        />
       ) : (
         <PropBoard
           rows={prop === "hr" ? hrRows : prop === "k" ? kRows : prop === "hits" ? hitsRows : tbRows}
