@@ -1,0 +1,21 @@
+{
+  "date": "2026-06-17",
+  "updated": "2026-06-18T04:45:38+00:00",
+  "hr": [
+    {"prop": "HR", "player": "Matt Olson", "team": "ATL", "matchup": "SF @ ATL", "park": "ATL", "probability": 0.29, "game_time": "2999-06-17T18:00:00Z", "lineup_status": "confirmed"},
+    {"prop": "HR", "player": "Proj Guy", "team": "NYM", "matchup": "NYM @ LAD", "park": "LAD", "probability": 0.31, "game_time": "2999-06-17T18:00:00Z", "lineup_status": "projected"},
+    {"prop": "HR", "player": "Started Guy", "team": "BOS", "matchup": "BOS @ NYY", "park": "NYY", "probability": 0.40, "game_time": "2000-06-17T18:00:00Z", "lineup_status": "confirmed"}
+  ],
+  "strikeouts": [
+    {"prop": "K", "player": "Kyle Bradish", "team": "BAL", "matchup": "BAL @ SEA", "over_prob": 0.77, "line": 3.5, "expected_ks": 5.26, "game_time": "2999-06-18T01:40:00Z", "pitcher_status": "confirmed"},
+    {"prop": "K", "player": "Proj Arm", "team": "CHC", "matchup": "CHC @ STL", "over_prob": 0.80, "line": 5.5, "expected_ks": 6.1, "game_time": "2999-06-18T01:40:00Z", "pitcher_status": "projected"},
+    {"prop": "K", "player": "Done Arm", "team": "HOU", "matchup": "HOU @ TEX", "over_prob": 0.90, "line": 6.5, "expected_ks": 7.2, "game_time": "2000-06-18T01:40:00Z", "pitcher_status": "confirmed"}
+  ],
+  "hits": [
+    {"prop": "HITS", "player": "Luis Arraez", "team": "SD", "matchup": "SD @ LAA", "p_ge1": 0.74, "p_ge2": 0.32, "game_time": "2999-06-18T02:00:00Z", "lineup_status": "confirmed"},
+    {"prop": "HITS", "player": "Proj Bat", "team": "TEX", "matchup": "HOU @ TEX", "p_ge1": 0.78, "p_ge2": 0.35, "game_time": "2999-06-18T00:05:00Z", "lineup_status": "projected"},
+    {"prop": "HITS", "player": "Done Bat", "team": "NYY", "matchup": "BOS @ NYY", "p_ge1": 0.85, "p_ge2": 0.40, "game_time": "2000-06-17T18:00:00Z", "lineup_status": "confirmed"}
+  ],
+  "total_bases": [],
+  "games": []
+}
