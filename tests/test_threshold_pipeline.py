@@ -192,5 +192,5 @@ def test_pitcher_factor_no_pitcher_defaults_to_1():
     pf = lambda pid: _pit_neutral()
     rows = build_hits_rows(slate_no_pit, lf, pf, _w, bvp_fn=None)
     # With no pitcher assigned, opp is None so actual_ev = neutral_ev => factor = 1.0
-    if rows:
-        assert rows[0]["pitcher_factor"] == 1.0
+    assert rows, "expected rows even with no pitcher"
+    assert rows[0]["pitcher_factor"] == 1.0
