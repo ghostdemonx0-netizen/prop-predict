@@ -91,6 +91,9 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind }: 
     .filter((r) => typeof r.kProb === "number")
     .slice()
     .sort((a, b) => (b.kProb ?? 0) - (a.kProb ?? 0));
+  // active thresholds, parsed from the prop kind (e.g. "hits2" -> 2, "tb3" -> 3)
+  const hitsThresh = hitsKind.replace("hits", "");
+  const tbThresh = tbKind.replace("tb", "");
 
   return (
     <div>
@@ -139,7 +142,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind }: 
       />
       <LeaderSection
         title="Top Hits"
-        sub="chance to record at selected threshold"
+        sub={`chance to reach ${hitsThresh}+ hits`}
         tip="Batters most likely to reach the selected hits threshold (1+, 2+, or 3+). Ranked by the threshold probability shown on the board."
         rows={hitsRows}
         count={count}
@@ -147,7 +150,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind }: 
       />
       <LeaderSection
         title="Top Total Bases"
-        sub="chance to reach selected total bases threshold"
+        sub={`chance to reach ${tbThresh}+ total bases`}
         tip="Batters most likely to reach the selected total bases threshold (2+, 3+, or 4+). Ranked by the threshold probability shown on the board."
         rows={tbRows}
         count={count}
