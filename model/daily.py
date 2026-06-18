@@ -137,12 +137,12 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
     hr, ks, games = [], [], []
     if fresh_slate:
         (starters_fn or export_web._ensure_starters)(fresh_slate)
-        lineups_fn, pitcher_fn = profile_fns or export_web.make_profile_fns(
-            fresh_slate, int(date_str[:4]), date_str)
+        fns = profile_fns or export_web.make_profile_fns(fresh_slate, int(date_str[:4]), date_str)
+        lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn = fns
         wfn = weather_fn or fetch.make_weather_fn()
         bfn = bvp_fn or export_web.make_bvp_fn()
-        hr = build_hr_rows(fresh_slate, lineups_fn, pitcher_fn, wfn, bvp_fn=bfn)
-        ks = build_strikeout_rows(fresh_slate, pitcher_fn, lineups_fn, wfn, bvp_fn=bfn)
+        hr, ks = export_web.build_board_with_history(
+            fresh_slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, wfn, bfn)
         games = build_games(fresh_slate, wfn)
 
     payload = {

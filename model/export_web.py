@@ -146,6 +146,41 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
     return lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn
 
 
+def _key(r: dict) -> tuple:
+    return (r.get("player_id"), r.get("game_id"))
+
+
+def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn,
+                             weather_fn, bvp_fn):
+    """Build current-mode rows, then attach history-mode twins (*_hist)."""
+    hr = build_hr_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
+    ks = build_strikeout_rows(slate, pitcher_fn, lineups_fn, weather_fn, bvp_fn=bvp_fn)
+    hr_h = {_key(r): r for r in build_hr_rows(slate, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn=bvp_fn)}
+    ks_h = {_key(r): r for r in build_strikeout_rows(slate, pitcher_hist_fn, lineups_hist_fn, weather_fn, bvp_fn=bvp_fn)}
+
+    def _copy_vs(dst_vs, src_vs):
+        for f in ("k_prob", "hit_prob", "lean", "prob"):
+            dst_vs[f"{f}_hist"] = src_vs.get(f)
+
+    for r in hr:
+        h = hr_h.get(_key(r))
+        if not h:
+            continue
+        r["probability_hist"] = h["probability"]
+        if r.get("vs") and h.get("vs"):
+            _copy_vs(r["vs"], h["vs"])
+    for r in ks:
+        h = ks_h.get(_key(r))
+        if not h:
+            continue
+        r["over_prob_hist"] = h["over_prob"]
+        r["expected_ks_hist"] = h["expected_ks"]
+        for i, m in enumerate(r.get("matchups", [])):
+            if i < len(h.get("matchups", [])):
+                _copy_vs(m, h["matchups"][i])
+    return hr, ks
+
+
 def make_bvp_fn():
     """Cached career batter-vs-pitcher fetcher for the pipeline (display on
     both props + the capped HR history dial).
@@ -174,12 +209,11 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
             g["started"] = False
 
     _ensure_starters(slate)
-    lineups_fn, pitcher_fn = make_profile_fns(slate, season, date_str)
+    lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn = make_profile_fns(slate, season, date_str)
     weather_fn = fetch.make_weather_fn()
     bvp_fn = make_bvp_fn()
-
-    hr_rows = build_hr_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
-    k_rows = build_strikeout_rows(slate, pitcher_fn, lineups_fn, weather_fn, bvp_fn=bvp_fn)
+    hr_rows, k_rows = build_board_with_history(
+        slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn)
 
     payload = {
         "date": date_str,
