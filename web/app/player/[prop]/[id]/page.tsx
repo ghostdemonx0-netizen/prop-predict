@@ -14,10 +14,11 @@ function pitLabel(t?: string) {
   return t === "L" ? "LHP" : t ? "RHP" : "";
 }
 
-function Back({ prop, date }: { prop?: string; date?: string }) {
+function Back({ prop, date, hist }: { prop?: string; date?: string; hist?: boolean }) {
   const q = new URLSearchParams();
   if (prop === "k") q.set("prop", "k"); // return to the strikeout board, not the default HR view
   if (date) q.set("date", date);
+  if (hist) q.set("source", "hist");
   const qs = q.toString();
   return (
     <Link href={qs ? `/?${qs}` : "/"} className="eyebrow" style={{ textDecoration: "none" }}>
@@ -128,7 +129,7 @@ export default function PlayerPage({
 
   const notFound = (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-5">
-      <Back prop={prop} date={date} />
+      <Back prop={prop} date={date} hist={hist} />
       <p className="panel" style={{ color: "var(--muted)" }}>No data for {name}.</p>
     </main>
   );
@@ -139,7 +140,7 @@ export default function PlayerPage({
     const parkFriendly = r.park_mult >= 1;
     return (
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-        <Back prop={prop} date={date} />
+        <Back prop={prop} date={date} hist={hist} />
         <div className="rise">
           <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Home Run{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
           <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
@@ -243,7 +244,7 @@ export default function PlayerPage({
   const over = displayKs > r.line;
   return (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-      <Back prop={prop} date={date} />
+      <Back prop={prop} date={date} hist={hist} />
       <div className="rise">
         <p className="eyebrow mb-1">{r.team}{r.throws ? ` · ${pitLabel(r.throws)}` : ""} · Strikeouts{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
         <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>

@@ -54,6 +54,7 @@ export default function Home() {
     const params = new URLSearchParams(window.location.search);
     const want = params.get("date");
     if (params.get("prop") === "k") setProp("k"); // back-link from a strikeout player page
+    if (params.get("source") === "hist") setSource("hist");
     loadIndex().then((ds) => {
       setDates(ds);
       setSelectedDate(want && ds.includes(want) ? want : ds[0] ?? "");
