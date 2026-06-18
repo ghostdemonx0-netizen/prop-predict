@@ -100,7 +100,13 @@ function WeatherChips({ r }: { r: BoardRow }) {
 export const HUB_SPHERE = 46;
 export const HUB_SLOT = 52;
 
-export const ADV_CHIP = { color: "var(--green)", borderColor: "rgba(62, 224, 127, 0.5)", background: "rgba(62, 224, 127, 0.1)" };
+// platoon-advantage highlight — cyan (distinct from the green CONF status chip)
+export const ADV_CHIP = {
+  color: "#34dfe8",
+  borderColor: "rgba(52, 223, 232, 0.55)",
+  background: "rgba(52, 223, 232, 0.12)",
+  boxShadow: "0 0 8px rgba(52, 223, 232, 0.45)",
+};
 
 function HeatSphere({ prob, kind, size }: { prob: number; kind: PropKind; size?: number }) {
   const c = heatColor(prob, kind);
