@@ -10,6 +10,10 @@ export type Matchup = {
   bvp?: { pa: number; ab: number; hits: number; hr: number; k: number; avg: string } | null;
   lineup_status?: string;
   pitcher_status?: string;
+  k_prob_hist?: number;
+  hit_prob_hist?: number;
+  lean_hist?: "K" | "H" | "NEU";
+  prob_hist?: number;
 };
 
 export type HrRow = {
@@ -35,6 +39,7 @@ export type HrRow = {
   pitcher_mult?: number; // opposing starter's HR quality
   bvp_mult?: number; // career batter-vs-pitcher history dial (capped ±10%)
   lineup_status?: string;
+  probability_hist?: number;
 };
 
 export type KRow = {
@@ -55,6 +60,8 @@ export type KRow = {
   player_id?: number;
   game_id?: number;
   pitcher_status?: string;
+  over_prob_hist?: number;
+  expected_ks_hist?: number;
 };
 
 export type Game = {
