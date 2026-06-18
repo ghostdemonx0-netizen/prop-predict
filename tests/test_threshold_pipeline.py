@@ -224,23 +224,46 @@ def _w_warm(g):
 
 
 def test_tb_park_boost_coors_vs_neutral():
-    """Coors (hr_factor ~1.22) should give higher p_ge2 / p_ge3 than neutral park on TB rows."""
-    batter = _typical_batter(pid=10)
-    lf = lambda g: {"home": [batter], "away": []}
+    """Coors xbh_mult must produce a meaningfully larger p_ge2/p_ge3 boost than HR
+    regression alone could explain.
+
+    Design rationale: even with season_hr=0, hr_rate_per_pa regresses toward the
+    league average (~0.033), so park_mult=1.22 still lifts p4 slightly.  That means
+    a bare "COL > neutral" assertion passes regardless of xbh_mult and is therefore
+    non-discriminating.
+
+    We instead assert that the COL-vs-neutral DELTA for p_ge2 exceeds a minimum
+    threshold (0.015) that HR-regression alone cannot clear.  With xbh_mult the
+    observed delta is ~0.031; without xbh_mult it falls to ~0.007.  The threshold
+    of 0.015 sits between these two values and will catch a regression that removes
+    the xbh_mult lines.
+    """
+    # Zero HRs: minimises the HR-regression contribution, isolating xbh_mult.
+    zero_hr_batter = {"player_id": 10, "name": "10", "team": "AAA", "bats": "R",
+                      "season_pa": 500, "season_1b": 100, "season_2b": 40,
+                      "season_3b": 8, "season_hr": 0, "recent_form_mult": 1.0,
+                      "k_rate": 0.22, "hit_rate": (100 + 40 + 8) / 500}
+    lf = lambda g: {"home": [zero_hr_batter], "away": []}
     pf = lambda pid: _pit_neutral()
 
     rows_coors = build_total_bases_rows(_slate_park("COL"), lf, pf, _w_warm, bvp_fn=None)
     rows_neutral = build_total_bases_rows(_slate_park("AAA"), lf, pf, _w_warm, bvp_fn=None)
 
-    # AAA is a dummy team; if park lookup falls back to hr_factor=1.0 that's the neutral baseline
     r_c = next(r for r in rows_coors if r["player_id"] == 10)
     r_n = next(r for r in rows_neutral if r["player_id"] == 10)
 
-    assert r_c["p_ge2"] > r_n["p_ge2"], (
-        f"Coors TB p_ge2={r_c['p_ge2']:.4f} should exceed neutral p_ge2={r_n['p_ge2']:.4f}"
+    delta_p2 = r_c["p_ge2"] - r_n["p_ge2"]
+    delta_p3 = r_c["p_ge3"] - r_n["p_ge3"]
+
+    # Minimum delta that HR regression alone cannot produce (~0.007); xbh_mult produces ~0.031.
+    _XBH_MIN_DELTA = 0.015
+    assert delta_p2 > _XBH_MIN_DELTA, (
+        f"Coors TB p_ge2 delta={delta_p2:.4f} should exceed {_XBH_MIN_DELTA} "
+        f"(xbh_mult lines deleted? HR-regression-only delta is ~0.007)"
     )
-    assert r_c["p_ge3"] > r_n["p_ge3"], (
-        f"Coors TB p_ge3={r_c['p_ge3']:.4f} should exceed neutral p_ge3={r_n['p_ge3']:.4f}"
+    assert delta_p3 > _XBH_MIN_DELTA, (
+        f"Coors TB p_ge3 delta={delta_p3:.4f} should exceed {_XBH_MIN_DELTA} "
+        f"(xbh_mult lines deleted? HR-regression-only delta is ~0.010)"
     )
 
 
@@ -271,6 +294,55 @@ def test_hits_rows_no_xbh_dampening():
     vec_coors_tb, _ = _batter_outcome_vector(b_xbh, None, 1.22, 1.0, 3, None, apply_xbh_park=True)
     assert vec_coors_tb[2] > vec_neutral_hits[2], (
         f"TB path: p2 should be boosted by Coors park: {vec_coors_tb[2]:.6f} vs {vec_neutral_hits[2]:.6f}"
+    )
+
+
+def test_hits_park_neutral_tb_park_boosted_public_api():
+    """Integration test through the public builders (not the internal vector function).
+
+    Uses a zero-HR batter at Coors (COL) vs a neutral park (AAA) to verify the gate
+    `apply_xbh_park=(units=="bases")` is correctly wired at the function boundary.
+
+    Key insight: even with season_hr=0, hr_rate_per_pa regresses toward the league
+    average and applies park_mult, so both Hits and TB rows are slightly affected by
+    park via HR regression / normalization.  What xbh_mult adds on top of that is an
+    EXTRA boost to doubles/triples.  We therefore assert that:
+
+      TB park delta (p_ge2_COL - p_ge2_neutral) > Hits park delta
+
+    because TB rows have BOTH the HR-regression effect AND the xbh_mult boost,
+    while Hits rows have only the HR-regression effect.  If the gate were removed
+    (apply_xbh_park always False) the TB delta would shrink to match the Hits delta
+    and this assertion would fail.
+    """
+    # Zero HRs: keeps HR-regression contribution small so xbh_mult dominates the gap.
+    zero_hr_batter = {"player_id": 15, "name": "15", "team": "AAA", "bats": "R",
+                      "season_pa": 500, "season_1b": 100, "season_2b": 40,
+                      "season_3b": 8, "season_hr": 0, "recent_form_mult": 1.0,
+                      "k_rate": 0.22, "hit_rate": (100 + 40 + 8) / 500}
+    lf = lambda g: {"home": [zero_hr_batter], "away": []}
+    pf = lambda pid: _pit_neutral()
+
+    hits_col = build_hits_rows(_slate_park("COL"), lf, pf, _w_warm, bvp_fn=None)
+    hits_neutral = build_hits_rows(_slate_park("AAA"), lf, pf, _w_warm, bvp_fn=None)
+    hc = next(r for r in hits_col if r["player_id"] == 15)
+    hn = next(r for r in hits_neutral if r["player_id"] == 15)
+    hits_delta_p2 = hc["p_ge2"] - hn["p_ge2"]
+
+    tb_col = build_total_bases_rows(_slate_park("COL"), lf, pf, _w_warm, bvp_fn=None)
+    tb_neutral = build_total_bases_rows(_slate_park("AAA"), lf, pf, _w_warm, bvp_fn=None)
+    tc = next(r for r in tb_col if r["player_id"] == 15)
+    tn = next(r for r in tb_neutral if r["player_id"] == 15)
+    tb_delta_p2 = tc["p_ge2"] - tn["p_ge2"]
+
+    # TB must also show a Coors boost at p_ge2
+    assert tc["p_ge2"] > tn["p_ge2"], (
+        f"TB p_ge2 should be boosted at Coors: COL={tc['p_ge2']:.6f} vs neutral={tn['p_ge2']:.6f}"
+    )
+    # The TB park delta must be strictly larger than the Hits delta (xbh_mult contribution)
+    assert tb_delta_p2 > hits_delta_p2, (
+        f"TB park delta ({tb_delta_p2:.6f}) should exceed Hits delta ({hits_delta_p2:.6f}); "
+        f"if equal, xbh_mult is not being applied to TB rows (gate broken?)"
     )
 
 
