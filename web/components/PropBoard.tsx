@@ -27,17 +27,26 @@ export type BoardRow = {
   tempF?: number;
   precipPct?: number;
   bvp?: { pa: number; ab: number; hits: number; hr: number; k: number; avg: string } | null;
-  lean?: { lean: string; prob: number } | null; // batter-vs-pitcher matchup read (K/H/N sphere)
+  lean?: { lean: string; prob: number } | null; // batter-vs-pitcher matchup read (K/C/N sphere)
+  hitProb?: number; // raw per-AB hit (contact) probability vs this pitcher — Top Plays "Top Contact"
+  kProb?: number; // raw per-AB strikeout probability vs this pitcher — Top Plays "Top Batter Strikeouts"
   status?: string; // lineup_status (hitters) or pitcher_status (pitchers)
 };
 
 /** K/H/N matchup sphere (shared with the player pages). */
 export function MatchupSphere({ lean, prob, size }: { lean: string; prob: number; size?: number }) {
   const cls = lean === "K" ? "k" : lean === "H" ? "h" : "neu";
+  const letter = lean === "H" ? "C" : lean; // hit shown as C (contact) across the board
+  const tip =
+    lean === "K"
+      ? "Strikeout chance for one at-bat vs this pitcher (matchup + handedness, history-nudged ±10%). Not the pitcher's strikeout prop."
+      : lean === "H"
+      ? "Hit chance for one at-bat vs this pitcher (matchup + handedness, history-nudged ±10%). Not the same as a '1+ hit' game prop."
+      : "No strong strikeout or contact edge in this matchup";
   return (
     <span
       className={`msphere ${cls}`}
-      title="model matchup read — rates + handedness, history-nudged (±10% cap)"
+      title={tip}
       style={size ? { width: size, height: size } : undefined}
     >
       {lean === "NEU" ? (
@@ -45,7 +54,7 @@ export function MatchupSphere({ lean, prob, size }: { lean: string; prob: number
       ) : (
         <>
           <span className="mp">{Math.round(prob * 100)}%</span>
-          <span className="ml">{lean}</span>
+          <span className="ml">{letter}</span>
         </>
       )}
     </span>
@@ -91,7 +100,7 @@ function WeatherChips({ r }: { r: BoardRow }) {
 export const HUB_SPHERE = 46;
 export const HUB_SLOT = 52;
 
-const ADV_CHIP = { color: "var(--green)", borderColor: "rgba(62, 224, 127, 0.5)", background: "rgba(62, 224, 127, 0.1)" };
+export const ADV_CHIP = { color: "var(--green)", borderColor: "rgba(62, 224, 127, 0.5)", background: "rgba(62, 224, 127, 0.1)" };
 
 function HeatSphere({ prob, kind, size }: { prob: number; kind: PropKind; size?: number }) {
   const c = heatColor(prob, kind);
@@ -182,15 +191,15 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
           <th style={{ width: "100%" }}>Opponent</th>
           <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Time</th>
           {kind === "k" && (
-            <th style={{ textAlign: "center", whiteSpace: "nowrap" }} title="not a sportsbook line — the model sets it from his typical start">
+            <th style={{ textAlign: "center" }} title="not a sportsbook line — the model sets it from his typical start">
               Model Book Line
             </th>
           )}
           {kind === "k" && <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>Proj Ks</th>}
-          <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+          <th style={{ textAlign: "right" }}>
             Probability
             {kind === "k" && (
-              <div style={{ fontWeight: 400, opacity: 0.55, fontSize: "0.58rem", letterSpacing: "0.02em", marginTop: 1 }}>
+              <div style={{ fontWeight: 400, opacity: 0.55, fontSize: "0.5rem", letterSpacing: "0.02em", marginTop: 1 }}>
                 (over Model Book Line)
               </div>
             )}
@@ -412,9 +421,9 @@ function SphereHeaders() {
         <>
           <span style={{ color: "#ffd9d6" }}>K</span>
           <span style={{ opacity: 0.5 }}>/</span>
-          <span style={{ color: "#c5d6e8" }}>N</span>
+          <span style={{ color: "#bff3d2" }}>C</span>
           <span style={{ opacity: 0.5 }}>/</span>
-          <span style={{ color: "#bff3d2" }}>H</span>
+          <span style={{ color: "#c5d6e8" }}>N</span>
         </>,
         "knh"
       )}

@@ -1,14 +1,14 @@
 "use client";
 
-export type ViewMode = "cards" | "table" | "hybrid" | "list" | "parks" | "hub";
-const MODES: ViewMode[] = ["hybrid", "cards", "table", "list", "parks", "hub"];
+// Views that apply to a prop board (HR / K / future props). Parks, Game Hub and
+// Top Plays are now top-level sections, not prop views — see Section in page.tsx.
+export type ViewMode = "cards" | "table" | "hybrid" | "list";
+const MODES: ViewMode[] = ["hybrid", "cards", "table", "list"];
 const LABELS: Record<ViewMode, string> = {
   hybrid: "Hybrid",
   cards: "Cards",
   table: "Table",
   list: "Matchups",
-  parks: "Parks",
-  hub: "Game Hub",
 };
 
 export function ViewSwitcher({

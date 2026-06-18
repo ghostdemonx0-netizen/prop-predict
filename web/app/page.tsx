@@ -5,6 +5,7 @@ import { loadProjections, loadIndex } from "../lib/data";
 import type { Projections } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
+import { TopPlays } from "../components/TopPlays";
 import { gameTimeLabel } from "../lib/format";
 import { ParksBoard } from "../components/ParksBoard";
 import { FlamingBall, ElectricBat } from "../components/Marks";
@@ -30,9 +31,20 @@ function gameLabel(matchup?: string, team?: string) {
   return team === home ? `vs ${away}` : `@ ${home}`;
 }
 
+// Top-level sections. "props" carries the HR/K (and future) prop boards with
+// their own view switcher; the rest are standalone views.
+type Section = "props" | "parks" | "hub" | "topplays";
+const SECTIONS: { id: Section; label: string }[] = [
+  { id: "props", label: "Props" },
+  { id: "parks", label: "Parks" },
+  { id: "hub", label: "Game Hub" },
+  { id: "topplays", label: "Top Plays" },
+];
+
 export default function Home() {
   const [data, setData] = useState<Projections | null>(null);
-  const [mode, setMode] = useState<ViewMode>("hybrid");
+  const [section, setSection] = useState<Section>("props");
+  const [view, setView] = useState<ViewMode>("hybrid");
   const [prop, setProp] = useState<"hr" | "k">("hr");
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -87,6 +99,8 @@ export default function Home() {
     opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
     bvp: r.vs?.bvp,
     lean: r.vs ? { lean: r.vs.lean, prob: r.vs.prob } : null,
+    hitProb: r.vs?.hit_prob,
+    kProb: r.vs?.k_prob,
     status: r.lineup_status,
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
@@ -155,25 +169,36 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rise" style={{ animationDelay: "60ms" }}>
-        {mode === "parks" || mode === "hub" ? (
-          <span />
-        ) : (
-          <div className="pillbar">
-            {(["hr", "k"] as const).map((p) => (
-              <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
-                {p === "hr" ? "Home Runs" : "Strikeouts"}
-              </button>
-            ))}
-          </div>
+      <div className="mb-6 flex flex-col items-center gap-2.5 rise" style={{ animationDelay: "60ms" }}>
+        {/* top level: Props · Parks · Game Hub · Top Plays */}
+        <div className="pillbar">
+          {SECTIONS.map((s) => (
+            <button key={s.id} onClick={() => setSection(s.id)} data-active={section === s.id} className="pill">
+              {s.label}
+            </button>
+          ))}
+        </div>
+        {/* under Props: which prop, then which view */}
+        {section === "props" && (
+          <>
+            <div className="pillbar">
+              {(["hr", "k"] as const).map((p) => (
+                <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
+                  {p === "hr" ? "Home Runs" : "Strikeouts"}
+                </button>
+              ))}
+            </div>
+            <ViewSwitcher mode={view} onChange={setView} />
+          </>
         )}
-        <ViewSwitcher mode={mode} onChange={setMode} />
       </div>
 
-      {mode === "parks" || mode === "hub" ? (
-        <ParksBoard games={data.games ?? []} hrRows={hrRows} kRows={kRows} expandable={mode === "hub"} />
+      {section === "parks" || section === "hub" ? (
+        <ParksBoard games={data.games ?? []} hrRows={hrRows} kRows={kRows} expandable={section === "hub"} />
+      ) : section === "topplays" ? (
+        <TopPlays hrRows={hrRows} kRows={kRows} />
       ) : (
-        <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={mode} kind={prop === "hr" ? "hr" : "k"} />
+        <PropBoard rows={prop === "hr" ? hrRows : kRows} mode={view} kind={prop === "hr" ? "hr" : "k"} />
       )}
 
       <footer className="mt-12" style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
