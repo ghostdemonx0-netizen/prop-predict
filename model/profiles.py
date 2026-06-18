@@ -35,6 +35,9 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
     hr = sum(1 for e in pa_rows if e["events"] == "home_run")
     ks = sum(1 for e in pa_rows if e["events"] in _K_EVENTS)
     hits = sum(1 for e in pa_rows if e["events"] in _HIT_EVENTS)
+    s1 = sum(1 for e in pa_rows if e["events"] == "single")
+    s2 = sum(1 for e in pa_rows if e["events"] == "double")
+    s3 = sum(1 for e in pa_rows if e["events"] == "triple")
 
     bip = [e for e in past if e["launch_speed"] is not None]
     season_hard = _hard_hit_rate(bip)
@@ -50,6 +53,9 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
         "bats": bats,
         "season_hr": hr,
         "season_pa": pa,
+        "season_1b": s1,
+        "season_2b": s2,
+        "season_3b": s3,
         "recent_form_mult": recent_form_mult,
         "k_rate": (ks / pa) if pa else 0.0,
         "hit_rate": (hits / pa) if pa else 0.0,
@@ -111,13 +117,16 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
 # ---------------------------------------------------------------------------
 
 def _count_batter(events: list[dict], as_of: str) -> tuple:
-    """(pa, hr, ks, hits) strictly before as_of — same rules as batter_profile_from_events."""
+    """(pa, hr, ks, hits, s1, s2, s3) strictly before as_of — same rules as batter_profile_from_events."""
     pa_rows = [e for e in events if e["game_date"] < as_of and e["events"]]
     pa = len(pa_rows)
     hr = sum(1 for e in pa_rows if e["events"] == "home_run")
     ks = sum(1 for e in pa_rows if e["events"] in _K_EVENTS)
     hits = sum(1 for e in pa_rows if e["events"] in _HIT_EVENTS)
-    return pa, hr, ks, hits
+    s1 = sum(1 for e in pa_rows if e["events"] == "single")
+    s2 = sum(1 for e in pa_rows if e["events"] == "double")
+    s3 = sum(1 for e in pa_rows if e["events"] == "triple")
+    return pa, hr, ks, hits, s1, s2, s3
 
 
 def _seasons_in_order(events_by_season: dict, current_season: int) -> list:
@@ -133,12 +142,18 @@ def blended_batter_profile(events_by_season: dict, *, as_of: str, current_season
     prof = batter_profile_from_events(events_by_season.get(current_season, []), as_of=as_of,
                                       player_id=player_id, name=name, bats=bats)
     seasons = _seasons_in_order(events_by_season, current_season)
-    counts = [_count_batter(evs, as_of) for evs in seasons]   # [(pa,hr,ks,hits), ...]
+    counts = [_count_batter(evs, as_of) for evs in seasons]   # [(pa,hr,ks,hits,s1,s2,s3), ...]
     hr_made, eff_pa = marcel_blend([(c[1], c[0]) for c in counts])
     ks_made, _ = marcel_blend([(c[2], c[0]) for c in counts])
     hits_made, _ = marcel_blend([(c[3], c[0]) for c in counts])
+    s1_made, _ = marcel_blend([(c[4], c[0]) for c in counts])
+    s2_made, _ = marcel_blend([(c[5], c[0]) for c in counts])
+    s3_made, _ = marcel_blend([(c[6], c[0]) for c in counts])
     prof["season_hr"] = hr_made          # HR regression stays inside hr_probability (R=300)
     prof["season_pa"] = eff_pa
+    prof["season_1b"] = s1_made
+    prof["season_2b"] = s2_made
+    prof["season_3b"] = s3_made
     prof["k_rate"] = regress(ks_made, eff_pa, LEAGUE_K, _K_R)
     prof["hit_rate"] = regress(hits_made, eff_pa, LEAGUE_HIT, _HIT_R)
     return prof
