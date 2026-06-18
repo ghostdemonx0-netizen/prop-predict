@@ -27,6 +27,7 @@ from model.blend import regress
 
 _LG_1B, _LG_2B, _LG_3B = 0.138, 0.045, 0.005
 _COMP_R = 200.0
+_XBH_PARK_DAMPEN = 0.5  # doubles/triples respond ~half as much as HRs to park/weather (tunable v1)
 
 
 def _history_adjusted(m: dict, bvp: dict | None) -> dict:
@@ -192,9 +193,13 @@ def build_games(slate: list[dict], weather_fn) -> list[dict]:
     return out
 
 
-def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp):
+def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_xbh_park: bool = False):
     """Per-PA [p0,p1,p2,p3,p4] (0..4 bases). HR reuses the adjusted HR rate;
     1B/2B/3B are regressed + matchup/platoon/recent-form (park/weather HR-only, v1).
+
+    apply_xbh_park=True (TB rows only): doubles/triples also receive a dampened
+    park/weather multiplier (_XBH_PARK_DAMPEN * (eff_park * weather_mult - 1)).
+    apply_xbh_park=False (default): output is byte-for-byte identical to old behavior.
 
     Returns (actual_vec, neutral_vec) where neutral_vec uses league-average pitcher
     and no platoon/bvp so only park/weather/form remain (matchup adjustments cancel
@@ -213,9 +218,16 @@ def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp):
     else:
         hit_factor = platoon = p_mult = b_mult = 1.0
     form = b.get("recent_form_mult", 1.0)
+
+    # Dampened park/weather multiplier for doubles + triples (TB rows only)
+    if apply_xbh_park:
+        xbh_mult = 1.0 + _XBH_PARK_DAMPEN * (eff_park * weather_mult - 1.0)
+    else:
+        xbh_mult = 1.0
+
     p1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * hit_factor * form
-    p2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * hit_factor * form
-    p3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * hit_factor * form
+    p2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * hit_factor * form * xbh_mult
+    p3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * hit_factor * form * xbh_mult
     p4 = hr_rate_per_pa(b.get("season_hr", 0), pa, recent_form_mult=form, matchup_mult=platoon,
                         park_mult=eff_park, weather_mult=weather_mult, pitcher_mult=p_mult, bvp_mult=b_mult)
     p1, p2, p3, p4 = (max(0.0, x) for x in (p1, p2, p3, p4))
@@ -228,8 +240,8 @@ def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp):
     # Neutral vector: same batter form + park/weather, but league-average pitcher
     # (no platoon, no pitcher quality, no bvp) so the ratio isolates pitcher effect.
     n1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * form
-    n2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * form
-    n3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * form
+    n2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * form * xbh_mult
+    n3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * form * xbh_mult
     n4 = hr_rate_per_pa(b.get("season_hr", 0), pa, recent_form_mult=form,
                         park_mult=eff_park, weather_mult=weather_mult)
     n1, n2, n3, n4 = (max(0.0, x) for x in (n1, n2, n3, n4))
@@ -258,7 +270,10 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
             eff_park = park_mult / sqrt(hr_park_factor(team))
             for slot, b in enumerate(lineups.get(side, [])):
                 bvp = bvp_fn(b.get("player_id"), opp.get("player_id")) if (bvp_fn and opp) else None
-                actual_vec, neutral_vec = _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp)
+                actual_vec, neutral_vec = _batter_outcome_vector(
+                    b, opp, eff_park, weather_mult, slot, bvp,
+                    apply_xbh_park=(units == "bases"),
+                )
                 outcomes = [actual_vec[0], actual_vec[1] + actual_vec[2] + actual_vec[3] + actual_vec[4]] if units == "hits" else actual_vec
 
                 # Compute pitcher_factor as the ratio of actual expected value to neutral

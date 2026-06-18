@@ -206,3 +206,104 @@ def test_pitcher_factor_no_pitcher_defaults_to_1():
     # With no pitcher assigned, opp is None so actual_ev = neutral_ev => factor = 1.0
     assert rows, "expected rows even with no pitcher"
     assert rows[0]["pitcher_factor"] == 1.0
+
+
+# ---------------------------------------------------------------------------
+# Tests for dampened park/weather on doubles+triples (TB-only, Hits neutral)
+# ---------------------------------------------------------------------------
+
+def _slate_park(park_team):
+    """Slate with a customisable park_team so we can swap Coors vs neutral."""
+    return [{"game_id": 2, "home": "AAA", "away": "BBB", "park_team": park_team,
+             "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+
+
+def _w_warm(g):
+    """Warm, calm weather so weather_mult ≈ 1 and differences are park-driven."""
+    return {"wind_speed_mph": 0, "wind_from_deg": 0, "temp_f": 72, "precip_pct": 0}
+
+
+def test_tb_park_boost_coors_vs_neutral():
+    """Coors (hr_factor ~1.22) should give higher p_ge2 / p_ge3 than neutral park on TB rows."""
+    batter = _typical_batter(pid=10)
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_neutral()
+
+    rows_coors = build_total_bases_rows(_slate_park("COL"), lf, pf, _w_warm, bvp_fn=None)
+    rows_neutral = build_total_bases_rows(_slate_park("AAA"), lf, pf, _w_warm, bvp_fn=None)
+
+    # AAA is a dummy team; if park lookup falls back to hr_factor=1.0 that's the neutral baseline
+    r_c = next(r for r in rows_coors if r["player_id"] == 10)
+    r_n = next(r for r in rows_neutral if r["player_id"] == 10)
+
+    assert r_c["p_ge2"] > r_n["p_ge2"], (
+        f"Coors TB p_ge2={r_c['p_ge2']:.4f} should exceed neutral p_ge2={r_n['p_ge2']:.4f}"
+    )
+    assert r_c["p_ge3"] > r_n["p_ge3"], (
+        f"Coors TB p_ge3={r_c['p_ge3']:.4f} should exceed neutral p_ge3={r_n['p_ge3']:.4f}"
+    )
+
+
+def test_hits_rows_no_xbh_dampening():
+    """HITS rows must NOT apply the XBH park dampening (apply_xbh_park=False).
+    We verify this by checking that the outcome vector for Hits is the same whether
+    park is Coors or neutral, when only non-HR hits are present (isolates XBH path).
+    Since HR is already park-adjusted in both paths, we use a singles+doubles-only
+    batter and confirm _batter_outcome_vector gives identical p2/p3 when apply_xbh_park=False."""
+    from model.pipeline import _batter_outcome_vector
+
+    b_xbh = {"player_id": 11, "name": "xbh", "team": "AAA", "bats": "R",
+              "season_pa": 400, "season_1b": 60, "season_2b": 30, "season_3b": 5,
+              "season_hr": 0, "recent_form_mult": 1.0, "k_rate": 0.22, "hit_rate": 0.2375}
+
+    # Hits path: apply_xbh_park=False — Coors park vs neutral park must give same p2/p3
+    vec_coors_hits, _ = _batter_outcome_vector(b_xbh, None, 1.22, 1.0, 3, None, apply_xbh_park=False)
+    vec_neutral_hits, _ = _batter_outcome_vector(b_xbh, None, 1.0, 1.0, 3, None, apply_xbh_park=False)
+
+    assert vec_coors_hits[2] == vec_neutral_hits[2], (
+        f"HITS path: p2 should be park-neutral: Coors={vec_coors_hits[2]:.6f} vs neutral={vec_neutral_hits[2]:.6f}"
+    )
+    assert vec_coors_hits[3] == vec_neutral_hits[3], (
+        f"HITS path: p3 should be park-neutral: Coors={vec_coors_hits[3]:.6f} vs neutral={vec_neutral_hits[3]:.6f}"
+    )
+
+    # TB path: apply_xbh_park=True — Coors should give higher p2/p3
+    vec_coors_tb, _ = _batter_outcome_vector(b_xbh, None, 1.22, 1.0, 3, None, apply_xbh_park=True)
+    assert vec_coors_tb[2] > vec_neutral_hits[2], (
+        f"TB path: p2 should be boosted by Coors park: {vec_coors_tb[2]:.6f} vs {vec_neutral_hits[2]:.6f}"
+    )
+
+
+def test_tb_pitcher_factor_neutral_approx_1_nonneutral_park():
+    """In a non-neutral park (Coors), a league-avg pitcher still yields pitcher_factor ≈ 1.
+    The dampened xbh_mult is identical in both actual and neutral vectors, so it cancels."""
+    batter = _typical_batter(pid=12)
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_neutral()
+
+    rows = build_total_bases_rows(_slate_park("COL"), lf, pf, _w_warm, bvp_fn=None)
+    r = next(r for r in rows if r["player_id"] == 12)
+
+    # Same R-vs-R platoon window as the hits test (±15%)
+    assert 0.85 <= r["pitcher_factor"] <= 1.15, (
+        f"TB neutral pitcher at Coors: pitcher_factor={r['pitcher_factor']:.4f} far from 1.0"
+    )
+
+
+def test_tb_singles_unchanged_by_park():
+    """p1 (singles) in the outcomes vector should not be inflated by xbh_mult.
+    Proxy: compare actual_vec p1 via a synthetic batter with only singles (no 2B/3B/HR)."""
+    from model.pipeline import _batter_outcome_vector
+
+    b_singles_only = {"player_id": 20, "name": "singles", "team": "AAA", "bats": "R",
+                      "season_pa": 400, "season_1b": 100, "season_2b": 0, "season_3b": 0,
+                      "season_hr": 0, "recent_form_mult": 1.0, "k_rate": 0.22, "hit_rate": 0.25}
+
+    # eff_park=1.22 (Coors-like), weather_mult=1.0
+    vec_park, _ = _batter_outcome_vector(b_singles_only, None, 1.22, 1.0, 3, None, apply_xbh_park=True)
+    vec_neutral, _ = _batter_outcome_vector(b_singles_only, None, 1.22, 1.0, 3, None, apply_xbh_park=False)
+
+    # p1 is index 1; xbh_mult should NOT touch it
+    assert vec_park[1] == vec_neutral[1], (
+        f"p1 (singles) changed with apply_xbh_park: park={vec_park[1]:.6f} vs neutral={vec_neutral[1]:.6f}"
+    )
