@@ -155,8 +155,8 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
     """Build current-mode rows, then attach history-mode twins (*_hist)."""
     hr = build_hr_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
     ks = build_strikeout_rows(slate, pitcher_fn, lineups_fn, weather_fn, bvp_fn=bvp_fn)
-    hr_h = {_key(r): r for r in build_hr_rows(slate, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn=bvp_fn)}
-    ks_h = {_key(r): r for r in build_strikeout_rows(slate, pitcher_hist_fn, lineups_hist_fn, weather_fn, bvp_fn=bvp_fn)}
+    hr_h = {_key(r): r for r in build_hr_rows(slate, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
+    ks_h = {_key(r): r for r in build_strikeout_rows(slate, pitcher_hist_fn, lineups_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
 
     def _copy_vs(dst_vs, src_vs):
         for f in ("k_prob", "hit_prob", "lean", "prob"):
@@ -175,9 +175,11 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
             continue
         r["over_prob_hist"] = h["over_prob"]
         r["expected_ks_hist"] = h["expected_ks"]
-        for i, m in enumerate(r.get("matchups", [])):
-            if i < len(h.get("matchups", [])):
-                _copy_vs(m, h["matchups"][i])
+        h_m_by_pid = {hm.get("player_id"): hm for hm in h.get("matchups", [])}
+        for m in r.get("matchups", []):
+            hm = h_m_by_pid.get(m.get("player_id"))
+            if hm is not None:
+                _copy_vs(m, hm)
     return hr, ks
 
 

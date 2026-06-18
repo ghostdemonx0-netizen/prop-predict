@@ -14,7 +14,7 @@ from pathlib import Path
 
 from model import export_web, fetch
 from model.cache import DEFAULT_DIR, _safe
-from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
+from model.pipeline import build_games
 
 _MARKER = "events-updated-through.json"
 _SIGNATURE = "last-signature.json"
