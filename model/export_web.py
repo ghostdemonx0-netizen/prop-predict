@@ -14,7 +14,7 @@ from pathlib import Path
 
 from model import fetch, profiles
 from model.cache import get_or_compute
-from model.pipeline import build_hr_rows, build_strikeout_rows, build_games
+from model.pipeline import build_hr_rows, build_strikeout_rows, build_games, build_hits_rows, build_total_bases_rows
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
 _DATE_FILE = re.compile(r"^\d{4}-\d{2}-\d{2}\.json$")
@@ -155,8 +155,13 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
     """Build current-mode rows, then attach history-mode twins (*_hist)."""
     hr = build_hr_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
     ks = build_strikeout_rows(slate, pitcher_fn, lineups_fn, weather_fn, bvp_fn=bvp_fn)
+    hits = build_hits_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
+    tb = build_total_bases_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
+
     hr_h = {_key(r): r for r in build_hr_rows(slate, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
     ks_h = {_key(r): r for r in build_strikeout_rows(slate, pitcher_hist_fn, lineups_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
+    hits_h = {_key(r): r for r in build_hits_rows(slate, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
+    tb_h = {_key(r): r for r in build_total_bases_rows(slate, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
 
     def _copy_vs(dst_vs, src_vs):
         for f in ("k_prob", "hit_prob", "lean", "prob"):
@@ -180,7 +185,27 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
             hm = h_m_by_pid.get(m.get("player_id"))
             if hm is not None:
                 _copy_vs(m, hm)
-    return hr, ks
+
+    # Attach _hist twins for threshold props (hits: p_ge1/2/3; tb: p_ge2/3/4)
+    _hits_thresholds = ("p_ge1", "p_ge2", "p_ge3")
+    _tb_thresholds = ("p_ge2", "p_ge3", "p_ge4")
+
+    for r in hits:
+        h = hits_h.get(_key(r))
+        if not h:
+            continue
+        for field in _hits_thresholds:
+            if field in h:
+                r[f"{field}_hist"] = h[field]
+    for r in tb:
+        h = tb_h.get(_key(r))
+        if not h:
+            continue
+        for field in _tb_thresholds:
+            if field in h:
+                r[f"{field}_hist"] = h[field]
+
+    return hr, ks, hits, tb
 
 
 def make_bvp_fn():
@@ -214,7 +239,7 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
     lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn = make_profile_fns(slate, season, date_str)
     weather_fn = fetch.make_weather_fn()
     bvp_fn = make_bvp_fn()
-    hr_rows, k_rows = build_board_with_history(
+    hr_rows, k_rows, hits_rows, tb_rows = build_board_with_history(
         slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn)
 
     payload = {
@@ -222,6 +247,8 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
         "updated": dt.datetime.now(dt.timezone.utc).isoformat(),
         "hr": hr_rows,
         "strikeouts": k_rows,
+        "hits": hits_rows,
+        "total_bases": tb_rows,
         "games": build_games(slate, weather_fn),
     }
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -229,7 +256,7 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
     # latest.json mirrors the date just written (fallback default for the site)
     (DATA_DIR / "latest.json").write_text(json.dumps(payload, indent=2))
     _update_index(date_str)
-    print(f"Wrote {date_str}.json ({len(hr_rows)} HR rows, {len(k_rows)} K rows, {len(payload['games'])} games)")
+    print(f"Wrote {date_str}.json ({len(hr_rows)} HR rows, {len(k_rows)} K rows, {len(hits_rows)} hits rows, {len(tb_rows)} TB rows, {len(payload['games'])} games)")
 
 
 if __name__ == "__main__":

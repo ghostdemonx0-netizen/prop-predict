@@ -147,17 +147,19 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
     frozen = {
         "hr": [r for r in existing.get("hr", []) if r.get("game_id") in started_ids],
         "strikeouts": [r for r in existing.get("strikeouts", []) if r.get("game_id") in started_ids],
+        "hits": [r for r in existing.get("hits", []) if r.get("game_id") in started_ids],
+        "total_bases": [r for r in existing.get("total_bases", []) if r.get("game_id") in started_ids],
         "games": [r for r in existing.get("games", []) if r.get("game_id") in started_ids],
     }
 
-    hr, ks, games = [], [], []
+    hr, ks, hits, tb, games = [], [], [], [], []
     if fresh_slate:
         (starters_fn or export_web._ensure_starters)(fresh_slate)
         fns = profile_fns or export_web.make_profile_fns(fresh_slate, int(date_str[:4]), date_str)
         lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn = fns
         wfn = weather_fn or fetch.make_weather_fn()
         bfn = bvp_fn or export_web.make_bvp_fn()
-        hr, ks = export_web.build_board_with_history(
+        hr, ks, hits, tb = export_web.build_board_with_history(
             fresh_slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, wfn, bfn)
         games = build_games(fresh_slate, wfn)
 
@@ -167,6 +169,8 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
         "started_ids": sorted(started_ids),
         "hr": sorted(hr + frozen["hr"], key=lambda r: r["probability"], reverse=True),
         "strikeouts": sorted(ks + frozen["strikeouts"], key=lambda r: r["over_prob"], reverse=True),
+        "hits": sorted(hits + frozen["hits"], key=lambda r: r["p_ge1"], reverse=True),
+        "total_bases": sorted(tb + frozen["total_bases"], key=lambda r: r["p_ge2"], reverse=True),
         "games": sorted(games + frozen["games"], key=lambda g: g["env"], reverse=True),
     }
 
