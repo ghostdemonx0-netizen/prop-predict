@@ -189,7 +189,7 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
     # Attach _hist twins for threshold props (hits: p_ge1/2/3; tb: p_ge2/3/4)
     _hits_thresholds = ("p_ge1", "p_ge2", "p_ge3")
     _tb_thresholds = ("p_ge2", "p_ge3", "p_ge4")
-    _factor_fields = ("recent_form_mult", "pitcher_factor")
+    _factor_fields = ("recent_form_mult", "pitcher_factor", "park_weather_factor")
 
     for r in hits:
         h = hits_h.get(_key(r))

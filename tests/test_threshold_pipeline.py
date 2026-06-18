@@ -362,6 +362,53 @@ def test_tb_pitcher_factor_neutral_approx_1_nonneutral_park():
     )
 
 
+# ── park_weather_factor field presence and values ──────────────────────────
+
+def test_tb_row_has_park_weather_factor():
+    """Every TB row carries a park_weather_factor float field."""
+    lf = lambda g: {"home": [_bat(10, 400, 90, 25, 3, 20)], "away": []}
+    pf = lambda pid: _pit_neutral()
+    rows = build_total_bases_rows(_slate_park("AAA"), lf, pf, _w_warm, bvp_fn=None)
+    assert rows, "expected at least one TB row"
+    r = rows[0]
+    assert "park_weather_factor" in r, "TB row missing park_weather_factor"
+    assert isinstance(r["park_weather_factor"], float)
+
+
+def test_tb_park_weather_factor_coors_gt_1():
+    """Coors (COL) should produce park_weather_factor > 1.0 for a TB row."""
+    lf = lambda g: {"home": [_bat(10, 400, 90, 25, 3, 20)], "away": []}
+    pf = lambda pid: _pit_neutral()
+    rows_coors = build_total_bases_rows(_slate_park("COL"), lf, pf, _w_warm, bvp_fn=None)
+    r = next(r for r in rows_coors if r["player_id"] == 10)
+    assert r["park_weather_factor"] > 1.0, (
+        f"Coors park_weather_factor={r['park_weather_factor']:.4f} should be > 1.0"
+    )
+
+
+def test_tb_park_weather_factor_neutral_approx_1():
+    """A neutral park (AAA) should produce park_weather_factor ≈ 1.0 (within 0.5%)."""
+    lf = lambda g: {"home": [_bat(10, 400, 90, 25, 3, 20)], "away": []}
+    pf = lambda pid: _pit_neutral()
+    rows = build_total_bases_rows(_slate_park("AAA"), lf, pf, _w_warm, bvp_fn=None)
+    r = next(r for r in rows if r["player_id"] == 10)
+    assert abs(r["park_weather_factor"] - 1.0) <= 0.005, (
+        f"Neutral park_weather_factor={r['park_weather_factor']:.6f} should be ≈ 1.0"
+    )
+
+
+def test_hits_row_park_weather_factor_is_1():
+    """Hits rows should have park_weather_factor == 1.0 (hits are park-neutral)."""
+    lf = lambda g: {"home": [_bat(10, 400, 90, 25, 3, 20)], "away": []}
+    pf = lambda pid: _pit_neutral()
+    rows = build_hits_rows(_slate_park("COL"), lf, pf, _w_warm, bvp_fn=None)
+    assert rows, "expected at least one hits row"
+    r = rows[0]
+    assert r.get("park_weather_factor", 1.0) == 1.0, (
+        f"Hits row park_weather_factor should be 1.0, got {r.get('park_weather_factor')}"
+    )
+
+
 def test_tb_singles_unchanged_by_park():
     """p1 (singles) in the outcomes vector should not be inflated by xbh_mult.
     Proxy: compare actual_vec p1 via a synthetic batter with only singles (no 2B/3B/HR)."""

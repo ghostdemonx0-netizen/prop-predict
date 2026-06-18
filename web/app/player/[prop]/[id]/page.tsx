@@ -390,6 +390,12 @@ export default function PlayerPage({
               note="Combines how hittable he is with his power (extra-base/HR) suppression, plus platoon."
             />
           )}
+          <Factor
+            icon="🌦️"
+            label="Park & weather"
+            mult={pick(r.park_weather_factor ?? 1, r.park_weather_factor_hist)}
+            note="The ballpark and conditions' net effect on his extra-base power (doubles, triples, homers). Singles barely move with the park, so the nudge stays modest."
+          />
         </div>
 
         <div className="panel rise" style={{ animationDelay: "240ms" }}>

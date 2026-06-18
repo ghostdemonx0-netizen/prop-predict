@@ -285,6 +285,12 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     neutral_ev = neutral_vec[1] + 2 * neutral_vec[2] + 3 * neutral_vec[3] + 4 * neutral_vec[4]
                 pitcher_factor = (actual_ev / neutral_ev) if neutral_ev > 0 else 1.0
 
+                park_weather_factor = 1.0
+                if units == "bases":
+                    nenv_vec, _ = _batter_outcome_vector(b, opp, 1.0, 1.0, slot, bvp, apply_xbh_park=True)
+                    nenv_ev = nenv_vec[1] + 2 * nenv_vec[2] + 3 * nenv_vec[3] + 4 * nenv_vec[4]
+                    park_weather_factor = (actual_ev / nenv_ev) if nenv_ev > 0 else 1.0
+
                 epa = expected_pa_for_slot(slot)
                 vs = None
                 if opp:
@@ -303,6 +309,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     "lineup_status": b.get("lineup_status", "confirmed"),
                     "recent_form_mult": b.get("recent_form_mult", 1.0),
                     "pitcher_factor": pitcher_factor,
+                    "park_weather_factor": park_weather_factor,
                     "vs": vs,
                     "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
                     "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
