@@ -137,6 +137,11 @@ export default function Home() {
     precipPct: r.precip_pct,
   }));
 
+  // Re-sort by the displayed probability so History mode reorders the list to
+  // match its numbers (current mode is already in this order, so it's unchanged).
+  hrRows.sort((a, b) => b.prob - a.prob);
+  kRows.sort((a, b) => b.prob - a.prob);
+
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">
       <header className="mb-9 rise">
@@ -175,33 +180,51 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="mb-6 flex flex-col items-center gap-2.5 rise" style={{ animationDelay: "60ms" }}>
-        {/* top level: Props · Parks · Game Hub · Top Plays */}
-        <div className="pillbar">
-          {SECTIONS.map((s) => (
-            <button key={s.id} onClick={() => setSection(s.id)} data-active={section === s.id} className="pill">
-              {s.label}
-            </button>
-          ))}
-        </div>
-        <div className="pillbar" title="History blends the last 3 seasons (5/4/3) for a steadier baseline — situational factors stay live">
-          {([["current", "Current"], ["hist", "History (3-yr)"]] as const).map(([v, label]) => (
-            <button key={v} onClick={() => setSource(v)} data-active={source === v} className="pill">{label}</button>
-          ))}
-        </div>
-        {/* under Props: which prop, then which view */}
-        {section === "props" && (
-          <>
+      <div className="mb-6 rise" style={{ animationDelay: "60ms" }}>
+        <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.625rem" }}>
+          {/* compact weighting toggle, pinned far-left on the selectors line */}
+          <div
+            style={{ position: "absolute", left: 0, top: 0, display: "flex", flexDirection: "column", gap: "0.15rem", lineHeight: 1.1 }}
+            title="Current = this season only. History = the last 3 seasons blended 5/4/3 for a steadier baseline. Park, weather, matchup and recent form stay live either way."
+          >
+            <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Weighting</span>
             <div className="pillbar">
-              {(["hr", "k"] as const).map((p) => (
-                <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
-                  {p === "hr" ? "Home Runs" : "Strikeouts"}
+              {([["current", "Current szn"], ["hist", "History 3yr"]] as const).map(([v, label]) => (
+                <button
+                  key={v}
+                  onClick={() => setSource(v)}
+                  data-active={source === v}
+                  className="pill"
+                  style={{ padding: "0.16rem 0.4rem", fontSize: "0.58rem" }}
+                >
+                  {label}
                 </button>
               ))}
             </div>
-            <ViewSwitcher mode={view} onChange={setView} />
-          </>
-        )}
+          </div>
+
+          {/* top level: Props · Parks · Game Hub · Top Plays (centered) */}
+          <div className="pillbar">
+            {SECTIONS.map((s) => (
+              <button key={s.id} onClick={() => setSection(s.id)} data-active={section === s.id} className="pill">
+                {s.label}
+              </button>
+            ))}
+          </div>
+          {/* under Props: which prop, then which view */}
+          {section === "props" && (
+            <>
+              <div className="pillbar">
+                {(["hr", "k"] as const).map((p) => (
+                  <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
+                    {p === "hr" ? "Home Runs" : "Strikeouts"}
+                  </button>
+                ))}
+              </div>
+              <ViewSwitcher mode={view} onChange={setView} />
+            </>
+          )}
+        </div>
       </div>
 
       {section === "parks" || section === "hub" ? (
