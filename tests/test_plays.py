@@ -1,7 +1,9 @@
 import json
 from pathlib import Path
 
+from model import plays_deliver
 from model.plays import select_plays
+from model.plays_email import render_email, render_push
 
 FIX = Path(__file__).parent / "fixtures" / "plays_board.json"
 BOARD = json.loads(FIX.read_text())
@@ -57,3 +59,54 @@ def test_missing_game_time_is_kept():
     }
     sel = select_plays(board, now_iso=NOW)
     assert sel["hr"][0]["player"] == "NoTime"
+
+
+def test_email_has_all_three_sections():
+    out = render_email(select_plays(BOARD, now_iso=NOW))
+    assert out["subject"].endswith("2026-06-17")
+    assert "LOCK OF THE DAY" in out["text"]
+    assert "HOME RUN PLAYS" in out["text"]
+    assert "STRIKEOUT PLAYS" in out["text"]
+    assert "HITS PLAYS" in out["text"]
+    assert "Matt Olson" in out["text"]
+    assert "Kyle Bradish" in out["text"]
+    assert "Luis Arraez" in out["text"]
+    assert "<pre" in out["html"]
+
+
+def test_push_mentions_lock_and_count():
+    msg = render_push(select_plays(BOARD, now_iso=NOW))
+    assert "Lock" in msg and "plays" in msg
+
+
+def test_dry_run_prints_and_sends_nothing(capsys, monkeypatch):
+    monkeypatch.setattr(plays_deliver, "load_board", lambda *a, **k: BOARD)
+
+    def boom(*a, **k):
+        raise AssertionError("network called during dry-run")
+
+    monkeypatch.setattr(plays_deliver, "send_email", boom)
+    monkeypatch.setattr(plays_deliver, "send_push", boom)
+    rc = plays_deliver.main(["--dry-run"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "LOCK OF THE DAY" in out
+    assert "[push]" in out
+
+
+def test_empty_board_skips_sending(capsys, monkeypatch):
+    monkeypatch.setattr(plays_deliver, "load_board",
+                        lambda *a, **k: {"date": "2026-06-17", "hr": [], "strikeouts": [], "hits": []})
+
+    def boom(*a, **k):
+        raise AssertionError("should not send for an empty board")
+
+    monkeypatch.setattr(plays_deliver, "send_email", boom)
+    monkeypatch.setattr(plays_deliver, "send_push", boom)
+    monkeypatch.setenv("RESEND_API_KEY", "x")
+    monkeypatch.setenv("PLAYS_TO_EMAIL", "me@example.com")
+    monkeypatch.setenv("NTFY_TOPIC", "topic")
+    rc = plays_deliver.main([])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "no upcoming plays" in out
