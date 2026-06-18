@@ -156,13 +156,16 @@ export default function Home() {
     return hist ?? base;
   }
 
+  const hitsDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=hits&threshold=${threshold.hits}${source === "hist" ? "&source=hist" : ""}`;
+  const tbDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=tb&threshold=${threshold.tb}${source === "hist" ? "&source=hist" : ""}`;
+
   const hitsRows: BoardRow[] = (data.hits ?? []).map((r) => ({
     id: `hits-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
     player: r.player,
     team: r.team,
     prob: hitsProb(r, threshold.hits),
     detail: `${threshold.hits}+ hits`,
-    href: `/player/hits/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
+    href: `/player/hits/${r.player_id ?? encodeURIComponent(r.player)}${hitsDateQ}`,
     time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
@@ -191,7 +194,7 @@ export default function Home() {
     team: r.team,
     prob: tbProb(r, threshold.tb),
     detail: `${threshold.tb}+ bases`,
-    href: `/player/tb/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
+    href: `/player/tb/${r.player_id ?? encodeURIComponent(r.player)}${tbDateQ}`,
     time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
@@ -342,7 +345,7 @@ export default function Home() {
       {section === "parks" || section === "hub" ? (
         <ParksBoard games={data.games ?? []} hrRows={hrRows} kRows={kRows} expandable={section === "hub"} />
       ) : section === "topplays" ? (
-        <TopPlays hrRows={hrRows} kRows={kRows} />
+        <TopPlays hrRows={hrRows} kRows={kRows} hitsRows={hitsRows} tbRows={tbRows} />
       ) : (
         <PropBoard
           rows={prop === "hr" ? hrRows : prop === "k" ? kRows : prop === "hits" ? hitsRows : tbRows}

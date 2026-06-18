@@ -14,9 +14,11 @@ function pitLabel(t?: string) {
   return t === "L" ? "LHP" : t ? "RHP" : "";
 }
 
-function Back({ prop, date, hist }: { prop?: string; date?: string; hist?: boolean }) {
+function Back({ prop, date, hist, threshold }: { prop?: string; date?: string; hist?: boolean; threshold?: string }) {
   const q = new URLSearchParams();
   if (prop === "k") q.set("prop", "k"); // return to the strikeout board, not the default HR view
+  if (prop === "hits") q.set("prop", "hits");
+  if (prop === "tb") q.set("prop", "tb");
   if (date) q.set("date", date);
   if (hist) q.set("source", "hist");
   const qs = q.toString();
@@ -104,16 +106,20 @@ export default function PlayerPage({
   searchParams,
 }: {
   params: Promise<{ prop: string; id: string }>;
-  searchParams: Promise<{ date?: string; source?: string }>;
+  searchParams: Promise<{ date?: string; source?: string; threshold?: string }>;
 }) {
   const { prop, id } = use(params);
-  const { date, source } = use(searchParams);
+  const { date, source, threshold: thresholdParam } = use(searchParams);
   const name = decodeURIComponent(id);
   const [data, setData] = useState<Projections | null>(null);
 
   const hist = source === "hist";
   const pick = <T,>(cur: T, h: T | undefined | null): T => (hist && h != null ? h : cur);
   const navQ = `${date ? `?date=${date}` : ""}${hist ? `${date ? "&" : "?"}source=hist` : ""}`;
+
+  // Parse threshold from query param (for hits: 1|2|3, for tb: 2|3|4)
+  const hitsThreshold: 1 | 2 | 3 = (thresholdParam === "2" ? 2 : thresholdParam === "3" ? 3 : 1);
+  const tbThreshold: 2 | 3 | 4 = (thresholdParam === "3" ? 3 : thresholdParam === "4" ? 4 : 2);
 
   useEffect(() => {
     loadProjections(date).then(setData).catch(console.error);
@@ -194,6 +200,150 @@ export default function PlayerPage({
               note={`${r.vs.bvp.hits}-for-${r.vs.bvp.ab} career${r.vs.bvp.hr > 0 ? ` with ${r.vs.bvp.hr} HR` : ""}.`}
             />
           )}
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "180ms" }}>
+          <div className="eyebrow mb-3">Conditions</div>
+          <WeatherStrip tempF={r.temp_f} windMph={r.wind_mph} windDir={r.wind_dir} precipPct={r.precip_pct} />
+        </div>
+
+        {r.vs && (
+          <div className="panel rise" style={{ animationDelay: "240ms" }}>
+            <div className="eyebrow mb-1">Pitcher matchup</div>
+            <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
+              <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
+              <strong style={{ color: "#bff3d2" }}>C</strong> = likely hit (contact) ·{" "}
+              <strong style={{ color: "#c5d6e8" }}>N</strong> = neutral
+            </p>
+            <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
+              <span className="bname">
+                <Link
+                  href={`/player/k/${r.vs.player_id ?? encodeURIComponent(r.vs.name)}${navQ}`}
+                  className="linklike"
+                >
+                  {r.vs.name}
+                </Link>{" "}
+                <span className="hand">{pitLabel(r.vs.throws)}</span>
+              </span>
+              <MatchupSphere lean={pick(r.vs.lean, r.vs.lean_hist)} prob={pick(r.vs.prob, r.vs.prob_hist)} />
+            </div>
+            {r.vs.bvp && r.vs.bvp.pa > 0 ? (
+              <p className="factor-note" style={{ marginBottom: 0 }}>
+                Career vs {r.vs.name}: <strong style={{ color: "var(--text)" }}>{r.vs.bvp.hits}-for-{r.vs.bvp.ab}</strong>
+                {r.vs.bvp.hr > 0 && <> · <strong style={{ color: "var(--text)" }}>{r.vs.bvp.hr} HR</strong></>}
+                {" "}· {r.vs.bvp.k} K
+              </p>
+            ) : (
+              <p className="factor-note" style={{ marginBottom: 0 }}>No career history against him yet.</p>
+            )}
+          </div>
+        )}
+      </main>
+    );
+  }
+
+  if (prop === "hits") {
+    const r = (data.hits ?? []).find((x) => String(x.player_id) === id) ?? (data.hits ?? []).find((x) => x.player === name);
+    if (!r) return notFound;
+    const p1 = pick(r.p_ge1, r.p_ge1_hist);
+    const p2 = pick(r.p_ge2, r.p_ge2_hist);
+    const p3 = pick(r.p_ge3, r.p_ge3_hist);
+    const activeProb = hitsThreshold === 1 ? p1 : hitsThreshold === 2 ? p2 : p3;
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
+        <Back prop={prop} date={date} hist={hist} threshold={thresholdParam} />
+        <div className="rise">
+          <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Hits{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
+          <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
+            <span className="lo">{r.player}</span>
+          </h1>
+        </div>
+
+        <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
+          <Stat value={pct(p1)} label="1+ hit" glow={hitsThreshold === 1} />
+          <Stat value={pct(p2)} label="2+ hits" glow={hitsThreshold === 2} />
+          <Stat value={pct(p3)} label="3+ hits" glow={hitsThreshold === 3} />
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "120ms" }}>
+          <div className="eyebrow mb-1">Our read</div>
+          <p className="factor-note" style={{ marginTop: 0 }}>
+            At the selected threshold ({hitsThreshold}+), we give him a{" "}
+            <strong style={{ color: "var(--text)" }}>{pct(activeProb)}</strong> chance.{" "}
+            {strengthLabel(activeProb)}
+          </p>
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "180ms" }}>
+          <div className="eyebrow mb-3">Conditions</div>
+          <WeatherStrip tempF={r.temp_f} windMph={r.wind_mph} windDir={r.wind_dir} precipPct={r.precip_pct} />
+        </div>
+
+        {r.vs && (
+          <div className="panel rise" style={{ animationDelay: "240ms" }}>
+            <div className="eyebrow mb-1">Pitcher matchup</div>
+            <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
+              <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
+              <strong style={{ color: "#bff3d2" }}>C</strong> = likely hit (contact) ·{" "}
+              <strong style={{ color: "#c5d6e8" }}>N</strong> = neutral
+            </p>
+            <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
+              <span className="bname">
+                <Link
+                  href={`/player/k/${r.vs.player_id ?? encodeURIComponent(r.vs.name)}${navQ}`}
+                  className="linklike"
+                >
+                  {r.vs.name}
+                </Link>{" "}
+                <span className="hand">{pitLabel(r.vs.throws)}</span>
+              </span>
+              <MatchupSphere lean={pick(r.vs.lean, r.vs.lean_hist)} prob={pick(r.vs.prob, r.vs.prob_hist)} />
+            </div>
+            {r.vs.bvp && r.vs.bvp.pa > 0 ? (
+              <p className="factor-note" style={{ marginBottom: 0 }}>
+                Career vs {r.vs.name}: <strong style={{ color: "var(--text)" }}>{r.vs.bvp.hits}-for-{r.vs.bvp.ab}</strong>
+                {r.vs.bvp.hr > 0 && <> · <strong style={{ color: "var(--text)" }}>{r.vs.bvp.hr} HR</strong></>}
+                {" "}· {r.vs.bvp.k} K
+              </p>
+            ) : (
+              <p className="factor-note" style={{ marginBottom: 0 }}>No career history against him yet.</p>
+            )}
+          </div>
+        )}
+      </main>
+    );
+  }
+
+  if (prop === "tb") {
+    const r = (data.total_bases ?? []).find((x) => String(x.player_id) === id) ?? (data.total_bases ?? []).find((x) => x.player === name);
+    if (!r) return notFound;
+    const p2 = pick(r.p_ge2, r.p_ge2_hist);
+    const p3 = pick(r.p_ge3, r.p_ge3_hist);
+    const p4 = pick(r.p_ge4, r.p_ge4_hist);
+    const activeProb = tbThreshold === 2 ? p2 : tbThreshold === 3 ? p3 : p4;
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
+        <Back prop={prop} date={date} hist={hist} threshold={thresholdParam} />
+        <div className="rise">
+          <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Total Bases{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
+          <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
+            <span className="lo">{r.player}</span>
+          </h1>
+        </div>
+
+        <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
+          <Stat value={pct(p2)} label="2+ bases" glow={tbThreshold === 2} />
+          <Stat value={pct(p3)} label="3+ bases" glow={tbThreshold === 3} />
+          <Stat value={pct(p4)} label="4+ bases" glow={tbThreshold === 4} />
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "120ms" }}>
+          <div className="eyebrow mb-1">Our read</div>
+          <p className="factor-note" style={{ marginTop: 0 }}>
+            At the selected threshold ({tbThreshold}+), we give him a{" "}
+            <strong style={{ color: "var(--text)" }}>{pct(activeProb)}</strong> chance.{" "}
+            {strengthLabel(activeProb)}
+          </p>
         </div>
 
         <div className="panel rise" style={{ animationDelay: "180ms" }}>

@@ -81,7 +81,7 @@ function LeaderSection({
 }
 
 /** A leaderboard tab: best plays grouped into collapsible categories. Pure display. */
-export function TopPlays({ hrRows, kRows }: { hrRows: BoardRow[]; kRows: BoardRow[] }) {
+export function TopPlays({ hrRows, kRows, hitsRows, tbRows }: { hrRows: BoardRow[]; kRows: BoardRow[]; hitsRows: BoardRow[]; tbRows: BoardRow[] }) {
   const [count, setCount] = useState<Count>(10);
   const topContact = hrRows
     .filter((r) => typeof r.hitProb === "number")
@@ -136,6 +136,22 @@ export function TopPlays({ hrRows, kRows }: { hrRows: BoardRow[]; kRows: BoardRo
         rows={topBatterK}
         count={count}
         render={(r) => <MatchupRow key={r.id} r={r} lean="K" prob={r.kProb ?? 0} />}
+      />
+      <LeaderSection
+        title="Top Hits"
+        sub="chance to record at selected threshold"
+        tip="Batters most likely to reach the selected hits threshold (1+, 2+, or 3+). Ranked by the threshold probability shown on the board."
+        rows={hitsRows}
+        count={count}
+        render={(r) => <BoardRowLine key={r.id} r={r} kind="hits1" />}
+      />
+      <LeaderSection
+        title="Top Total Bases"
+        sub="chance to reach selected total bases threshold"
+        tip="Batters most likely to reach the selected total bases threshold (2+, 3+, or 4+). Ranked by the threshold probability shown on the board."
+        rows={tbRows}
+        count={count}
+        render={(r) => <BoardRowLine key={r.id} r={r} kind="tb2" />}
       />
     </div>
   );
