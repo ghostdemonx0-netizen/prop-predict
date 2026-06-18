@@ -120,6 +120,24 @@ body::after {
   box-shadow: 0 0 18px rgba(62, 224, 127, 0.42);
 }
 
+/* Weighting toggle: in normal flow + centered on phones (no overlap with the
+   selector pills), pinned to the top-left corner only on wider screens. */
+.weighting-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  line-height: 1.1;
+}
+@media (min-width: 640px) {
+  .weighting-toggle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    align-items: flex-start;
+  }
+}
+
 /* ---- play cards ---- */
 .card {
   display: block;

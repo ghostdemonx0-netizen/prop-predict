@@ -272,9 +272,9 @@ export default function Home() {
 
       <div className="mb-6 rise" style={{ animationDelay: "60ms" }}>
         <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.625rem" }}>
-          {/* compact weighting toggle, pinned far-left on the selectors line */}
+          {/* compact weighting toggle: stacked+centered on phones, pinned far-left on wider screens */}
           <div
-            style={{ position: "absolute", left: 0, top: 0, display: "flex", flexDirection: "column", gap: "0.15rem", lineHeight: 1.1 }}
+            className="weighting-toggle"
             title="Current = this season only. History = the last 3 seasons blended 5/4/3 for a steadier baseline. Park, weather, matchup and recent form stay live either way."
           >
             <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Weighting</span>
