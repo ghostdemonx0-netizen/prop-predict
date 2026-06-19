@@ -6,21 +6,26 @@ def _pct(x) -> str:
     return f"{x * 100:.0f}%" if isinstance(x, (int, float)) else "—"
 
 
+def _tag(p: dict, status_field: str) -> str:
+    """' ⚠️proj' when the lineup/pitcher isn't confirmed yet (play may shift)."""
+    return "" if p.get(status_field) == "confirmed" else " ⚠️proj"
+
+
 def _hr_line(p: dict) -> str:
     return (f"{p.get('player')} ({p.get('team')}) — {_pct(p.get('probability'))} to homer"
-            f" · {p.get('matchup', '')} · {p.get('park', '')}")
+            f" · {p.get('matchup', '')} · {p.get('park', '')}{_tag(p, 'lineup_status')}")
 
 
 def _k_line(p: dict) -> str:
     ek = p.get("expected_ks")
     proj = f" (proj {ek:.1f})" if isinstance(ek, (int, float)) else ""
     return (f"{p.get('player')} ({p.get('team')}) — {_pct(p.get('over_prob'))} over"
-            f" {p.get('line')} Ks{proj} · {p.get('matchup', '')}")
+            f" {p.get('line')} Ks{proj} · {p.get('matchup', '')}{_tag(p, 'pitcher_status')}")
 
 
 def _hits_line(p: dict) -> str:
     return (f"{p.get('player')} ({p.get('team')}) — {_pct(p.get('p_ge1'))} for a hit"
-            f" · {p.get('matchup', '')}")
+            f" · {p.get('matchup', '')}{_tag(p, 'lineup_status')}")
 
 
 def _lock_line(p: dict | None) -> str:
@@ -28,10 +33,13 @@ def _lock_line(p: dict | None) -> str:
         return "No lock today."
     prop = p.get("prop")
     if prop == "HR":
-        return f"{p.get('player')} to hit a HR — {_pct(p.get('probability'))} · {p.get('matchup', '')}"
+        return (f"{p.get('player')} to hit a HR — {_pct(p.get('probability'))}"
+                f" · {p.get('matchup', '')}{_tag(p, 'lineup_status')}")
     if prop == "HITS":
-        return f"{p.get('player')} to record a hit — {_pct(p.get('p_ge1'))} · {p.get('matchup', '')}"
-    return f"{p.get('player')} OVER {p.get('line')} Ks — {_pct(p.get('over_prob'))} · {p.get('matchup', '')}"
+        return (f"{p.get('player')} to record a hit — {_pct(p.get('p_ge1'))}"
+                f" · {p.get('matchup', '')}{_tag(p, 'lineup_status')}")
+    return (f"{p.get('player')} OVER {p.get('line')} Ks — {_pct(p.get('over_prob'))}"
+            f" · {p.get('matchup', '')}{_tag(p, 'pitcher_status')}")
 
 
 def _escape(s: str) -> str:

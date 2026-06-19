@@ -17,11 +17,11 @@ def test_excludes_started_games():
     assert "Done Bat" not in [p["player"] for p in sel["hits"]]
 
 
-def test_prefers_confirmed_then_metric():
+def test_ranks_by_metric_all_games():
     sel = select_plays(BOARD, hr_count=2, now_iso=NOW)
-    # Confirmed taken first even though a projected row has higher probability
-    assert sel["hr"][0]["player"] == "Matt Olson"  # confirmed, 0.29
-    assert sel["hr"][1]["player"] == "Proj Guy"  # projected fills remainder
+    # Pure probability ranking — projected 0.31 outranks confirmed 0.29 (all games compete)
+    assert sel["hr"][0]["player"] == "Proj Guy"  # 0.31
+    assert sel["hr"][1]["player"] == "Matt Olson"  # 0.29
 
 
 def test_counts_respected():
@@ -29,10 +29,10 @@ def test_counts_respected():
     assert len(sel["hr"]) == 1 and len(sel["strikeouts"]) == 1 and len(sel["hits"]) == 1
 
 
-def test_hits_ranked_by_p_ge1_confirmed_first():
+def test_hits_ranked_by_p_ge1():
     sel = select_plays(BOARD, hits_count=2, now_iso=NOW)
-    assert sel["hits"][0]["player"] == "Luis Arraez"  # confirmed, 0.74
-    assert sel["hits"][1]["player"] == "Proj Bat"  # projected fills remainder
+    assert sel["hits"][0]["player"] == "Proj Bat"  # 0.78
+    assert sel["hits"][1]["player"] == "Luis Arraez"  # 0.74
 
 
 def test_lock_is_highest_chance_to_cash():
@@ -77,6 +77,13 @@ def test_email_has_all_three_sections():
 def test_push_mentions_lock_and_count():
     msg = render_push(select_plays(BOARD, now_iso=NOW))
     assert "Lock" in msg and "plays" in msg
+
+
+def test_email_tags_projected_not_confirmed():
+    text = render_email(select_plays(BOARD, now_iso=NOW))["text"]
+    assert "⚠️proj" in text  # projected plays (e.g. Proj Guy / Proj Bat) are tagged
+    olson_line = next(l for l in text.splitlines() if "Matt Olson" in l)
+    assert "⚠️proj" not in olson_line  # a confirmed play is NOT tagged
 
 
 def test_dry_run_prints_and_sends_nothing(capsys, monkeypatch):

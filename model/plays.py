@@ -28,12 +28,10 @@ def _not_started(play: dict, now: datetime) -> bool:
         return True
 
 
-def _rank(candidates: list[dict], metric: str, status_field: str, count: int) -> list[dict]:
-    """Top `count` by `metric`, confirmed-status plays first then best non-confirmed."""
-    ranked = sorted(candidates, key=lambda p: p.get(metric, 0.0), reverse=True)
-    confirmed = [p for p in ranked if p.get(status_field) == "confirmed"]
-    others = [p for p in ranked if p.get(status_field) != "confirmed"]
-    return (confirmed + others)[:count]
+def _rank(candidates: list[dict], metric: str, count: int) -> list[dict]:
+    """Top `count` purely by `metric` — all games compete, confirmed + projected alike.
+    (Projected plays get a ⚠️proj tag at render time so the user knows they may shift.)"""
+    return sorted(candidates, key=lambda p: p.get(metric, 0.0), reverse=True)[:count]
 
 
 # (list-of-plays, headline-metric) pairs the lock considers — highest cashes.
@@ -55,9 +53,9 @@ def select_plays(board: dict, *, hr_count: int = 5, k_count: int = 5, hits_count
     k_all = [p for p in board.get("strikeouts", []) if _not_started(p, now)]
     hits_all = [p for p in board.get("hits", []) if _not_started(p, now)]
 
-    hr_sel = _rank(hr_all, "probability", "lineup_status", hr_count)
-    k_sel = _rank(k_all, "over_prob", "pitcher_status", k_count)
-    hits_sel = _rank(hits_all, "p_ge1", "lineup_status", hits_count)
+    hr_sel = _rank(hr_all, "probability", hr_count)
+    k_sel = _rank(k_all, "over_prob", k_count)
+    hits_sel = _rank(hits_all, "p_ge1", hits_count)
 
     lock = _pick_lock((hr_sel, "probability"), (k_sel, "over_prob"), (hits_sel, "p_ge1"))
     return {
