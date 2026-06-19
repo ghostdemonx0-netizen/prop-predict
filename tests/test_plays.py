@@ -63,7 +63,8 @@ def test_missing_game_time_is_kept():
 
 def test_email_has_all_three_sections():
     out = render_email(select_plays(BOARD, now_iso=NOW))
-    assert out["subject"].endswith("2026-06-17")
+    assert "2026-06-17" in out["subject"]
+    assert "ET" in out["subject"]  # send-time stamp keeps each subject unique (no Gmail collapse)
     assert "LOCK OF THE DAY" in out["text"]
     assert "HOME RUN PLAYS" in out["text"]
     assert "STRIKEOUT PLAYS" in out["text"]

@@ -1,6 +1,20 @@
 """Render selected plays into an email (subject/text/html) and a short push string."""
 from __future__ import annotations
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+
+def _et_stamp(updated) -> str:
+    """Board's refresh time as 'H:MMam ET' — keeps each send's subject unique so
+    Gmail doesn't thread + collapse them into blank-looking messages."""
+    try:
+        dt = datetime.fromisoformat(str(updated).replace("Z", "+00:00")).astimezone(
+            ZoneInfo("America/New_York"))
+        return dt.strftime("%I:%M%p ET").lstrip("0").replace("AM", "am").replace("PM", "pm")
+    except Exception:
+        return ""
+
 
 def _pct(x) -> str:
     return f"{x * 100:.0f}%" if isinstance(x, (int, float)) else "—"
@@ -59,7 +73,9 @@ def render_email(selection: dict) -> dict:
     lines += ["", f"Board refreshed {selection.get('updated', '')} (UTC). Source: prop-predict."]
     text = "\n".join(lines)
     html = "<pre style=\"font:14px/1.5 ui-monospace,monospace\">" + _escape(text) + "</pre>"
-    return {"subject": f"⚾ Prop Plays — {date}", "text": text, "html": html}
+    stamp = _et_stamp(selection.get("updated"))
+    subject = f"⚾ Prop Plays — {date}" + (f" · {stamp}" if stamp else "")
+    return {"subject": subject, "text": text, "html": html}
 
 
 def render_push(selection: dict) -> str:
