@@ -23,9 +23,12 @@ jobs:
       - name: Restore board from the refresh build cache
         uses: actions/cache/restore@v5
         with:
-          # the refresh workflow saves web/public/data under engine-cache-<run_id>;
-          # restore-keys prefix grabs the newest published board (read-only here).
+          # MUST match board-refresh's cache `path` EXACTLY (.cache + web/public/data) —
+          # GitHub derives the cache "version" from the path list, so a different path
+          # set silently fails to match the engine-cache-* entries. restore-keys prefix
+          # then grabs the newest published board (read-only here).
           path: |
+            .cache
             web/public/data
           key: board-readonly-${{ github.run_id }}
           restore-keys: engine-cache-
