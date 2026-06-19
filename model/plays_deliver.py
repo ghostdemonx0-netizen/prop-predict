@@ -2,7 +2,8 @@
 
 Entry: `python -m model.plays_deliver` (add --dry-run to print instead of send).
 Config via env: RESEND_API_KEY, PLAYS_TO_EMAIL, PLAYS_FROM_EMAIL (optional),
-NTFY_TOPIC (optional). Missing email/push config is skipped, not an error.
+NTFY_TOKEN (optional — holds the ntfy topic name; free ntfy.sh needs only the
+topic in the URL). Missing email/push config is skipped, not an error.
 """
 from __future__ import annotations
 
@@ -62,7 +63,7 @@ def main(argv: list[str]) -> int:
     api_key = os.environ.get("RESEND_API_KEY")
     to_email = os.environ.get("PLAYS_TO_EMAIL")
     from_email = os.environ.get("PLAYS_FROM_EMAIL", DEFAULT_FROM)
-    topic = os.environ.get("NTFY_TOPIC")
+    topic = os.environ.get("NTFY_TOKEN")  # holds the ntfy topic name (free public push)
 
     if api_key and to_email:
         send_email(email["subject"], email["html"], api_key=api_key,
@@ -74,7 +75,7 @@ def main(argv: list[str]) -> int:
         send_push(push, topic=topic)
         print("push sent")
     else:
-        print("[skip] push — NTFY_TOPIC not set")
+        print("[skip] push — NTFY_TOKEN not set")
     return 0
 
 

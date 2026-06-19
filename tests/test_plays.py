@@ -105,7 +105,7 @@ def test_empty_board_skips_sending(capsys, monkeypatch):
     monkeypatch.setattr(plays_deliver, "send_push", boom)
     monkeypatch.setenv("RESEND_API_KEY", "x")
     monkeypatch.setenv("PLAYS_TO_EMAIL", "me@example.com")
-    monkeypatch.setenv("NTFY_TOPIC", "topic")
+    monkeypatch.setenv("NTFY_TOKEN", "topic")
     rc = plays_deliver.main([])
     out = capsys.readouterr().out
     assert rc == 0

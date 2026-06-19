@@ -35,6 +35,5 @@ jobs:
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           PLAYS_TO_EMAIL: ${{ secrets.PLAYS_TO_EMAIL }}
-          PLAYS_FROM_EMAIL: ${{ secrets.PLAYS_FROM_EMAIL }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
         run: python -m model.plays_deliver
