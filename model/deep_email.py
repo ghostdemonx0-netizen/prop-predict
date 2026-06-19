@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from model.parlays import MONEYLINE_LEGS, build_all_parlays
 from model.plays import select_plays
-from model.plays_email import _escape, _et_stamp, _hits_line, _hr_line, _k_line
+from model.plays_email import _escape, _et_stamp, _hits_line, _hr_line, _k_line, _lock_line
 
 TOP_N = 25
 
@@ -25,6 +25,26 @@ def _parlay_lines(parlays: list[dict]) -> list[str]:
 
 def _section(title: str, lines: list[str]) -> list[str]:
     return [title] + (lines if lines else ["   (none — slate too small)"])
+
+
+def render_deep_push(board: dict, now_iso: str | None = None) -> str:
+    """Phone-sized summary of the deep board (lock + top 3 each + best parlay).
+    The full Top 25s + ~70 parlays stay in the email — too much for a notification."""
+    sel = select_plays(board, hr_count=3, k_count=3, hits_count=3, now_iso=now_iso)
+    par = build_all_parlays(board, now_iso=now_iso)
+    L = [f"📊 Deep Board — {board.get('date', '')}", f"🔒 {_lock_line(sel['lock'])}"]
+    if sel["hr"]:
+        L += ["", "💣 Top HR"] + ["• " + _hr_line(p) for p in sel["hr"]]
+    if sel["strikeouts"]:
+        L += ["", "🔥 Top K"] + ["• " + _k_line(p) for p in sel["strikeouts"]]
+    if sel["hits"]:
+        L += ["", "🟢 Top Hits"] + ["• " + _hits_line(p) for p in sel["hits"]]
+    if par["hr"]["2leg"]:
+        p = par["hr"]["2leg"][0]
+        L += ["", f"🎰 Best 2-leg {_parlay_pct(p['prob'])}: "
+              + " + ".join(leg["label"] for leg in p["legs"])]
+    L += ["", "Full Top 25s + ~70 parlays in the email 📧"]
+    return "\n".join(L)
 
 
 def render_deep_email(board: dict, now_iso: str | None = None) -> dict:

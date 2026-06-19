@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import sys
 
-from model.deep_email import render_deep_email
+from model.deep_email import render_deep_email, render_deep_push
 from model.plays import select_plays
 from model.plays_deliver import DEFAULT_FROM, load_board, send_email, send_push
 
@@ -40,7 +40,7 @@ def main(argv: list[str]) -> int:
     else:
         print("[skip] email — RESEND_API_KEY / PLAYS_TO_EMAIL not set")
     if topic:
-        send_push(f"📊 Deep Board ready — {board.get('date', '')}", topic=topic)
+        send_push(render_deep_push(board), topic=topic)
         print("push sent")
     else:
         print("[skip] push — NTFY_TOKEN not set")

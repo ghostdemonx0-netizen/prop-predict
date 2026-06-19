@@ -1,4 +1,4 @@
-from model.deep_email import render_deep_email
+from model.deep_email import render_deep_email, render_deep_push
 
 FUTURE = "2999-01-01T00:00:00Z"
 
@@ -35,3 +35,10 @@ def test_deep_email_notes_skipped_moneyline_on_light_slate():
     # 5 games -> 5-leg money-line builds, 6+ skipped
     out = render_deep_email(_board(5), now_iso="2026-06-18T00:00:00+00:00")
     assert "skipped" in out["text"].lower()
+
+
+def test_deep_push_is_a_summary_pointing_to_email():
+    msg = render_deep_push(_board(), now_iso="2026-06-18T00:00:00+00:00")
+    assert "📊 Deep Board" in msg
+    assert "Top HR" in msg
+    assert "email" in msg.lower()  # points to email for the full detail
