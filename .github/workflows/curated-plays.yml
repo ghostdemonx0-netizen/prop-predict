@@ -1,8 +1,8 @@
 name: curated-plays
 on:
-  workflow_run:
-    workflows: ["refresh-board", "morning-board"]
-    types: [completed]
+  # Fires ONLY when triggered (manual run, or a cron-job.org entry hitting the
+  # workflow_dispatch API at the user's chosen send times). Deliberately NOT
+  # chained to every board refresh — that would email ~48x/day.
   workflow_dispatch: {}
 concurrency:
   group: curated-plays
@@ -13,8 +13,6 @@ jobs:
   plays:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # On the chained trigger, only run if the refresh actually succeeded.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
