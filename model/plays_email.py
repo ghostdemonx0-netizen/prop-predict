@@ -79,6 +79,12 @@ def render_email(selection: dict) -> dict:
 
 
 def render_push(selection: dict) -> str:
-    n = (len(selection.get("hr", [])) + len(selection.get("strikeouts", []))
-         + len(selection.get("hits", [])))
-    return f"Lock: {_lock_line(selection.get('lock'))} | {n} plays ready — check email."
+    """The full lean plays — compact enough to read straight in the phone push."""
+    lines = [f"🔒 {_lock_line(selection.get('lock'))}"]
+    if selection.get("hr"):
+        lines += ["", "💣 HR"] + ["• " + _hr_line(p) for p in selection["hr"]]
+    if selection.get("strikeouts"):
+        lines += ["", "🔥 K"] + ["• " + _k_line(p) for p in selection["strikeouts"]]
+    if selection.get("hits"):
+        lines += ["", "🟢 HITS"] + ["• " + _hits_line(p) for p in selection["hits"]]
+    return "\n".join(lines)

@@ -75,9 +75,11 @@ def test_email_has_all_three_sections():
     assert "<pre" in out["html"]
 
 
-def test_push_mentions_lock_and_count():
+def test_push_carries_the_full_plays():
     msg = render_push(select_plays(BOARD, now_iso=NOW))
-    assert "Lock" in msg and "plays" in msg
+    assert "🔒" in msg
+    assert "💣 HR" in msg and "🔥 K" in msg and "🟢 HITS" in msg
+    assert "Matt Olson" in msg  # a real play is in the push, not just "check email"
 
 
 def test_email_tags_projected_not_confirmed():
