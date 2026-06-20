@@ -20,10 +20,7 @@ import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from model.deep_email import _parlay_lines
-from model.parlays import build_all_parlays
-from model.plays import select_plays
-from model.plays_email import _hits_line, _hr_line, _k_line, _lock_line
+from model.deep_email import render_deep_email
 
 BOARD_PATH = Path("web/public/data/latest.json")
 RESEND_URL = "https://api.resend.com/emails"
@@ -39,21 +36,6 @@ def load_env(path: str = ".env") -> dict:
                 k, v = line.split("=", 1)
                 env[k.strip()] = v.strip()
     return env
-
-
-def site_section(board: dict, now_iso: str | None = None) -> str:
-    sel = select_plays(board, hr_count=10, k_count=10, hits_count=10, now_iso=now_iso)
-    par = build_all_parlays(board, now_iso=now_iso)
-    L = ["────────  MY MODEL'S BOARD (prop-predict, pure math)  ────────", ""]
-    L.append("🔒 LOCK: " + _lock_line(sel["lock"]))
-    L += ["", "💣 Top 10 Home Runs"] + ["  • " + _hr_line(p) for p in sel["hr"]]
-    L += ["", "🔥 Top 10 Strikeouts"] + ["  • " + _k_line(p) for p in sel["strikeouts"]]
-    L += ["", "🟢 Top 10 Hits"] + ["  • " + _hits_line(p) for p in sel["hits"]]
-    L += ["", "🎰 Sample site parlays (real combined %):"]
-    L += ["  HR 2-leg:"] + _parlay_lines(par["hr"]["2leg"][:3])
-    L += ["  Ks 6-leg:"] + _parlay_lines(par["ks"]["6leg"][:2])
-    L += ["  Money-line 5-leg:"] + _parlay_lines(par["moneyline"][5][:2])
-    return "\n".join(L)
 
 
 def main(argv: list[str]) -> int:
@@ -76,9 +58,12 @@ def main(argv: list[str]) -> int:
     now_iso = f"{board.get('date', '2026-01-01')}T00:00:00+00:00"
 
     narrative = Path(narrative_path).read_text() if narrative_path and Path(narrative_path).exists() else ""
-    body = narrative.rstrip() + "\n\n\n" + site_section(board, now_iso) + \
+    # The narrative is the SMART LAYER (buzz leaderboards, blend, per-play, tweets — written
+    # by Claude each run). render_deep_email is BOARD C + all parlays (the site math).
+    site = render_deep_email(board, now_iso=now_iso)["text"]
+    body = narrative.rstrip() + "\n\n\n" + site + \
         "\n\n──────────  Source: prop-predict  ──────────"
-    subject = f"🧪 Manual Report — {board.get('date', '')}"
+    subject = f"📋 Manual Report — {board.get('date', '')}"
     html_body = ("<pre style=\"font:13px/1.5 ui-monospace,monospace;white-space:pre-wrap\">"
                  + html.escape(body) + "</pre>")
 
