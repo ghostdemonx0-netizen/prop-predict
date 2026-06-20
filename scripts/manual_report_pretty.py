@@ -70,16 +70,12 @@ MY_PARLAYS = [
      "why": "Lottery payout, but all three are exactly where my model AND the posted parlays overlap. Small stake, monster ceiling."},
 ]
 
-# (player, slips-note, model%) — ranked by posted-parlay appearances, filtered to who's playing
-BUZZ_HR = [("Ben Rice", "2 slips", "25%"), ("Shea Langeliers", "", "25%"), ("Nick Kurtz", "", "22%"),
-           ("Bryce Harper", "", "22%"), ("Jordan Walker", "", "19%"), ("Mike Trout", "", "16%"),
-           ("Cal Raleigh", "", "8%")]
-BUZZ_HITS = [("Drake Baldwin", "", "73%"), ("Adley Rutschman", "5 slips", "69%"), ("Nick Kurtz", "", "69%"),
-             ("Jake Bauers", "", "67%"), ("Ryan McMahon", "", "66%"), ("Willson Contreras", "5 slips", "63%"),
-             ("Paul Goldschmidt", "", "62%")]
-BUZZ_K = [("Bryan Woo", "model", "80%"), ("Shane Drohan", "model", "80%"), ("Matthew Liberatore", "model", "74%"),
-          ("Gage Jump", "model", "72%"), ("Ryan Weathers", "model", "70%")]
-DROPPED = "Kyle Schwarber, Juan Soto, Randal Grichuk (not in 6/18 lineups), Aaron Judge (injured)"
+# (player, model%) ranked MOST bet-on at top. Filled each run from a DEEP multi-account X
+# sweep, availability-filtered to who's playing. Target depth: 15 per prop. No fake counts.
+BUZZ_HR = []     # e.g. [("Ben Rice","25%"), ("Shea Langeliers","25%"), ...] up to 15
+BUZZ_HITS = []   # up to 15
+BUZZ_K = []      # up to 15
+DROPPED = ""     # buzz names excluded because not in today's lineups / injured
 
 TWEETS = [
     "🔒 LOCK: Bryan Woo OVER 3.5 Ks. Everyone's chasing Misiorowski K's — he's not even pitching. My model's quietly sitting on an 80%. 👉 [link] #MLB #PropBets",
@@ -163,15 +159,16 @@ def _parlay_card(p: dict) -> str:
 
 
 def _buzz_block(title_emoji: str, label: str, color: str, rows: list, note: str) -> str:
+    # rows = (player, model%) ranked by how heavily they appear in posted slips.
+    # No fabricated exact counts — ranking order IS the signal. Top 3 get a 🔥 heat dot.
     items = ""
-    for i, (name, slips, model) in enumerate(rows, 1):
-        slip_tag = (f'<span style="background:{color}1a;color:{color};font:700 10px/1 Arial;padding:3px 6px;'
-                    f'border-radius:4px;margin-left:6px;">🎟 {slips}</span>' if slips and slips != "model" else "")
+    for i, (name, model) in enumerate(rows, 1):
+        heat = ' <span style="color:#dc2626;font-size:12px;">🔥</span>' if i <= 3 else ""
         items += (
             f'<tr><td style="padding:8px 0;border-bottom:1px solid {LINE};">'
             f'<span style="display:inline-block;width:22px;height:22px;background:{color};color:#fff;'
             f'border-radius:50%;text-align:center;font:800 12px/22px Arial;">{i}</span> '
-            f'<span style="font:600 14px/1.2 Arial;color:{INK};">{name}</span>{slip_tag}'
+            f'<span style="font:600 14px/1.2 Arial;color:{INK};">{name}</span>{heat}'
             f'<span style="float:right;font:700 13px/1.2 Arial;color:{color};">{model}</span></td></tr>')
     inner = (
         f'<div style="font:800 15px/1.2 Arial;color:{color};margin-bottom:4px;">{title_emoji} {label}</div>'
@@ -219,16 +216,22 @@ def _ranklist(rows: list, color: str) -> str:
 
 
 def _model_board(board: dict, now_iso: str) -> str:
-    sel = select_plays(board, hr_count=15, k_count=15, hits_count=15, now_iso=now_iso)
-    hr = [(p["player"], p.get("matchup", ""), f'{p["probability"]*100:.0f}%') for p in sel["hr"]]
-    k = [(p["player"], f'O{p.get("line")}', f'{p["over_prob"]*100:.0f}%') for p in sel["strikeouts"]]
-    hits = [(p["player"], p.get("matchup", ""), f'{p["p_ge1"]*100:.0f}%') for p in sel["hits"]]
-    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:8px;">💣 Top 15 — Home Runs</div>'
-                + _ranklist(hr, HR_C), HR_C)
-    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:8px;">🟢 Top 15 — Hits</div>'
-                 + _ranklist(hits, HIT_C), HIT_C)
-    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:8px;">🔥 Top 15 — Strikeouts</div>'
-                 + _ranklist(k, K_C), K_C)
+    # Over-fetch, then keep only CONFIRMED lineups/starters (manual report = locked-in plays,
+    # never "probable" guesses), Top 25 per prop.
+    sel = select_plays(board, hr_count=60, k_count=60, hits_count=60, now_iso=now_iso)
+
+    def conf(plays, field):
+        return [p for p in plays if p.get(field) == "confirmed"][:25]
+    hr = [(p["player"], p.get("matchup", ""), f'{p["probability"]*100:.0f}%') for p in conf(sel["hr"], "lineup_status")]
+    k = [(p["player"], f'O{p.get("line")}', f'{p["over_prob"]*100:.0f}%') for p in conf(sel["strikeouts"], "pitcher_status")]
+    hits = [(p["player"], p.get("matchup", ""), f'{p["p_ge1"]*100:.0f}%') for p in conf(sel["hits"], "lineup_status")]
+    note = '<div style="font:400 11px/1.3 Arial;color:#94a3b8;margin-bottom:6px;">confirmed lineups only · Top 25</div>'
+    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:4px;">💣 Top 25 — Home Runs</div>'
+                + note + _ranklist(hr, HR_C), HR_C)
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:4px;">🟢 Top 25 — Hits</div>'
+                 + note + _ranklist(hits, HIT_C), HIT_C)
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:4px;">🔥 Top 25 — Strikeouts</div>'
+                 + note + _ranklist(k, K_C), K_C)
     return out
 
 
@@ -349,7 +352,25 @@ def load_key() -> str:
     return os.environ.get("RESEND_API_KEY", "")
 
 
+def _stale_guard(argv: list[str]) -> int | None:
+    """Refuse to build on a board that isn't today's — the Bryan-Woo / 2-day-stale failure."""
+    import datetime
+    board = json.load(open(BOARD))
+    bdate = board.get("date", "")
+    today = datetime.date.today().isoformat()
+    if bdate != today and "--allow-stale" not in argv:
+        print(f"[STALE BOARD] board date is {bdate}, today is {today}.")
+        print("Refusing to build a manual report on a stale board.")
+        print("Refresh first: cd ~/Projects/prop-predict && .venv/bin/python -m model.jobs morning")
+        print("(or pass --allow-stale to override for a test).")
+        return 1
+    return None
+
+
 def main(argv: list[str]) -> int:
+    guard = _stale_guard(argv)
+    if guard is not None:
+        return guard
     html = build_html()
     if "--dry-run" in argv:
         Path("/tmp/manual_pretty.html").write_text(html)
