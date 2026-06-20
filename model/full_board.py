@@ -75,14 +75,33 @@ def _both_block(emoji, title, color, plays, m, mh, statusf, batter=False):
     return _wrap(emoji, title, color, rows)
 
 
-def _lock_items(board, now, kind):
+def _lock_items(board, now, kind, n=10):
     items = []
     for _, key, color, m, mh, statusf, emoji, batter in PROPS:
         met = m if kind == "season" else mh
         for p in _up(board, key, now):
             items.append((p.get(met, 0) or 0, p, emoji, color, statusf, met, batter))
     items.sort(key=lambda x: x[0], reverse=True)
-    return items[:8]
+    return items[:n]
+
+
+def _both_lock(board, now, n=10, src=20):
+    """'Both' lock: players who land in BOTH the top-{src} season AND top-{src} history pools,
+    ranked by the blend of their two numbers. Wider src so this fills toward {n} instead of the
+    handful that survive a top-8 vs top-8 overlap."""
+    season = _lock_items(board, now, "season", src)
+    hist_v = {}
+    for it in _lock_items(board, now, "hist", src):
+        hist_v.setdefault(it[1]["player"], it[0])  # best history value per player
+    scored, seen = [], set()
+    for it in season:
+        nm = it[1]["player"]
+        if nm in seen or nm not in hist_v:
+            continue
+        seen.add(nm)
+        scored.append(((it[0] + hist_v[nm]) / 2, it))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [it for _, it in scored[:n]]
 
 
 def _lock_block(title, plays_items):
@@ -101,11 +120,9 @@ def render_full_board(board: dict, now_iso: str | None = None) -> dict:
     now = _now_utc(now_iso)
     date = board.get("date", "")
 
-    season_lock = _lock_items(board, now, "season")
-    hist_lock = _lock_items(board, now, "hist")
-    sl_names = {it[1]["player"] for it in season_lock}
-    hl_names = {it[1]["player"] for it in hist_lock}
-    both_lock = [it for it in season_lock if it[1]["player"] in hl_names]
+    season_lock = _lock_items(board, now, "season", 10)
+    hist_lock = _lock_items(board, now, "hist", 10)
+    both_lock = _both_lock(board, now, 10)
 
     locks = (f'<div style="font:800 16px Arial;color:{GOLD};margin:6px 0 8px;">🔒 Locks of the Day</div>'
              + _lock_block("Season — highest % across the board", season_lock)
