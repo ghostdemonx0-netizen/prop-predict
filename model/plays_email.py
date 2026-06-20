@@ -60,6 +60,58 @@ def _escape(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+# ---- styled email (same design language as the manual report) ----
+_INK, _SUB, _LINE, _BG = "#0f172a", "#475569", "#e2e8f0", "#f1f5f9"
+_HR_C, _K_C, _HIT_C = "#e8590c", "#1c7ed6", "#2f9e44"
+
+
+def _srow(rank: int, player, sub, val, color, proj) -> str:
+    tag = ('<span style="background:#fff4e6;color:#b9760a;font:700 9px/1 Arial;padding:2px 5px;'
+           'border-radius:4px;margin-left:5px;">PROJ</span>') if proj else ""
+    return (f'<tr><td style="padding:7px 0;border-bottom:1px solid {_LINE};">'
+            f'<span style="display:inline-block;width:20px;height:20px;background:{color};color:#fff;'
+            f'border-radius:50%;text-align:center;font:800 11px/20px Arial;">{rank}</span> '
+            f'<span style="font:600 13px/1.2 Arial;color:{_INK};">{_escape(str(player))}</span>{tag} '
+            f'<span style="color:{_SUB};font:400 11px/1.2 Arial;">{_escape(str(sub))}</span>'
+            f'<span style="float:right;font:700 13px/1.2 Arial;color:{color};">{val}</span></td></tr>')
+
+
+def _sblock(emoji: str, title: str, color: str, plays: list, metric: str, statusf: str) -> str:
+    rows = "".join(_srow(i, p.get("player"), p.get("matchup", ""), _pct(p.get(metric)), color,
+                         p.get(statusf) != "confirmed") for i, p in enumerate(plays, 1))
+    if not rows:
+        rows = f'<tr><td style="font:400 12px Arial;color:{_SUB};padding:6px 0;">(no upcoming plays)</td></tr>'
+    return (f'<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid {_LINE};'
+            f'border-left:4px solid {color};border-radius:12px;margin-bottom:12px;"><tr><td style="padding:14px 16px;">'
+            f'<div style="font:800 15px/1.2 Arial;color:{color};margin-bottom:6px;">{emoji} {title}</div>'
+            f'<table width="100%" cellpadding="0" cellspacing="0">{rows}</table></td></tr></table>')
+
+
+def _styled_email(selection: dict, date: str, stamp: str) -> str:
+    lock = selection.get("lock")
+    lc = {"HR": _HR_C, "K": _K_C, "HITS": _HIT_C}.get(lock.get("prop") if lock else None, _INK)
+    lock_card = (f'<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid {_LINE};'
+                 f'border-left:4px solid {lc};border-radius:12px;margin-bottom:12px;"><tr><td style="padding:14px 16px;">'
+                 f'<div style="font:800 11px/1 Arial;color:{lc};letter-spacing:.5px;">🔒 LOCK OF THE DAY</div>'
+                 f'<div style="font:600 14px/1.4 Arial;color:{_INK};margin-top:5px;">{_escape(_lock_line(lock))}</div>'
+                 f'</td></tr></table>')
+    body = (lock_card
+            + _sblock("💣", "Home Run Plays", _HR_C, selection.get("hr", []), "probability", "lineup_status")
+            + _sblock("🔥", "Strikeout Plays", _K_C, selection.get("strikeouts", []), "over_prob", "pitcher_status")
+            + _sblock("🟢", "Hits Plays", _HIT_C, selection.get("hits", []), "p_ge1", "lineup_status"))
+    head_sub = f"Daily Plays &nbsp;·&nbsp; {date}" + (f" &nbsp;·&nbsp; {stamp}" if stamp else "")
+    return (f'<!DOCTYPE html><html><body style="margin:0;padding:0;background:{_BG};">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="background:{_BG};"><tr>'
+            f'<td align="center" style="padding:18px 12px;"><table width="560" cellpadding="0" cellspacing="0" '
+            f'style="max-width:560px;width:100%;">'
+            f'<tr><td style="background:{_INK};border-radius:14px;padding:18px 20px;">'
+            f'<span style="font:800 20px/1 Arial;color:#fff;">⚾ PROP-PREDICT</span>'
+            f'<div style="font:600 12px/1.4 Arial;color:#94a3b8;margin-top:5px;">{head_sub}</div></td></tr>'
+            f'<tr><td style="height:14px;line-height:14px;">&nbsp;</td></tr><tr><td>{body}</td></tr>'
+            f'<tr><td style="padding:10px 4px;font:400 11px/1.4 Arial;color:{_SUB};">Source: prop-predict</td></tr>'
+            f'</table></td></tr></table></body></html>')
+
+
 def render_email(selection: dict) -> dict:
     date = selection.get("date", "")
     lines = [f"PROP-PREDICT PLAYS — {date}", "",
@@ -72,8 +124,8 @@ def render_email(selection: dict) -> dict:
     lines += ["  • " + _hits_line(p) for p in selection.get("hits", [])]
     lines += ["", f"Board refreshed {selection.get('updated', '')} (UTC). Source: prop-predict."]
     text = "\n".join(lines)
-    html = "<pre style=\"font:14px/1.5 ui-monospace,monospace\">" + _escape(text) + "</pre>"
     stamp = _et_stamp(selection.get("updated"))
+    html = _styled_email(selection, date, stamp)  # styled cards (same design as manual report)
     subject = f"⚾ Prop Plays — {date}" + (f" · {stamp}" if stamp else "")
     return {"subject": subject, "text": text, "html": html}
 

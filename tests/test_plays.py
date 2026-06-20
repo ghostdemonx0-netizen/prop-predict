@@ -72,7 +72,7 @@ def test_email_has_all_three_sections():
     assert "Matt Olson" in out["text"]
     assert "Kyle Bradish" in out["text"]
     assert "Luis Arraez" in out["text"]
-    assert "<pre" in out["html"]
+    assert "PROP-PREDICT" in out["html"]  # styled HTML email (cards, not <pre> dump)
 
 
 def test_push_carries_the_full_plays():

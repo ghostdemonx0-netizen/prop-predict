@@ -159,6 +159,11 @@ def _parlay_card(p: dict) -> str:
 def _buzz_block(title_emoji: str, label: str, color: str, rows: list, note: str) -> str:
     # rows = (player, model%) ranked by how heavily they appear in posted slips.
     # No fabricated exact counts — ranking order IS the signal. Top 3 get a 🔥 heat dot.
+    if not rows:  # empty list (e.g. K parlays this early) — say so, don't render blank
+        inner = (f'<div style="font:800 15px/1.2 Arial;color:{color};margin-bottom:4px;">{title_emoji} {label}</div>'
+                 f'<div style="font:400 12px/1.4 Arial;color:{SUB};">Light this early — few of these posted yet. '
+                 f'Fills in closer to first pitch.</div>')
+        return _card(inner, color)
     items = ""
     for i, (name, model) in enumerate(rows, 1):
         heat = ' <span style="color:#dc2626;font-size:12px;">🔥</span>' if i <= 3 else ""
@@ -237,6 +242,65 @@ def _model_board(board: dict, now_iso: str) -> str:
     return out
 
 
+def _top_plays(board: dict, now_iso: str) -> str:
+    """Top 7 per prop (HR / Hits / Ks), ranked by model %, 🔥 = also in the buzz."""
+    sel = select_plays(board, hr_count=7, k_count=7, hits_count=7, now_iso=now_iso)
+    bh = {n for n, _ in BUZZ_HR}
+    bhit = {n for n, _ in BUZZ_HITS}
+
+    def rows(plays, metric, sub_fn, buzz):
+        return [(p["player"] + (" 🔥" if p["player"] in buzz else ""), sub_fn(p), f'{p[metric]*100:.0f}%')
+                for p in plays]
+    hr = rows(sel["hr"], "probability", lambda p: p.get("matchup", ""), bh)
+    hits = rows(sel["hits"], "p_ge1", lambda p: p.get("matchup", ""), bhit)
+    k = rows(sel["strikeouts"], "over_prob", lambda p: f'O{p.get("line")}', set())
+    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:8px;">💣 Top 7 — Home Runs</div>'
+                + _ranklist(hr, HR_C), HR_C)
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:8px;">🟢 Top 7 — Hits</div>'
+                 + _ranklist(hits, HIT_C), HIT_C)
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:8px;">🔥 Top 7 — Strikeouts</div>'
+                 + _ranklist(k, K_C), K_C)
+    return out
+
+
+def _gen_parlays(board: dict, now_iso: str) -> str:
+    """Several model-built parlays (mostly 3-leg — the user's most-played), different games."""
+    sel = select_plays(board, hr_count=10, k_count=10, hits_count=10, now_iso=now_iso)
+    h, k, hr = sel["hits"], sel["strikeouts"], sel["hr"]
+
+    def leg(p, prop):
+        if prop == "hits":
+            return (p["player"], "1+ hit", p["p_ge1"])
+        if prop == "k":
+            return (p["player"], f'O{p.get("line")} K', p["over_prob"])
+        return (p["player"], "HR", p["probability"])
+
+    def card(name, tag, color, legs, why):
+        comb = 1.0
+        for _, _, pr in legs:
+            comb *= pr
+        cs = f"{comb*100:.0f}%" if comb >= 0.1 else f"{comb*100:.1f}%"
+        return _parlay_card({"name": name, "tag": tag, "color": color, "combined": cs,
+                             "legs": [(n, b, f"{pr*100:.0f}%") for n, b, pr in legs], "why": why})
+    out = ""
+    if len(h) >= 3:
+        out += card("Safe Hits 3-Leg", "highest floor", HIT_C, [leg(h[0], "hits"), leg(h[1], "hits"), leg(h[2], "hits")],
+                    "The three highest-probability hit props, different games. My go-to safe ticket.")
+    if len(k) >= 3:
+        out += card("Strikeout 3-Leg", "pitcher overs", K_C, [leg(k[0], "k"), leg(k[1], "k"), leg(k[2], "k")],
+                    "Top three K-overs on the board. Pitchers control their own outcome more than hitters.")
+    if len(h) >= 2 and len(k) >= 1:
+        out += card("Mixed Safe 3-Leg", "hits + K", INK, [leg(h[0], "hits"), leg(k[0], "k"), leg(h[1], "hits")],
+                    "Two safe hits plus the top strikeout over — spreads the risk across bet types.")
+    if len(hr) >= 3:
+        out += card("HR Bomb 3-Leg", "longshot, big payout", HR_C, [leg(hr[0], "hr"), leg(hr[1], "hr"), leg(hr[2], "hr")],
+                    "My three best home-run numbers. Lottery odds, huge ceiling — small stake.")
+    if len(h) >= 1 and len(hr) >= 1 and len(k) >= 1:
+        out += card("Balanced 3-Leg", "hit + HR + K", HR_C, [leg(h[0], "hits"), leg(hr[0], "hr"), leg(k[0], "k")],
+                    "One of each: a safe hit, a power swing, and a strikeout over.")
+    return out
+
+
 def _parlay_rows(parlays: list, color: str) -> str:
     if not parlays:
         return f'<div style="font:400 12px/1.4 Arial;color:{SUB};">(none — slate too small)</div>'
@@ -286,13 +350,12 @@ def build_html() -> str:
     fresh = board.get("updated", "")
 
     plays = "".join(_play_card(p) for p in MY_PLAYS)
-    my_parlays = "".join(_parlay_card(p) for p in MY_PARLAYS)
-    buzz = (_buzz_block("💣", "Most bet-on HOME RUNS", HR_C, BUZZ_HR,
-                        "Ranked by appearances in posted X parlays, filtered to who's playing. % = my model.")
-            + _buzz_block("🟢", "Most bet-on HITS", HIT_C, BUZZ_HITS,
-                          "From posted hit parlays (Contreras, Rutschman led the slips). % = my model.")
-            + _buzz_block("🔥", "STRIKEOUTS — model board", K_C, BUZZ_K,
-                          "Public K names weren't pitching 6/18, so these are the model's K plays. % = over prob."))
+    top7 = _top_plays(board, now_iso)
+    my_parlays = "".join(_parlay_card(p) for p in MY_PARLAYS) + _gen_parlays(board, now_iso)
+    BUZZ_NOTE = "Ranked by how heavily each appears in posted parlays, filtered to who's playing. % = my model."
+    buzz = (_buzz_block("💣", "Most bet-on HOME RUNS", HR_C, BUZZ_HR, BUZZ_NOTE)
+            + _buzz_block("🟢", "Most bet-on HITS", HIT_C, BUZZ_HITS, BUZZ_NOTE)
+            + _buzz_block("🔥", "Most bet-on STRIKEOUTS", K_C, BUZZ_K, BUZZ_NOTE))
     slate = "".join(f'<div style="font:400 13px/1.6 Arial;color:{SUB};">{s}</div>' for s in SLATE)
     tweets = "".join(_tweet_card(t) for t in TWEETS)
     dropped = _card(f'<div style="font:400 12px/1.5 Arial;color:{SUB};">🚫 <b>Dropped (not playing / injured):</b> '
@@ -315,7 +378,10 @@ def build_html() -> str:
   {_section_title("🔥", "My Plays", "what I'd actually post")}
   {plays}
 
-  {_section_title("🎰", "My 3-Leg Parlays", "your most-played ticket")}
+  {_section_title("📋", "Top 7 by Prop", "ranked by my model · 🔥 = also buzzing")}
+  {top7}
+
+  {_section_title("🎰", "My Parlays", "your most-played ticket")}
   {my_parlays}
 
   {_section_title("📡", "Most Bet-On", "Board A — from posted X parlays")}
