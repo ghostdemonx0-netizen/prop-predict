@@ -16,16 +16,16 @@ def _ranked(board: dict, key: str, metric: str, now) -> list:
                   key=lambda p: p.get(metric, 0) or 0, reverse=True)
 
 
-def render_site_email(board: dict, now_iso: str | None = None, depth: int = 40) -> dict:
+def render_site_email(board: dict, now_iso: str | None = None, depth: int = 30) -> dict:
     now = _now_utc(now_iso)
     date = board.get("date", "")
     blocks = [
-        ("💣", "Home Runs", _HR_C, _ranked(board, "hr", "probability", now)[:depth], "probability", "lineup_status"),
-        ("🟢", "Hits (1+)", _HIT_C, _ranked(board, "hits", "p_ge1", now)[:depth], "p_ge1", "lineup_status"),
-        ("🔥", "Strikeouts (over)", _K_C, _ranked(board, "strikeouts", "over_prob", now)[:depth], "over_prob", "pitcher_status"),
-        ("📊", "Total Bases (2+)", TB_C, _ranked(board, "total_bases", "p_ge2", now)[:depth], "p_ge2", "lineup_status"),
+        ("💣", "Home Runs", _HR_C, _ranked(board, "hr", "probability", now)[:depth], "probability", "lineup_status", True),
+        ("🟢", "Hits (1+)", _HIT_C, _ranked(board, "hits", "p_ge1", now)[:depth], "p_ge1", "lineup_status", True),
+        ("🔥", "Strikeouts (over)", _K_C, _ranked(board, "strikeouts", "over_prob", now)[:depth], "over_prob", "pitcher_status", False),
+        ("📊", "Total Bases (2+)", TB_C, _ranked(board, "total_bases", "p_ge2", now)[:depth], "p_ge2", "lineup_status", True),
     ]
-    body = "".join(_sblock(e, f"{t} — top {len(pl)}", c, pl, m, s) for e, t, c, pl, m, s in blocks)
+    body = "".join(_sblock(e, f"{t} — top {len(pl)}", c, pl, m, s, b) for e, t, c, pl, m, s, b in blocks)
     stamp = _et_stamp(board.get("updated"))
     head = f"Full Site Board &nbsp;·&nbsp; {date}" + (f" &nbsp;·&nbsp; {stamp}" if stamp else "")
     html = (f'<!DOCTYPE html><html><body style="margin:0;padding:0;background:{_BG};">'

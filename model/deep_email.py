@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from model.plays import _not_started, _now_utc, select_plays
 from model.plays_email import (_BG, _HIT_C, _HR_C, _INK, _K_C, _LINE, _SUB, _et_stamp, _pct,
-                               factor_strength, factor_tags)
+                               factor_strength, factor_tags, platoon_badge)
 
 # (color, metric, status field, bet label)
 META = {"HR": (_HR_C, "probability", "lineup_status", "to HR"),
@@ -37,10 +37,11 @@ def _row(i: int, p: dict, prop: str, color: str, val: str) -> str:
     tags = factor_tags(p, prop)
     sub = (f'<div style="margin-left:28px;font:400 10px/1.3 Arial;color:#94a3b8;">{" · ".join(tags)}</div>'
            if tags else "")
+    badge = platoon_badge(p) if prop in ("HR", "HITS") else ""
     return (f'<tr><td style="padding:7px 0;border-bottom:1px solid {_LINE};">'
             f'<span style="display:inline-block;width:20px;height:20px;background:{color};color:#fff;'
             f'border-radius:50%;text-align:center;font:800 11px/20px Arial;">{i}</span> '
-            f'<span style="font:600 13px/1.2 Arial;color:{_INK};">{p.get("player")}</span>{proj} '
+            f'<span style="font:600 13px/1.2 Arial;color:{_INK};">{p.get("player")}</span>{proj}{badge} '
             f'<span style="color:{_SUB};font:400 11px Arial;">{_bet(p, prop)}</span>'
             f'<span style="float:right;font:700 13px Arial;color:{color};">{val}</span>{sub}</td></tr>')
 

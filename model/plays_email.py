@@ -65,20 +65,21 @@ _INK, _SUB, _LINE, _BG = "#0f172a", "#475569", "#e2e8f0", "#f1f5f9"
 _HR_C, _K_C, _HIT_C = "#e8590c", "#1c7ed6", "#2f9e44"
 
 
-def _srow(rank: int, player, sub, val, color, proj) -> str:
+def _srow(rank: int, player, sub, val, color, proj, extra: str = "") -> str:
     tag = ('<span style="background:#fff4e6;color:#b9760a;font:700 9px/1 Arial;padding:2px 5px;'
            'border-radius:4px;margin-left:5px;">PROJ</span>') if proj else ""
     return (f'<tr><td style="padding:7px 0;border-bottom:1px solid {_LINE};">'
             f'<span style="display:inline-block;width:20px;height:20px;background:{color};color:#fff;'
             f'border-radius:50%;text-align:center;font:800 11px/20px Arial;">{rank}</span> '
-            f'<span style="font:600 13px/1.2 Arial;color:{_INK};">{_escape(str(player))}</span>{tag} '
+            f'<span style="font:600 13px/1.2 Arial;color:{_INK};">{_escape(str(player))}</span>{tag}{extra} '
             f'<span style="color:{_SUB};font:400 11px/1.2 Arial;">{_escape(str(sub))}</span>'
             f'<span style="float:right;font:700 13px/1.2 Arial;color:{color};">{val}</span></td></tr>')
 
 
-def _sblock(emoji: str, title: str, color: str, plays: list, metric: str, statusf: str) -> str:
+def _sblock(emoji: str, title: str, color: str, plays: list, metric: str, statusf: str, batter: bool = False) -> str:
     rows = "".join(_srow(i, p.get("player"), p.get("matchup", ""), _pct(p.get(metric)), color,
-                         p.get(statusf) != "confirmed") for i, p in enumerate(plays, 1))
+                         p.get(statusf) != "confirmed", platoon_badge(p) if batter else "")
+                   for i, p in enumerate(plays, 1))
     if not rows:
         rows = f'<tr><td style="font:400 12px Arial;color:{_SUB};padding:6px 0;">(no upcoming plays)</td></tr>'
     return (f'<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid {_LINE};'
@@ -165,6 +166,25 @@ def factor_tags(p: dict, prop: str) -> list:
 def factor_strength(p: dict, prop: str) -> int:
     """How many strong factors a play has — for the Factor Edge ranking."""
     return len(factor_tags(p, prop))
+
+
+def platoon_badge(p: dict) -> str:
+    """A lit-up box next to a BATTER who has the platoon edge — opposite-handed vs the
+    pitcher, or a switch hitter (always has it). Shows ⚡ vs RHP/LHP + pitcher name.
+    Returns '' when there's no edge or the data's missing. Batters only (not pitchers)."""
+    bats = p.get("bats")
+    vs = p.get("vs") or {}
+    throws, name = vs.get("throws"), vs.get("name")
+    if not bats or not throws:
+        return ""
+    edge = bats == "S" or (bats == "L" and throws == "R") or (bats == "R" and throws == "L")
+    if not edge:
+        return ""
+    hand = "RHP" if throws == "R" else "LHP"
+    nm = f" {name}" if name else ""
+    return (f'<span style="background:#fff9db;color:#a37500;border:1px solid #ffe066;'
+            f'font:700 9px/1 Arial;padding:2px 6px;border-radius:5px;margin-left:6px;">'
+            f'⚡ vs {hand}{nm}</span>')
 
 
 def render_push(selection: dict) -> str:
