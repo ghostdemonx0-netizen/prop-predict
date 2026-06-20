@@ -14,8 +14,9 @@ from pathlib import Path
 
 import requests
 
+from model.full_board import render_full_board
 from model.plays import select_plays
-from model.plays_email import render_email, render_push
+from model.plays_email import render_push
 
 BOARD_PATH = Path("web/public/data/latest.json")
 RESEND_URL = "https://api.resend.com/emails"
@@ -45,12 +46,14 @@ def send_push(message: str, *, topic: str) -> None:
 
 def main(argv: list[str]) -> int:
     dry = "--dry-run" in argv
-    selection = select_plays(load_board())
-    email = render_email(selection)
-    push = render_push(selection)
+    board = load_board()
+    selection = select_plays(board)
+    email = render_full_board(board)  # Season + History + Both, every prop
+    push = render_push(selection)     # phone push stays the lean top plays
 
     if dry:
-        print(email["text"])
+        print(email["subject"])
+        print(f"html: {len(email['html'])} bytes")
         print("\n[push]", push)
         return 0
 
