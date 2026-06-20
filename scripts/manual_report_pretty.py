@@ -18,6 +18,7 @@ import requests
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.parlays import _best_per_game, _combined, build_all_parlays, build_parlay_set  # noqa: E402
 from model.plays import select_plays  # noqa: E402
+from model.plays_email import platoon_badge  # noqa: E402
 
 BOARD = "/Users/issiakadiawara/Projects/prop-predict/web/public/data/latest.json"
 RESEND_URL = "https://api.resend.com/emails"
@@ -208,12 +209,14 @@ def _ppct(p: float) -> str:
 
 def _ranklist(rows: list, color: str) -> str:
     items = ""
-    for i, (name, sub, val) in enumerate(rows, 1):
+    for i, row in enumerate(rows, 1):
+        name, sub, val, *rest = row
+        badge = rest[0] if rest else ""
         sub_h = f' <span style="color:{SUB};font-weight:400;font-size:12px;">{sub}</span>' if sub else ""
         items += (f'<tr><td style="padding:6px 0;border-bottom:1px solid {LINE};">'
                   f'<span style="display:inline-block;width:20px;height:20px;background:{color};color:#fff;'
                   f'border-radius:50%;text-align:center;font:800 11px/20px Arial;">{i}</span> '
-                  f'<span style="font:600 13px/1.2 Arial;color:{INK};">{name}</span>{sub_h}'
+                  f'<span style="font:600 13px/1.2 Arial;color:{INK};">{name}</span>{badge}{sub_h}'
                   f'<span style="float:right;font:700 13px/1.2 Arial;color:{color};">{val}</span></td></tr>')
     return f'<table width="100%" cellpadding="0" cellspacing="0">{items}</table>'
 
@@ -225,19 +228,19 @@ def _model_board(board: dict, now_iso: str) -> str:
 
     def conf(plays, field):
         c = [p for p in plays if p.get(field) == "confirmed"]
-        return c[:10] if c else plays[:10]  # fall back to projected when nothing's confirmed yet
+        return c[:8] if c else plays[:8]  # fall back to projected when nothing's confirmed yet
     any_conf = any(p.get("lineup_status") == "confirmed" for p in sel["hr"])
-    hr = [(p["player"], p.get("matchup", ""), f'{p["probability"]*100:.0f}%') for p in conf(sel["hr"], "lineup_status")]
+    hr = [(p["player"], p.get("matchup", ""), f'{p["probability"]*100:.0f}%', platoon_badge(p)) for p in conf(sel["hr"], "lineup_status")]
     k = [(p["player"], f'O{p.get("line")}', f'{p["over_prob"]*100:.0f}%') for p in conf(sel["strikeouts"], "pitcher_status")]
-    hits = [(p["player"], p.get("matchup", ""), f'{p["p_ge1"]*100:.0f}%') for p in conf(sel["hits"], "lineup_status")]
+    hits = [(p["player"], p.get("matchup", ""), f'{p["p_ge1"]*100:.0f}%', platoon_badge(p)) for p in conf(sel["hits"], "lineup_status")]
     note = (f'<div style="font:400 11px/1.3 Arial;color:'
-            + ('#94a3b8;">confirmed lineups only · Top 10 (full 25 in Deep Board email)</div>' if any_conf
-               else '#d97706;">⚠️ projected — lineups not confirmed yet · Top 10</div>'))
-    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:4px;">💣 Top 10 — Home Runs</div>'
+            + ('#94a3b8;">confirmed lineups only · Top 8 (full 25 in Deep Board email)</div>' if any_conf
+               else '#d97706;">⚠️ projected — lineups not confirmed yet · Top 8</div>'))
+    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:4px;">💣 Top 8 — Home Runs</div>'
                 + note + _ranklist(hr, HR_C), HR_C)
-    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:4px;">🟢 Top 10 — Hits</div>'
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:4px;">🟢 Top 8 — Hits</div>'
                  + note + _ranklist(hits, HIT_C), HIT_C)
-    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:4px;">🔥 Top 10 — Strikeouts</div>'
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:4px;">🔥 Top 8 — Strikeouts</div>'
                  + note + _ranklist(k, K_C), K_C)
     return out
 
@@ -278,15 +281,17 @@ def _factor_tags(p: dict, prop: str) -> list:
 
 
 def _factor_list(rows: list, color: str) -> str:
-    """rows = (name, bet, val, tags[]). Shows rank, name, bet, %, and a factor sub-line."""
+    """rows = (name, bet, val, tags[, badge]). Rank, name, [⚡platoon box], bet, %, factor sub-line."""
     items = ""
-    for i, (name, bet, val, tags) in enumerate(rows, 1):
+    for i, row in enumerate(rows, 1):
+        name, bet, val, tags, *rest = row
+        badge = rest[0] if rest else ""
         sub = (f'<div style="margin-left:28px;font:400 10px/1.3 Arial;color:#94a3b8;">{" · ".join(tags)}</div>'
                if tags else "")
         items += (f'<tr><td style="padding:7px 0;border-bottom:1px solid {LINE};">'
                   f'<span style="display:inline-block;width:20px;height:20px;background:{color};color:#fff;'
                   f'border-radius:50%;text-align:center;font:800 11px/20px Arial;">{i}</span> '
-                  f'<span style="font:600 13px/1.2 Arial;color:{INK};">{name}</span> '
+                  f'<span style="font:600 13px/1.2 Arial;color:{INK};">{name}</span>{badge} '
                   f'<span style="color:{SUB};font:400 11px/1.2 Arial;">{bet}</span>'
                   f'<span style="float:right;font:700 13px/1.2 Arial;color:{color};">{val}</span>'
                   f'{sub}</td></tr>')
@@ -306,19 +311,19 @@ def _board_b(board: dict, now_iso: str) -> str:
         return s
 
     def blend(plays, metric, buzz):
-        return sorted(plays, key=lambda p: score(p, metric, buzz), reverse=True)[:10]
+        return sorted(plays, key=lambda p: score(p, metric, buzz), reverse=True)[:8]
 
     def rows(plays, metric, prop, buzz, betfn):
         return [(p["player"] + (" ✅" if p["player"] in buzz else ""), betfn(p), f'{p[metric]*100:.0f}%',
-                 _factor_tags(p, prop)) for p in plays]
+                 _factor_tags(p, prop), platoon_badge(p) if prop in ("HR", "HITS") else "") for p in plays]
     hr = blend(sel["hr"], "probability", bh)
     hits = blend(sel["hits"], "p_ge1", bhit)
     k = blend(sel["strikeouts"], "over_prob", set())
-    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:8px;">💣 Blend — Home Runs (top 10)</div>'
+    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:8px;">💣 Blend — Home Runs (top 8)</div>'
                 + _factor_list(rows(hr, "probability", "HR", bh, lambda p: "to HR"), HR_C), HR_C)
-    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:8px;">🟢 Blend — Hits (top 10)</div>'
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:8px;">🟢 Blend — Hits (top 8)</div>'
                  + _factor_list(rows(hits, "p_ge1", "HITS", bhit, lambda p: "1+ hit"), HIT_C), HIT_C)
-    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:8px;">🔥 Blend — Strikeouts (top 10)</div>'
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:8px;">🔥 Blend — Strikeouts (top 8)</div>'
                  + _factor_list(rows(k, "over_prob", "K", set(), lambda p: f'O{p.get("line")}'), K_C), K_C)
     return out
 
@@ -337,11 +342,12 @@ def _my_plays(board: dict, now_iso: str) -> str:
         for pool in pools:
             if r < len(pool):
                 locks.append(pool[r])
-    lock_rows = [(p["player"], bet, f'{m*100:.0f}%', _factor_tags(p, prop)) for p, prop, bet, m in locks[:9]]
+    lock_rows = [(p["player"], bet, f'{m*100:.0f}%', _factor_tags(p, prop),
+                  platoon_badge(p) if prop in ("HR", "HITS") else "") for p, prop, bet, m in locks[:9]]
     hr_blend = sorted(hr, key=lambda p: p["probability"] * (1.15 if p["player"] in bh else 1.0), reverse=True)[:10]
     mb_rows = [(p["player"] + (" ✅" if p["player"] in bh else ""), "to HR", f'{p["probability"]*100:.0f}%',
-                _factor_tags(p, "HR")) for p in hr_blend]
-    con_rows = [(p["player"], "to HR", f'{p["probability"]*100:.0f}%', _factor_tags(p, "HR"))
+                _factor_tags(p, "HR"), platoon_badge(p)) for p in hr_blend]
+    con_rows = [(p["player"], "to HR", f'{p["probability"]*100:.0f}%', _factor_tags(p, "HR"), platoon_badge(p))
                 for p in [p for p in hr if p["player"] not in bh][:10]]
     k10 = [(p["player"], f'O{p.get("line")}', f'{p["over_prob"]*100:.0f}%', _factor_tags(p, "K")) for p in k[:10]]
     GOLD = "#ca8a04"
@@ -362,11 +368,11 @@ def _top_plays(board: dict, now_iso: str) -> str:
     bh = {n for n, _ in BUZZ_HR}
     bhit = {n for n, _ in BUZZ_HITS}
 
-    def rows(plays, metric, sub_fn, buzz):
-        return [(p["player"] + (" 🔥" if p["player"] in buzz else ""), sub_fn(p), f'{p[metric]*100:.0f}%')
-                for p in plays]
-    hr = rows(sel["hr"], "probability", lambda p: p.get("matchup", ""), bh)
-    hits = rows(sel["hits"], "p_ge1", lambda p: p.get("matchup", ""), bhit)
+    def rows(plays, metric, sub_fn, buzz, batter=False):
+        return [(p["player"] + (" 🔥" if p["player"] in buzz else ""), sub_fn(p), f'{p[metric]*100:.0f}%',
+                 platoon_badge(p) if batter else "") for p in plays]
+    hr = rows(sel["hr"], "probability", lambda p: p.get("matchup", ""), bh, batter=True)
+    hits = rows(sel["hits"], "p_ge1", lambda p: p.get("matchup", ""), bhit, batter=True)
     k = rows(sel["strikeouts"], "over_prob", lambda p: f'O{p.get("line")}', set())
     out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:8px;">💣 Top 7 — Home Runs</div>'
                 + _ranklist(hr, HR_C), HR_C)
@@ -378,27 +384,32 @@ def _top_plays(board: dict, now_iso: str) -> str:
 
 
 def _gen_parlays(board: dict, now_iso: str) -> str:
-    """5 parlay TYPES, 3 DIVERSE versions each — different legs (not the same top 3), each with a
-    factor-based 'why' from the model's real multipliers."""
+    """5 parlay TYPES, 3 DIVERSE versions each — by Season, History (3-yr), and Blended numbers.
+    Different legs (not the same top 3), each with a factor-based 'why' from real multipliers."""
     sel = select_plays(board, hr_count=25, k_count=25, hits_count=25, now_iso=now_iso)
+    SM = {"HR": "probability", "HITS": "p_ge1", "K": "over_prob"}
+    HM = {"HR": "probability_hist", "HITS": "p_ge1_hist", "K": "over_prob_hist"}
 
-    def bpg(plays, metric):  # best play per game (full dict, keeps factors), sorted
+    def met(p, prop, mode="season"):
+        s = p.get(SM[prop], 0) or 0
+        if mode == "season":
+            return s
+        h = p.get(HM[prop], 0) or 0
+        return h if mode == "hist" else (s + h) / 2
+
+    def bpg(plays, keyfn):  # best play per game (full dict, keeps factors), sorted
         bg = {}
         for p in plays:
             g = p.get("game_id")
             if g is None:
                 continue
-            if g not in bg or p.get(metric, 0) > bg[g].get(metric, 0):
+            if g not in bg or keyfn(p) > keyfn(bg[g]):
                 bg[g] = p
-        return sorted(bg.values(), key=lambda p: p.get(metric, 0), reverse=True)
-    hp, kp, rp = bpg(sel["hits"], "p_ge1"), bpg(sel["strikeouts"], "over_prob"), bpg(sel["hr"], "probability")
+        return sorted(bg.values(), key=keyfn, reverse=True)
 
     def lab(p, prop):
         return (f'{p["player"]} 1+ hit' if prop == "HITS"
                 else f'{p["player"]} O{p.get("line")} K' if prop == "K" else f'{p["player"]} HR')
-
-    def met(p, prop):
-        return p["p_ge1"] if prop == "HITS" else (p["over_prob"] if prop == "K" else p["probability"])
 
     def why(legs):
         tags = []
@@ -411,7 +422,7 @@ def _gen_parlays(board: dict, now_iso: str) -> str:
                 uniq.append(t)
         return ("Edge: " + " · ".join(uniq[:4])) if uniq else "Top model numbers, all different games."
 
-    def version_row(legs, i, color):
+    def version_row(legs, i, color, mode):
         seen, ok = set(), []
         for p, prop in legs:
             if p["game_id"] not in seen:
@@ -421,18 +432,18 @@ def _gen_parlays(board: dict, now_iso: str) -> str:
             return None
         comb = 1.0
         for p, prop in ok:
-            comb *= met(p, prop)
+            comb *= met(p, prop, mode)
         pc = f"{comb*100:.0f}%" if comb >= 0.1 else f"{comb*100:.1f}%"
         return (f'<div style="padding:7px 0;border-bottom:1px solid {LINE};font:400 12px/1.4 Arial;color:{SUB};">'
                 f'<b style="color:{color};">v{i} · {pc}</b> · ' + " + ".join(lab(p, prop) for p, prop in ok)
                 + f'<div style="margin-top:2px;font:400 10px/1.3 Arial;color:#94a3b8;">{why(ok)}</div></div>')
 
-    def type_card(name, tag, color, versions):
+    def type_card(name, tag, color, versions, mode):
         rows, n = "", 0
         for legs in versions:
             if n >= 3:
                 break
-            r = version_row(legs, n + 1, color)
+            r = version_row(legs, n + 1, color, mode)
             if r:
                 n += 1
                 rows += r
@@ -446,17 +457,32 @@ def _gen_parlays(board: dict, now_iso: str) -> str:
 
     def g(pool, i, prop):
         return (pool[i], prop) if i < len(pool) else None
-    mixed = [[g(hp, 0, "HITS"), g(hp, 3, "HITS"), g(kp, 0, "K")], [g(hp, 1, "HITS"), g(hp, 4, "HITS"), g(kp, 1, "K")],
-             [g(hp, 2, "HITS"), g(hp, 5, "HITS"), g(kp, 2, "K")], [g(hp, 0, "HITS"), g(kp, 0, "K"), g(hp, 6, "HITS")]]
-    bal = [[g(hp, 0, "HITS"), g(rp, 0, "HR"), g(kp, 0, "K")], [g(hp, 1, "HITS"), g(rp, 1, "HR"), g(kp, 1, "K")],
-           [g(hp, 2, "HITS"), g(rp, 2, "HR"), g(kp, 2, "K")], [g(hp, 3, "HITS"), g(rp, 3, "HR"), g(kp, 3, "K")]]
-    mixed = [[x for x in v if x] for v in mixed]
-    bal = [[x for x in v if x] for v in bal]
-    return (type_card("Safe Hits 3-Leg", "highest floor", HIT_C, win(hp, "HITS"))
-            + type_card("Strikeout 3-Leg", "pitcher overs", K_C, win(kp, "K"))
-            + type_card("HR Bomb 3-Leg", "longshot, big payout", HR_C, win(rp, "HR"))
-            + type_card("Mixed Safe 3-Leg", "hits + K", INK, mixed)
-            + type_card("Balanced 3-Leg", "hit + HR + K", HR_C, bal))
+
+    def build(hp, kp, rp, mode, core_only=False):
+        bal = [[g(hp, 0, "HITS"), g(rp, 0, "HR"), g(kp, 0, "K")], [g(hp, 1, "HITS"), g(rp, 1, "HR"), g(kp, 1, "K")],
+               [g(hp, 2, "HITS"), g(rp, 2, "HR"), g(kp, 2, "K")], [g(hp, 3, "HITS"), g(rp, 3, "HR"), g(kp, 3, "K")]]
+        bal = [[x for x in v if x] for v in bal]
+        out = (type_card("Safe Hits 3-Leg", "highest floor", HIT_C, win(hp, "HITS"), mode)
+               + type_card("Strikeout 3-Leg", "pitcher overs", K_C, win(kp, "K"), mode)
+               + type_card("Balanced 3-Leg", "hit + HR + K", HR_C, bal, mode))
+        if core_only:  # history/blend: 3 core types (keeps the email under Gmail's clip limit)
+            return out
+        out += type_card("HR Bomb 3-Leg", "longshot, big payout", HR_C, win(rp, "HR"), mode)
+        mixed = [[g(hp, 0, "HITS"), g(hp, 3, "HITS"), g(kp, 0, "K")], [g(hp, 1, "HITS"), g(hp, 4, "HITS"), g(kp, 1, "K")],
+                 [g(hp, 2, "HITS"), g(hp, 5, "HITS"), g(kp, 2, "K")], [g(hp, 0, "HITS"), g(kp, 0, "K"), g(hp, 6, "HITS")]]
+        mixed = [[x for x in v if x] for v in mixed]
+        return out + type_card("Mixed Safe 3-Leg", "hits + K", INK, mixed, mode)
+
+    def pools(mode):
+        return (bpg(sel["hits"], lambda p: met(p, "HITS", mode)),
+                bpg(sel["strikeouts"], lambda p: met(p, "K", mode)),
+                bpg(sel["hr"], lambda p: met(p, "HR", mode)))
+
+    def hdr(text):
+        return f'<div style="font:800 15px/1.2 Arial;color:{INK};margin:16px 0 8px;">{text}</div>'
+    return (hdr("🎰 Parlays — Season") + build(*pools("season"), "season")
+            + hdr("📜 Parlays — History-Weighted (3-yr)") + build(*pools("hist"), "hist", core_only=True)
+            + hdr("🔀 Parlays — Blended (season + history)") + build(*pools("blend"), "blend", core_only=True))
 
 
 def _parlay_rows(parlays: list, color: str) -> str:

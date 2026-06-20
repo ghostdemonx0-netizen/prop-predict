@@ -53,19 +53,35 @@ def _list(plays: list, prop: str, color: str) -> str:
 
 
 # ---------- parlays (diverse, factor-reasoned) ----------
-def _bpg(plays: list, metric: str) -> list:
+# metric per prop, by mode: season number, 3-yr history number, or blend of both
+_SEASON_M = {"HR": "probability", "HITS": "p_ge1", "K": "over_prob"}
+_HIST_M = {"HR": "probability_hist", "HITS": "p_ge1_hist", "K": "over_prob_hist"}
+
+
+def _metp(p, prop, mode="season"):
+    s = p.get(_SEASON_M[prop], 0) or 0
+    if mode == "season":
+        return s
+    h = p.get(_HIST_M[prop], 0) or 0
+    if mode == "hist":
+        return h
+    return (s + h) / 2  # blend
+
+
+def _bpg(plays: list, keyfn) -> list:
+    """Best play per game by keyfn, sorted high→low (so parlay legs never share a game)."""
     bg = {}
     for p in plays:
         g = p.get("game_id")
         if g is None:
             continue
-        if g not in bg or p.get(metric, 0) > bg[g].get(metric, 0):
+        if g not in bg or keyfn(p) > keyfn(bg[g]):
             bg[g] = p
-    return sorted(bg.values(), key=lambda p: p.get(metric, 0), reverse=True)
+    return sorted(bg.values(), key=keyfn, reverse=True)
 
 
 def _met(p, prop):
-    return p["p_ge1"] if prop == "HITS" else (p["over_prob"] if prop == "K" else p["probability"])
+    return _metp(p, prop, "season")
 
 
 def _lab(p, prop):
@@ -83,7 +99,7 @@ def _why(legs):
     return ("Edge: " + " · ".join(uniq[:4])) if uniq else "Top model numbers, all different games."
 
 
-def _parlay_versions(versions, color):
+def _parlay_versions(versions, color, mode="season"):
     rows, n = "", 0
     for legs in versions:
         if n >= 3:
@@ -98,7 +114,7 @@ def _parlay_versions(versions, color):
         n += 1
         comb = 1.0
         for p, prop in ok:
-            comb *= _met(p, prop)
+            comb *= _metp(p, prop, mode)
         pc = f"{comb*100:.0f}%" if comb >= 0.1 else f"{comb*100:.1f}%"
         rows += (f'<div style="padding:7px 0;border-bottom:1px solid {_LINE};font:400 12px/1.4 Arial;color:{_SUB};">'
                  f'<b style="color:{color};">v{n} · {pc}</b> · ' + " + ".join(_lab(p, prop) for p, prop in ok)
@@ -106,13 +122,13 @@ def _parlay_versions(versions, color):
     return rows
 
 
-def _type_card(name, tag, color, versions):
+def _type_card(name, tag, color, versions, mode="season"):
     return _card(f'<div style="font:800 14px/1.2 Arial;color:{color};margin-bottom:2px;">🎰 {name} '
                  f'<span style="font-weight:400;font-size:11px;color:{_SUB};">×3 · {tag}</span></div>'
-                 + _parlay_versions(versions, color), color)
+                 + _parlay_versions(versions, color, mode), color)
 
 
-def _parlays(hp, kp, rp):
+def _parlays(hp, kp, rp, mode="season"):
     def win(pool, prop):
         c = [[(pool[i], prop) for i in range(s, s + 3) if i < len(pool)] for s in (0, 3, 6)]
         c += [[(pool[i], prop) for i in idx if i < len(pool)] for idx in ((0, 1, 2), (1, 3, 5), (2, 4, 6))]
@@ -125,11 +141,11 @@ def _parlays(hp, kp, rp):
     bal = [[g(hp, 0, "HITS"), g(rp, 0, "HR"), g(kp, 0, "K")], [g(hp, 1, "HITS"), g(rp, 1, "HR"), g(kp, 1, "K")],
            [g(hp, 2, "HITS"), g(rp, 2, "HR"), g(kp, 2, "K")], [g(hp, 3, "HITS"), g(rp, 3, "HR"), g(kp, 3, "K")]]
     clean = lambda v: [[x for x in leg if x] for leg in v]
-    return (_type_card("Safe Hits 3-Leg", "highest floor", _HIT_C, win(hp, "HITS"))
-            + _type_card("Strikeout 3-Leg", "pitcher overs", _K_C, win(kp, "K"))
-            + _type_card("HR Bomb 3-Leg", "longshot", _HR_C, win(rp, "HR"))
-            + _type_card("Mixed Safe 3-Leg", "hits + K", _INK, clean(mixed))
-            + _type_card("Balanced 3-Leg", "hit + HR + K", _HR_C, clean(bal)))
+    return (_type_card("Safe Hits 3-Leg", "highest floor", _HIT_C, win(hp, "HITS"), mode)
+            + _type_card("Strikeout 3-Leg", "pitcher overs", _K_C, win(kp, "K"), mode)
+            + _type_card("HR Bomb 3-Leg", "longshot", _HR_C, win(rp, "HR"), mode)
+            + _type_card("Mixed Safe 3-Leg", "hits + K", _INK, clean(mixed), mode)
+            + _type_card("Balanced 3-Leg", "hit + HR + K", _HR_C, clean(bal), mode))
 
 
 def _moneyline(allpool):
@@ -155,10 +171,18 @@ def render_deep_email(board: dict, now_iso: str | None = None) -> dict:
     date = board.get("date", "")
     sel = select_plays(board, hr_count=12, k_count=12, hits_count=12, now_iso=now_iso)
 
-    # diverse pools (one play per game)
-    hp = _bpg([p for p in board.get("hits", []) if _not_started(p, now)], "p_ge1")
-    kp = _bpg([p for p in board.get("strikeouts", []) if _not_started(p, now)], "over_prob")
-    rp = _bpg([p for p in board.get("hr", []) if _not_started(p, now)], "probability")
+    # upcoming plays per prop, then diverse pools (one play per game) ranked by each mode
+    hits_up = [p for p in board.get("hits", []) if _not_started(p, now)]
+    k_up = [p for p in board.get("strikeouts", []) if _not_started(p, now)]
+    hr_up = [p for p in board.get("hr", []) if _not_started(p, now)]
+
+    def pools(mode):
+        return (_bpg(hits_up, lambda p: _metp(p, "HITS", mode)),
+                _bpg(k_up, lambda p: _metp(p, "K", mode)),
+                _bpg(hr_up, lambda p: _metp(p, "HR", mode)))
+    hp, kp, rp = pools("season")
+    hph, kph, rph = pools("hist")
+    hpb, kpb, rpb = pools("blend")
 
     # Top per prop (factor-tagged)
     tops = (_card(_title("💣", "Top 12 — Home Runs", _HR_C) + _list(sel["hr"], "HR", _HR_C), _HR_C)
@@ -205,8 +229,12 @@ def render_deep_email(board: dict, now_iso: str | None = None) -> dict:
             ml_pool.append((p, prop))
 
     body = (tops
-            + f'<div style="font:800 16px/1.2 Arial;color:{_INK};margin:18px 0 8px;">🎰 Parlays (diverse · 3 versions each)</div>'
-            + _parlays(hp, kp, rp)
+            + f'<div style="font:800 16px/1.2 Arial;color:{_INK};margin:18px 0 8px;">🎰 Parlays — Season (diverse · 3 versions each)</div>'
+            + _parlays(hp, kp, rp, "season")
+            + f'<div style="font:800 16px/1.2 Arial;color:{_INK};margin:18px 0 8px;">📜 Parlays — History-Weighted (3-yr · diverse · 3 each)</div>'
+            + _parlays(hph, kph, rph, "hist")
+            + f'<div style="font:800 16px/1.2 Arial;color:{_INK};margin:18px 0 8px;">🔀 Parlays — Blended (season + history · diverse · 3 each)</div>'
+            + _parlays(hpb, kpb, rpb, "blend")
             + f'<div style="font:800 16px/1.2 Arial;color:#0ca678;margin:18px 0 8px;">🎲 Diversity</div>'
             + diversity + div_par
             + f'<div style="font:800 16px/1.2 Arial;color:#f08c00;margin:18px 0 8px;">🧠 Factor Edge</div>'
