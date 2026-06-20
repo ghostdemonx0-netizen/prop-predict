@@ -15,6 +15,10 @@ from pathlib import Path
 
 import requests
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from model.parlays import build_all_parlays  # noqa: E402
+from model.plays import select_plays  # noqa: E402
+
 BOARD = "/Users/issiakadiawara/Projects/prop-predict/web/public/data/latest.json"
 RESEND_URL = "https://api.resend.com/emails"
 
@@ -81,6 +85,25 @@ TWEETS = [
     "🔒 LOCK: Bryan Woo OVER 3.5 Ks. Everyone's chasing Misiorowski K's — he's not even pitching. My model's quietly sitting on an 80%. 👉 [link] #MLB #PropBets",
     "💣 Ben Rice is in everybody's HR parlay tonight — and my model agrees (25%). When the slips AND the math line up, I'm in. 👉 [link] #HomeRunProps",
     "🎰 My safe 3-leg: Bryan Woo O3.5 K + Drake Baldwin hit + Adley Rutschman hit. ~40% combined, three different games. 👉 [link] #GamblingTwitter",
+]
+
+BLEND = [
+    ("✅", HIT_C, "Convergence (safest)", "Ben Rice (HR), Adley Rutschman & Drake Baldwin (hits) — my model AND the posted parlays are both on them. Lead with these."),
+    ("⚠️", HR_C, "My contrarian edges", "Bryan Woo & Shane Drohan K-overs (both 80%) — zero public K buzz because the loud K arms weren't pitching. Pure model edge."),
+    ("🌀", SUB, "Buzz I'm fading", "Schwarber/Soto HR slips and Misiorowski K hype — all sidelined or not pitching 6/18. Don't chase names that aren't in the lineup."),
+]
+
+FLAGS = [
+    ("🌡️", "102° heat at LAA (ATH @ LAA)", "Home-run tailwind — boosts any LAA/ATH power bat."),
+    ("🏟️", "NYM @ PHI, Citizens Bank Park", "Top HR park tonight (~3.36 projected HR)."),
+    ("🪧", "Hittable starters", "Nola (5.86 ERA) & Manaea (4.78) — lifts opposing bats' hit/HR props."),
+    ("🩹", "No injury/scratch flags", "on the featured plays in this pass."),
+]
+
+TRENDING = [
+    "\"Daily Dinger\" content pushing Harper + Bellinger HR hard — verify lineups first.",
+    "Misiorowski dubbed \"most dominant pitcher on the planet\" (105mph) — huge K hype, but NOT pitching 6/18.",
+    "FanDuel's hit list stacked the NYM @ PHI game (6 of 25 picks) — crowd piling into one spot.",
 ]
 
 
@@ -162,9 +185,103 @@ def _tweet_card(t: str) -> str:
     return _card(inner, "#1da1f2")
 
 
+def _notes_card(items: list, kind: str) -> str:
+    rows = ""
+    for it in items:
+        if kind == "blend":
+            emoji, color, head, body = it
+            rows += (f'<div style="margin-bottom:10px;"><span style="font:800 13px/1.3 Arial;color:{color};">'
+                     f'{emoji} {head}</span><div style="font:400 13px/1.5 Arial;color:{SUB};">{body}</div></div>')
+        elif kind == "flags":
+            emoji, head, body = it
+            rows += (f'<div style="margin-bottom:8px;font:400 13px/1.5 Arial;color:{SUB};">'
+                     f'{emoji} <b style="color:{INK};">{head}</b> — {body}</div>')
+        else:  # trending
+            rows += f'<div style="margin-bottom:7px;font:400 13px/1.5 Arial;color:{SUB};">• {it}</div>'
+    return _card(rows)
+
+
+def _ppct(p: float) -> str:
+    pc = p * 100
+    return f"{pc:.0f}%" if pc >= 10 else (f"{pc:.1f}%" if pc >= 0.1 else "<0.1%")
+
+
+def _ranklist(rows: list, color: str) -> str:
+    items = ""
+    for i, (name, sub, val) in enumerate(rows, 1):
+        sub_h = f' <span style="color:{SUB};font-weight:400;font-size:12px;">{sub}</span>' if sub else ""
+        items += (f'<tr><td style="padding:6px 0;border-bottom:1px solid {LINE};">'
+                  f'<span style="display:inline-block;width:20px;height:20px;background:{color};color:#fff;'
+                  f'border-radius:50%;text-align:center;font:800 11px/20px Arial;">{i}</span> '
+                  f'<span style="font:600 13px/1.2 Arial;color:{INK};">{name}</span>{sub_h}'
+                  f'<span style="float:right;font:700 13px/1.2 Arial;color:{color};">{val}</span></td></tr>')
+    return f'<table width="100%" cellpadding="0" cellspacing="0">{items}</table>'
+
+
+def _model_board(board: dict, now_iso: str) -> str:
+    sel = select_plays(board, hr_count=15, k_count=15, hits_count=15, now_iso=now_iso)
+    hr = [(p["player"], p.get("matchup", ""), f'{p["probability"]*100:.0f}%') for p in sel["hr"]]
+    k = [(p["player"], f'O{p.get("line")}', f'{p["over_prob"]*100:.0f}%') for p in sel["strikeouts"]]
+    hits = [(p["player"], p.get("matchup", ""), f'{p["p_ge1"]*100:.0f}%') for p in sel["hits"]]
+    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:8px;">💣 Top 15 — Home Runs</div>'
+                + _ranklist(hr, HR_C), HR_C)
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:8px;">🟢 Top 15 — Hits</div>'
+                 + _ranklist(hits, HIT_C), HIT_C)
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:8px;">🔥 Top 15 — Strikeouts</div>'
+                 + _ranklist(k, K_C), K_C)
+    return out
+
+
+def _parlay_rows(parlays: list, color: str) -> str:
+    if not parlays:
+        return f'<div style="font:400 12px/1.4 Arial;color:{SUB};">(none — slate too small)</div>'
+    rows = ""
+    for p in parlays:
+        legs = " + ".join(leg["label"] for leg in p["legs"])
+        rows += (f'<div style="padding:6px 0;border-bottom:1px solid {LINE};font:400 12px/1.4 Arial;color:{SUB};">'
+                 f'<b style="color:{color};">{_ppct(p["prob"])}</b> · {legs}</div>')
+    return rows
+
+
+def _parlays_section(board: dict, now_iso: str) -> str:
+    par = build_all_parlays(board, now_iso=now_iso)
+    out = ""
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:8px;">💣 HR parlays</div>'
+                 + '<div style="font:700 12px/1 Arial;color:#94a3b8;margin:6px 0 2px;">2-LEG</div>'
+                 + _parlay_rows(par["hr"]["2leg"], HR_C)
+                 + '<div style="font:700 12px/1 Arial;color:#94a3b8;margin:8px 0 2px;">3-LEG</div>'
+                 + _parlay_rows(par["hr"]["3leg"], HR_C)
+                 + '<div style="font:700 12px/1 Arial;color:#94a3b8;margin:8px 0 2px;">LONGSHOTS (4/5/6-LEG)</div>'
+                 + _parlay_rows(par["hr"]["longshots"][4] + par["hr"]["longshots"][5] + par["hr"]["longshots"][6], HR_C),
+                 HR_C)
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:8px;">🟢 Hits parlays (6 & 7-leg)</div>'
+                 + _parlay_rows(par["hits"]["6leg"] + par["hits"]["7leg"], HIT_C), HIT_C)
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:8px;">🔥 Ks parlays (6 & 7-leg)</div>'
+                 + _parlay_rows(par["ks"]["6leg"] + par["ks"]["7leg"], K_C), K_C)
+    ml = [(n, par["moneyline"][n]) for n in (5, 6, 8, 9, 10, 11, 12, 13, 14, 15)]
+    ml_rows = ""
+    skipped = []
+    for n, pls in ml:
+        if pls:
+            ml_rows += (f'<div style="font:700 12px/1 Arial;color:#94a3b8;margin:8px 0 2px;">{n}-LEG</div>'
+                        + _parlay_rows(pls[:2], INK))
+        else:
+            skipped.append(str(n))
+    skip = (f'<div style="font:400 11px/1.4 Arial;color:{SUB};margin-top:6px;">Skipped {", ".join(skipped)}-leg — '
+            f'not enough games on the slate.</div>' if skipped else "")
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{INK};margin-bottom:8px;">🎟 Money-line ladder '
+                 f'<span style="font-weight:400;font-size:12px;color:{SUB};">(slate-adaptive)</span></div>'
+                 + ml_rows + skip)
+    return out
+
+
 def build_html() -> str:
+    board = json.load(open(BOARD))
+    now_iso = f"{board.get('date', '2026-01-01')}T00:00:00+00:00"
+    fresh = board.get("updated", "")
+
     plays = "".join(_play_card(p) for p in MY_PLAYS)
-    parlays = "".join(_parlay_card(p) for p in MY_PARLAYS)
+    my_parlays = "".join(_parlay_card(p) for p in MY_PARLAYS)
     buzz = (_buzz_block("💣", "Most bet-on HOME RUNS", HR_C, BUZZ_HR,
                         "Ranked by appearances in posted X parlays, filtered to who's playing. % = my model.")
             + _buzz_block("🟢", "Most bet-on HITS", HIT_C, BUZZ_HITS,
@@ -184,7 +301,7 @@ def build_html() -> str:
   <tr><td style="background:{INK};border-radius:14px;padding:22px 22px;">
     <span style="font:800 22px/1 -apple-system,Arial;color:#fff;">⚾ PROP-PREDICT</span>
     <span style="float:right;background:#16a34a;color:#fff;font:700 11px/1 Arial;padding:6px 10px;border-radius:999px;">● MANUAL</span>
-    <div style="font:600 13px/1.4 Arial;color:#94a3b8;margin-top:6px;">Curated Report &nbsp;·&nbsp; {DATE}</div>
+    <div style="font:600 13px/1.4 Arial;color:#94a3b8;margin-top:6px;">Curated Report &nbsp;·&nbsp; {DATE} &nbsp;·&nbsp; board refreshed {fresh[:16].replace('T', ' ')} UTC</div>
   </td></tr>
 
   {_section_title("🗓️", "Slate Overview")}
@@ -194,17 +311,32 @@ def build_html() -> str:
   {plays}
 
   {_section_title("🎰", "My 3-Leg Parlays", "your most-played ticket")}
-  {parlays}
+  {my_parlays}
 
-  {_section_title("📡", "Most Bet-On", "from posted X parlays")}
+  {_section_title("📡", "Most Bet-On", "Board A — from posted X parlays")}
   {buzz}
   {dropped}
+
+  {_section_title("🧠", "Blend", "Board B — model meets buzz")}
+  {_notes_card(BLEND, "blend")}
+
+  {_section_title("⚠️", "Contradiction & Environment Flags")}
+  {_notes_card(FLAGS, "flags")}
+
+  {_section_title("⭐", "Trending Elsewhere", "verify first")}
+  {_notes_card(TRENDING, "trending")}
+
+  {_section_title("📊", "My Model Board", "Board C — pure math")}
+  {_model_board(board, now_iso)}
+
+  {_section_title("🎟", "All Site Parlays")}
+  {_parlays_section(board, now_iso)}
 
   {_section_title("🐦", "Ready-to-Post Tweets")}
   {tweets}
 
   <tr><td style="padding:18px 4px;font:400 12px/1.5 Arial;color:{SUB};">
-    Full Top-25 boards + all parlays are in your 📊 Deep Board email. Source: prop-predict.
+    Source: prop-predict &nbsp;·&nbsp; buzz from posted X parlays + last30days, availability-filtered.
   </td></tr>
 
 </table></td></tr></table></body></html>"""
