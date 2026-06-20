@@ -7,15 +7,15 @@ so a guy strong in history but weak this season (or vice-versa) is filtered out.
 from __future__ import annotations
 
 from model.plays import _not_started, _now_utc
-from model.plays_email import _BG, _HIT_C, _HR_C, _INK, _K_C, _LINE, _SUB, _et_stamp, _pct
+from model.plays_email import _BG, _HIT_C, _HR_C, _INK, _K_C, _LINE, _SUB, _et_stamp, _pct, platoon_badge
 
 TB_C, GOLD = "#7048e8", "#ca8a04"
-# label, board key, color, season metric, history metric, status field, emoji
+# label, board key, color, season metric, history metric, status field, emoji, is_batter
 PROPS = [
-    ("Home Runs", "hr", _HR_C, "probability", "probability_hist", "lineup_status", "💣"),
-    ("Hits (1+)", "hits", _HIT_C, "p_ge1", "p_ge1_hist", "lineup_status", "🟢"),
-    ("Strikeouts", "strikeouts", _K_C, "over_prob", "over_prob_hist", "pitcher_status", "🔥"),
-    ("Total Bases (2+)", "total_bases", TB_C, "p_ge2", "p_ge2_hist", "lineup_status", "📊"),
+    ("Home Runs", "hr", _HR_C, "probability", "probability_hist", "lineup_status", "💣", True),
+    ("Hits (1+)", "hits", _HIT_C, "p_ge1", "p_ge1_hist", "lineup_status", "🟢", True),
+    ("Strikeouts", "strikeouts", _K_C, "over_prob", "over_prob_hist", "pitcher_status", "🔥", False),
+    ("Total Bases (2+)", "total_bases", TB_C, "p_ge2", "p_ge2_hist", "lineup_status", "📊", True),
 ]
 DEPTH = 10  # per prop section. 12 sections + 3 lock blocks must fit Gmail's ~102KB clip limit.
 
@@ -51,23 +51,25 @@ def _wrap(emoji, title, color, rows):
             f'<table width="100%" cellpadding="0" cellspacing="0">{rows}</table></td></tr></table>')
 
 
-def _list_block(emoji, title, color, plays, metric, statusf):
+def _list_block(emoji, title, color, plays, metric, statusf, batter=False):
     rows = "".join(
         f'<tr><td style="padding:6px 0;border-bottom:1px solid {_LINE};">'
         f'<span style="display:inline-block;width:20px;height:20px;background:{color};color:#fff;'
         f'border-radius:50%;text-align:center;font:800 11px/20px Arial;">{i}</span> '
         f'<span style="font:600 13px Arial;color:{_INK};">{p.get("player")}</span>{_proj(p, statusf)}'
+        f'{platoon_badge(p) if batter else ""}'
         f'<span style="float:right;font:700 13px Arial;color:{color};">{_pct(p.get(metric))}</span></td></tr>'
         for i, p in enumerate(plays, 1))
     return _wrap(emoji, title, color, rows)
 
 
-def _both_block(emoji, title, color, plays, m, mh, statusf):
+def _both_block(emoji, title, color, plays, m, mh, statusf, batter=False):
     rows = "".join(
         f'<tr><td style="padding:6px 0;border-bottom:1px solid {_LINE};">'
         f'<span style="display:inline-block;width:20px;height:20px;background:{color};color:#fff;'
         f'border-radius:50%;text-align:center;font:800 11px/20px Arial;">{i}</span> '
         f'<span style="font:600 13px Arial;color:{_INK};">{p.get("player")}</span>{_proj(p, statusf)}'
+        f'{platoon_badge(p) if batter else ""}'
         f'<span style="float:right;font:700 12px Arial;color:{color};">S {_pct(p.get(m))} · H {_pct(p.get(mh))}</span>'
         f'</td></tr>' for i, p in enumerate(plays, 1))
     return _wrap(emoji, title, color, rows)
@@ -75,10 +77,10 @@ def _both_block(emoji, title, color, plays, m, mh, statusf):
 
 def _lock_items(board, now, kind):
     items = []
-    for _, key, color, m, mh, statusf, emoji in PROPS:
+    for _, key, color, m, mh, statusf, emoji, batter in PROPS:
         met = m if kind == "season" else mh
         for p in _up(board, key, now):
-            items.append((p.get(met, 0) or 0, p, emoji, color, statusf, met))
+            items.append((p.get(met, 0) or 0, p, emoji, color, statusf, met, batter))
     items.sort(key=lambda x: x[0], reverse=True)
     return items[:8]
 
@@ -89,8 +91,9 @@ def _lock_block(title, plays_items):
         f'<span style="display:inline-block;width:20px;height:20px;background:{GOLD};color:#fff;'
         f'border-radius:50%;text-align:center;font:800 11px/20px Arial;">{i}</span> '
         f'{emoji} <span style="font:600 13px Arial;color:{_INK};">{p.get("player")}</span>{_proj(p, statusf)}'
+        f'{platoon_badge(p) if batter else ""}'
         f'<span style="float:right;font:700 13px Arial;color:{color};">{_pct(p.get(met))}</span></td></tr>'
-        for i, (v, p, emoji, color, statusf, met) in enumerate(plays_items, 1))
+        for i, (v, p, emoji, color, statusf, met, batter) in enumerate(plays_items, 1))
     return _wrap("🔒", title, GOLD, rows)
 
 
@@ -111,15 +114,15 @@ def render_full_board(board: dict, now_iso: str | None = None) -> dict:
 
     def section(heading, color, render):
         out = f'<div style="font:800 16px Arial;color:{color};margin:18px 0 8px;">{heading}</div>'
-        for label, key, c, m, mh, statusf, emoji in PROPS:
-            out += render(label, key, c, m, mh, statusf, emoji)
+        for label, key, c, m, mh, statusf, emoji, batter in PROPS:
+            out += render(label, key, c, m, mh, statusf, emoji, batter)
         return out
     season = section("📅 Season", _INK,
-                     lambda label, key, c, m, mh, sf, e: _list_block(e, f"{label} — top {DEPTH}", c, _rank(_up(board, key, now), m, DEPTH), m, sf))
+                     lambda label, key, c, m, mh, sf, e, b: _list_block(e, f"{label} — top {DEPTH}", c, _rank(_up(board, key, now), m, DEPTH), m, sf, b))
     history = section("📜 History-Weighted (3-yr)", _INK,
-                      lambda label, key, c, m, mh, sf, e: _list_block(e, f"{label} (hist) — top {DEPTH}", c, _rank(_up(board, key, now), mh, DEPTH), mh, sf))
+                      lambda label, key, c, m, mh, sf, e, b: _list_block(e, f"{label} (hist) — top {DEPTH}", c, _rank(_up(board, key, now), mh, DEPTH), mh, sf, b))
     both = section("🎯 Both — must rank in season AND history", _INK,
-                   lambda label, key, c, m, mh, sf, e: _both_block(e, f"{label} — in both", c, _both(_up(board, key, now), m, mh), m, mh, sf))
+                   lambda label, key, c, m, mh, sf, e, b: _both_block(e, f"{label} — in both", c, _both(_up(board, key, now), m, mh), m, mh, sf, b))
 
     body = locks + season + history + both
     stamp = _et_stamp(board.get("updated"))
