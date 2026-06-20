@@ -39,67 +39,65 @@ PILL = {
     "lean": ("#eef2f7", "#475569", "👀 MODEL LEAN"),
 }
 
-DATE = "June 18, 2026"
+DATE = "June 20, 2026"
 
 SLATE = [
-    "🏟️ Hottest HR park: <b>NYM @ PHI</b> (Citizens Bank) — Nola (5.86 ERA) hittable",
-    "🌡️ <b>102°</b> heat at LAA — home-run tailwind",
-    "🪧 Loud public K names (Misiorowski, deGrom, Skubal) <b>weren't pitching</b> — K buzz didn't apply",
+    "📅 <b>14 games</b> today — <b>early read</b>, lineups not yet confirmed (projections).",
+    "🔁 Re-run closer to first pitch (~1:10pm ET) for confirmed lineups before betting.",
+    "🔥 Ben Rice is the most-posted HR name in early parlays — and he's in a lineup.",
 ]
 
 MY_PLAYS = [
-    {"prop": "K", "lead": "LOCK", "player": "Bryan Woo", "bet": "Over 3.5 Ks", "model": "80%",
-     "tag": "contrarian", "why": "My model's safest number — and the public K parlays were all Misiorowski/deGrom (who weren't even pitching). Quiet money."},
-    {"prop": "HR", "player": "Ben Rice", "bet": "To hit a HR", "model": "25%",
-     "tag": "agree", "why": "Showed up in TWO separate posted HR parlays AND sits in my model's top tier. Bettors and the math both on him."},
-    {"prop": "HR", "player": "Shea Langeliers", "bet": "To hit a HR", "model": "25%",
-     "tag": "agree", "why": "Model 25% + 102° heat in LAA. Power, weather, and buzz all line up."},
-    {"prop": "HITS", "player": "Drake Baldwin", "bet": "1+ hit", "model": "73%",
-     "tag": "lean", "why": "Highest hit probability on my whole board, flying under the public's radar."},
-    {"prop": "HITS", "player": "Adley Rutschman", "bet": "1+ hit", "model": "69%",
-     "tag": "agree", "why": "In 5 posted hit slips and 69% on my model — strongest model+buzz overlap of the day."},
+    {"prop": "HITS", "lead": "LOCK", "player": "Kody Clemens", "bet": "1+ hit", "model": "83%",
+     "tag": "lean", "why": "Highest single probability on the whole board today — the safest floor play (projected; confirm lineup)."},
+    {"prop": "HR", "player": "Ben Rice", "bet": "To hit a HR", "model": "24%",
+     "tag": "agree", "why": "Most-posted HR name in the early parlays (10+ mentions) AND on my board. Bettors and the math agree."},
+    {"prop": "HR", "player": "Byron Buxton", "bet": "To hit a HR", "model": "32%",
+     "tag": "contrarian", "why": "My model's #1 HR play (32%) but not in the early parlay buzz — your differentiated angle."},
+    {"prop": "K", "player": "J.T. Ginn", "bet": "Over 3.5 Ks", "model": "79%",
+     "tag": "lean", "why": "Top strikeout edge on the board, and K parlay buzz is light this early — quiet money."},
 ]
 
 MY_PARLAYS = [
-    {"name": "The Safe 3-Leg", "tag": "your most-played type", "combined": "40%", "color": HIT_C,
-     "legs": [("Bryan Woo", "Over 3.5 Ks", "80%"), ("Drake Baldwin", "1+ hit", "73%"),
-              ("Adley Rutschman", "1+ hit", "69%")],
-     "why": "Three high-floor, model-backed legs across different games. This is the ticket I'd actually fire today."},
-    {"name": "Model + Buzz HR Bomb", "tag": "longshot, big upside", "combined": "1.4%", "color": HR_C,
-     "legs": [("Ben Rice", "HR", "25%"), ("Shea Langeliers", "HR", "25%"), ("Bryce Harper", "HR", "22%")],
-     "why": "Lottery payout, but all three are exactly where my model AND the posted parlays overlap. Small stake, monster ceiling."},
+    {"name": "The Safe 3-Leg", "tag": "your most-played type", "combined": "55%", "color": HIT_C,
+     "legs": [("Kody Clemens", "1+ hit", "83%"), ("Matt Shaw", "1+ hit", "82%"),
+              ("Endy Rodríguez", "1+ hit", "81%")],
+     "why": "Three highest-floor hit props on the board, different games — ~55% combined. The ticket I'd fire (confirm lineups first)."},
+    {"name": "Model + Buzz HR Bomb", "tag": "longshot, big upside", "combined": "2.0%", "color": HR_C,
+     "legs": [("Byron Buxton", "HR", "32%"), ("Kyle Schwarber", "HR", "26%"), ("Ben Rice", "HR", "24%")],
+     "why": "My three best HR numbers, all playing today — Ben Rice & Schwarber also buzzing. Small stake, big ceiling."},
 ]
 
 # (player, model%) ranked MOST bet-on at top. Filled each run from a DEEP multi-account X
 # sweep, availability-filtered to who's playing. Target depth: 15 per prop. No fake counts.
-BUZZ_HR = []     # e.g. [("Ben Rice","25%"), ("Shea Langeliers","25%"), ...] up to 15
-BUZZ_HITS = []   # up to 15
-BUZZ_K = []      # up to 15
-DROPPED = ""     # buzz names excluded because not in today's lineups / injured
+BUZZ_HR = [("Ben Rice", "24%"), ("Kyle Schwarber", "26%"), ("Yordan Alvarez", "22%"),
+           ("Nick Kurtz", "17%"), ("Pete Alonso", "15%")]
+BUZZ_HITS = [("Ben Rice", "70%"), ("Yordan Alvarez", "69%"), ("Kyle Schwarber", "66%"), ("Nick Kurtz", "64%")]
+BUZZ_K = []  # K parlay volume is light this early — fills in closer to game time
+DROPPED = "Jordan Walker, Christian Scott — in early parlays but NOT in today's lineups"
 
 TWEETS = [
-    "🔒 LOCK: Bryan Woo OVER 3.5 Ks. Everyone's chasing Misiorowski K's — he's not even pitching. My model's quietly sitting on an 80%. 👉 [link] #MLB #PropBets",
-    "💣 Ben Rice is in everybody's HR parlay tonight — and my model agrees (25%). When the slips AND the math line up, I'm in. 👉 [link] #HomeRunProps",
-    "🎰 My safe 3-leg: Bryan Woo O3.5 K + Drake Baldwin hit + Adley Rutschman hit. ~40% combined, three different games. 👉 [link] #GamblingTwitter",
+    "🔒 Lock: Kody Clemens 1+ hit (my model 83%) — quietly the safest play on today's board. 👉 [link] #MLB #PropBets",
+    "💣 Ben Rice is in everybody's early HR parlay — and my model backs it (24%). When the slips and the math agree, I'm in. 👉 [link] #HomeRunProps",
+    "🎰 My safe 3-leg: Kody Clemens + Matt Shaw + Endy Rodríguez, all 1+ hit. ~55% combined, three different games. 👉 [link] #GamblingTwitter",
 ]
 
 BLEND = [
-    ("✅", HIT_C, "Convergence (safest)", "Ben Rice (HR), Adley Rutschman & Drake Baldwin (hits) — my model AND the posted parlays are both on them. Lead with these."),
-    ("⚠️", HR_C, "My contrarian edges", "Bryan Woo & Shane Drohan K-overs (both 80%) — zero public K buzz because the loud K arms weren't pitching. Pure model edge."),
-    ("🌀", SUB, "Buzz I'm fading", "Schwarber/Soto HR slips and Misiorowski K hype — all sidelined or not pitching 6/18. Don't chase names that aren't in the lineup."),
+    ("✅", HIT_C, "Convergence (safest)", "Ben Rice — top of the early HR parlays AND on my board (24% HR / 70% hit). Lead with him."),
+    ("⚠️", HR_C, "My contrarian edges", "Byron Buxton — my #1 HR at 32% with zero early buzz. J.T. Ginn K (79%) — no public K parlays yet. Pure model edges."),
+    ("🌀", SUB, "Buzz I'm fading", "Jordan Walker & Christian Scott showed up in slips but aren't in today's lineups. Don't bet names that aren't playing."),
 ]
 
 FLAGS = [
-    ("🌡️", "102° heat at LAA (ATH @ LAA)", "Home-run tailwind — boosts any LAA/ATH power bat."),
-    ("🏟️", "NYM @ PHI, Citizens Bank Park", "Top HR park tonight (~3.36 projected HR)."),
-    ("🪧", "Hittable starters", "Nola (5.86 ERA) & Manaea (4.78) — lifts opposing bats' hit/HR props."),
-    ("🩹", "No injury/scratch flags", "on the featured plays in this pass."),
+    ("⏰", "EARLY READ", "Lineups are NOT confirmed yet — everything here is projected. Re-run closer to first pitch."),
+    ("🔁", "Confirm before betting", "Status flips projected → confirmed as lineups post (first game ~1:10pm ET)."),
+    ("🩹", "No scratch/injury flags", "surfaced on the featured plays in this early pass."),
 ]
 
 TRENDING = [
-    "\"Daily Dinger\" content pushing Harper + Bellinger HR hard — verify lineups first.",
-    "Misiorowski dubbed \"most dominant pitcher on the planet\" (105mph) — huge K hype, but NOT pitching 6/18.",
-    "FanDuel's hit list stacked the NYM @ PHI game (6 of 25 picks) — crowd piling into one spot.",
+    "Ben Rice is the heaviest early HR-parlay name (10+ posted slips).",
+    "\"Daily Dingers\" / \"Strikeout Targets\" content accounts active — verify each name is in a lineup.",
+    "K-prop parlay volume is light this early; most K action posts closer to game time.",
 ]
 
 
@@ -221,11 +219,15 @@ def _model_board(board: dict, now_iso: str) -> str:
     sel = select_plays(board, hr_count=60, k_count=60, hits_count=60, now_iso=now_iso)
 
     def conf(plays, field):
-        return [p for p in plays if p.get(field) == "confirmed"][:25]
+        c = [p for p in plays if p.get(field) == "confirmed"]
+        return c[:25] if c else plays[:25]  # fall back to projected when nothing's confirmed yet
+    any_conf = any(p.get("lineup_status") == "confirmed" for p in sel["hr"])
     hr = [(p["player"], p.get("matchup", ""), f'{p["probability"]*100:.0f}%') for p in conf(sel["hr"], "lineup_status")]
     k = [(p["player"], f'O{p.get("line")}', f'{p["over_prob"]*100:.0f}%') for p in conf(sel["strikeouts"], "pitcher_status")]
     hits = [(p["player"], p.get("matchup", ""), f'{p["p_ge1"]*100:.0f}%') for p in conf(sel["hits"], "lineup_status")]
-    note = '<div style="font:400 11px/1.3 Arial;color:#94a3b8;margin-bottom:6px;">confirmed lineups only · Top 25</div>'
+    note = (f'<div style="font:400 11px/1.3 Arial;color:'
+            + ('#94a3b8;">confirmed lineups only · Top 25</div>' if any_conf
+               else '#d97706;">⚠️ projected — lineups not confirmed yet · Top 25</div>'))
     out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:4px;">💣 Top 25 — Home Runs</div>'
                 + note + _ranklist(hr, HR_C), HR_C)
     out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:4px;">🟢 Top 25 — Hits</div>'
