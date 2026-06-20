@@ -21,20 +21,21 @@ def _board(n_games=5):
 
 def test_deep_email_has_boards_and_parlays():
     out = render_deep_email(_board(), now_iso="2026-06-18T00:00:00+00:00")
-    t = out["text"]
-    assert "TOP 25 — HOME RUNS" in t
-    assert "TOP 25 — HITS" in t
-    assert "TOP 25 — STRIKEOUTS" in t
-    assert "PARLAYS" in t
-    assert "MONEY-LINE" in t
+    h = out["html"]
+    assert "Top 12 — Home Runs" in h
+    assert "Parlays (diverse" in h
+    assert "Diversity" in h
+    assert "Factor Edge" in h
+    assert "Money-line ladder" in h
     assert out["subject"].startswith("📊 Deep Board")
-    assert "<pre" in out["html"]
+    assert "border-left:4px solid" in h  # styled cards
+    assert "<pre" not in h  # no more monospace dump
 
 
 def test_deep_email_notes_skipped_moneyline_on_light_slate():
-    # 5 games -> 5-leg money-line builds, 6+ skipped
+    # 5 games -> 5-leg money-line builds, 6+ skipped (note now in the HTML)
     out = render_deep_email(_board(5), now_iso="2026-06-18T00:00:00+00:00")
-    assert "skipped" in out["text"].lower()
+    assert "Skipped" in out["html"]
 
 
 def test_deep_push_is_a_summary_pointing_to_email():
