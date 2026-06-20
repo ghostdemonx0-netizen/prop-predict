@@ -23,7 +23,9 @@ def test_deep_email_has_boards_and_parlays():
     out = render_deep_email(_board(), now_iso="2026-06-18T00:00:00+00:00")
     h = out["html"]
     assert "Top 12 — Home Runs" in h
-    assert "Parlays (diverse" in h
+    assert "Parlays — Season" in h
+    assert "History-Weighted (3-yr" in h  # new history-weighted parlay section
+    assert "Blended (season + history" in h  # new blended parlay section
     assert "Diversity" in h
     assert "Factor Edge" in h
     assert "Money-line ladder" in h
