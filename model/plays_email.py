@@ -130,6 +130,43 @@ def render_email(selection: dict) -> dict:
     return {"subject": subject, "text": text, "html": html}
 
 
+def factor_tags(p: dict, prop: str) -> list:
+    """Reasoning from the model's own factor multipliers — heat, wind, matchup, form, BvP.
+    Pure thresholding of numbers the model already computed (no AI). Shared by all emails."""
+    tags = []
+    t, w = p.get("temp_f"), p.get("wind_out_mph")
+    if isinstance(t, (int, float)) and t >= 90:
+        tags.append(f"🌡️{t:.0f}°")
+    if prop == "HR":
+        if isinstance(w, (int, float)) and w >= 5:
+            tags.append(f"💨out {w:.0f}")
+        if p.get("pitcher_mult", 1) >= 1.15:
+            tags.append("vs HR-prone arm")
+        if p.get("recent_form_mult", 1) >= 1.06:
+            tags.append("🔥hot")
+        if p.get("park_mult", 1) >= 1.05:
+            tags.append("hitter park")
+        if p.get("bvp_mult", 1) >= 1.12:
+            tags.append("owns matchup")
+    elif prop == "HITS":
+        if p.get("pitcher_factor", 1) >= 1.2:
+            tags.append("vs hittable arm")
+        if p.get("recent_form_mult", 1) >= 1.05:
+            tags.append("🔥hot")
+        if (p.get("vs") or {}).get("lean") == "H":
+            tags.append("matchup→hits")
+    elif prop == "K":
+        ek, ln = p.get("expected_ks"), p.get("line")
+        if isinstance(ek, (int, float)) and isinstance(ln, (int, float)) and ek - ln >= 1.0:
+            tags.append(f"proj {ek:.1f} vs {ln}")
+    return tags
+
+
+def factor_strength(p: dict, prop: str) -> int:
+    """How many strong factors a play has — for the Factor Edge ranking."""
+    return len(factor_tags(p, prop))
+
+
 def render_push(selection: dict) -> str:
     """The full lean plays — compact enough to read straight in the phone push."""
     lines = [f"🔒 {_lock_line(selection.get('lock'))}"]
