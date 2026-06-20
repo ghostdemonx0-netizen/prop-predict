@@ -16,7 +16,7 @@ from pathlib import Path
 import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from model.parlays import build_all_parlays  # noqa: E402
+from model.parlays import _best_per_game, _combined, build_all_parlays, build_parlay_set  # noqa: E402
 from model.plays import select_plays  # noqa: E402
 
 BOARD = "/Users/issiakadiawara/Projects/prop-predict/web/public/data/latest.json"
@@ -242,6 +242,30 @@ def _model_board(board: dict, now_iso: str) -> str:
     return out
 
 
+def _my_plays(board: dict, now_iso: str) -> str:
+    """Categorized, ranked: 7 Locks · 7 HR (model+buzz) · 7 HR (contrarian) · 10 Ks."""
+    sel = select_plays(board, hr_count=40, k_count=40, hits_count=40, now_iso=now_iso)
+    bh = {n for n, _ in BUZZ_HR}
+    allp = ([(p["player"], "to hit a HR", p["probability"]) for p in sel["hr"]]
+            + [(p["player"], "1+ hit", p["p_ge1"]) for p in sel["hits"]]
+            + [(p["player"], f'O{p.get("line")} Ks', p["over_prob"]) for p in sel["strikeouts"]])
+    allp.sort(key=lambda x: x[2], reverse=True)
+    locks = [(n, b, f'{m*100:.0f}%') for n, b, m in allp[:7]]
+    hr_mb = [(p["player"], "to HR", f'{p["probability"]*100:.0f}%') for p in sel["hr"] if p["player"] in bh][:7]
+    hr_con = [(p["player"], "to HR", f'{p["probability"]*100:.0f}%') for p in sel["hr"] if p["player"] not in bh][:7]
+    k10 = [(p["player"], f'O{p.get("line")}', f'{p["over_prob"]*100:.0f}%') for p in sel["strikeouts"][:10]]
+    GOLD = "#ca8a04"
+
+    def block(emoji, title, color, rows):
+        body = _ranklist(rows, color) if rows else f'<div style="font:400 12px Arial;color:{SUB};">(none yet)</div>'
+        return _card(f'<div style="font:800 15px/1.2 Arial;color:{color};margin-bottom:8px;">{emoji} {title}</div>'
+                     + body, color)
+    return (block("🔒", "Top 7 Locks", GOLD, locks)
+            + block("💣", "7 HR — Model + Buzz ✅", HR_C, hr_mb)
+            + block("💣", "7 HR — Contrarian Edge ⚠️", HR_C, hr_con)
+            + block("🔥", "10 Strikeouts", K_C, k10))
+
+
 def _top_plays(board: dict, now_iso: str) -> str:
     """Top 7 per prop (HR / Hits / Ks), ranked by model %, 🔥 = also in the buzz."""
     sel = select_plays(board, hr_count=7, k_count=7, hits_count=7, now_iso=now_iso)
@@ -264,41 +288,45 @@ def _top_plays(board: dict, now_iso: str) -> str:
 
 
 def _gen_parlays(board: dict, now_iso: str) -> str:
-    """Several model-built parlays (mostly 3-leg — the user's most-played), different games."""
-    sel = select_plays(board, hr_count=10, k_count=10, hits_count=10, now_iso=now_iso)
-    h, k, hr = sel["hits"], sel["strikeouts"], sel["hr"]
+    """5 parlay TYPES, 3 versions each (15 total). Different-game legs. The user places 3-leggers most."""
+    sel = select_plays(board, hr_count=25, k_count=25, hits_count=25, now_iso=now_iso)
+    hp, kp, rp = _best_per_game(sel["hits"]), _best_per_game(sel["strikeouts"]), _best_per_game(sel["hr"])
 
-    def leg(p, prop):
-        if prop == "hits":
-            return (p["player"], "1+ hit", p["p_ge1"])
-        if prop == "k":
-            return (p["player"], f'O{p.get("line")} K', p["over_prob"])
-        return (p["player"], "HR", p["probability"])
+    def type_card(name, tag, color, versions):
+        rows, n = "", 0
+        for legs in versions:
+            if n >= 3:
+                break
+            legs = [l for l in legs if l]
+            seen, ok = set(), []
+            for l in legs:  # keep different games only
+                if l["game_id"] not in seen:
+                    seen.add(l["game_id"])
+                    ok.append(l)
+            if len(ok) < 3:
+                continue
+            n += 1
+            pr = _combined(ok)
+            pc = f"{pr*100:.0f}%" if pr >= 0.1 else f"{pr*100:.1f}%"
+            rows += (f'<div style="padding:7px 0;border-bottom:1px solid {LINE};font:400 12px/1.4 Arial;color:{SUB};">'
+                     f'<b style="color:{color};">v{n} · {pc}</b> · ' + " + ".join(l["label"] for l in ok) + '</div>')
+        return _card(f'<div style="font:800 14px/1.2 Arial;color:{color};margin-bottom:2px;">🎰 {name} '
+                     f'<span style="font-weight:400;font-size:11px;color:{SUB};">×3 · {tag}</span></div>' + rows, color)
 
-    def card(name, tag, color, legs, why):
-        comb = 1.0
-        for _, _, pr in legs:
-            comb *= pr
-        cs = f"{comb*100:.0f}%" if comb >= 0.1 else f"{comb*100:.1f}%"
-        return _parlay_card({"name": name, "tag": tag, "color": color, "combined": cs,
-                             "legs": [(n, b, f"{pr*100:.0f}%") for n, b, pr in legs], "why": why})
-    out = ""
-    if len(h) >= 3:
-        out += card("Safe Hits 3-Leg", "highest floor", HIT_C, [leg(h[0], "hits"), leg(h[1], "hits"), leg(h[2], "hits")],
-                    "The three highest-probability hit props, different games. My go-to safe ticket.")
-    if len(k) >= 3:
-        out += card("Strikeout 3-Leg", "pitcher overs", K_C, [leg(k[0], "k"), leg(k[1], "k"), leg(k[2], "k")],
-                    "Top three K-overs on the board. Pitchers control their own outcome more than hitters.")
-    if len(h) >= 2 and len(k) >= 1:
-        out += card("Mixed Safe 3-Leg", "hits + K", INK, [leg(h[0], "hits"), leg(k[0], "k"), leg(h[1], "hits")],
-                    "Two safe hits plus the top strikeout over — spreads the risk across bet types.")
-    if len(hr) >= 3:
-        out += card("HR Bomb 3-Leg", "longshot, big payout", HR_C, [leg(hr[0], "hr"), leg(hr[1], "hr"), leg(hr[2], "hr")],
-                    "My three best home-run numbers. Lottery odds, huge ceiling — small stake.")
-    if len(h) >= 1 and len(hr) >= 1 and len(k) >= 1:
-        out += card("Balanced 3-Leg", "hit + HR + K", HR_C, [leg(h[0], "hits"), leg(hr[0], "hr"), leg(k[0], "k")],
-                    "One of each: a safe hit, a power swing, and a strikeout over.")
-    return out
+    def from_set(pool):  # 3 distinct different-game parlays of a single prop
+        return [s["legs"] for s in build_parlay_set(pool, 3, 3)]
+
+    def g(pool, i):
+        return pool[i] if i < len(pool) else None
+    mixed = [[g(hp, 0), g(hp, 1), g(kp, 0)], [g(hp, 0), g(hp, 2), g(kp, 1)], [g(hp, 1), g(hp, 3), g(kp, 2)],
+             [g(hp, 2), g(hp, 4), g(kp, 0)], [g(hp, 0), g(hp, 3), g(kp, 3)], [g(hp, 1), g(hp, 4), g(kp, 1)]]
+    bal = [[g(hp, 0), g(rp, 0), g(kp, 0)], [g(hp, 1), g(rp, 1), g(kp, 1)], [g(hp, 2), g(rp, 2), g(kp, 2)],
+           [g(hp, 3), g(rp, 3), g(kp, 0)], [g(hp, 0), g(rp, 1), g(kp, 2)], [g(hp, 1), g(rp, 2), g(kp, 3)]]
+    return (type_card("Safe Hits 3-Leg", "highest floor", HIT_C, from_set(hp))
+            + type_card("Strikeout 3-Leg", "pitcher overs", K_C, from_set(kp))
+            + type_card("HR Bomb 3-Leg", "longshot, big payout", HR_C, from_set(rp))
+            + type_card("Mixed Safe 3-Leg", "hits + K", INK, mixed)
+            + type_card("Balanced 3-Leg", "hit + HR + K", HR_C, bal))
 
 
 def _parlay_rows(parlays: list, color: str) -> str:
@@ -349,9 +377,9 @@ def build_html() -> str:
     now_iso = f"{board.get('date', '2026-01-01')}T00:00:00+00:00"
     fresh = board.get("updated", "")
 
-    plays = "".join(_play_card(p) for p in MY_PLAYS)
+    plays = _my_plays(board, now_iso)
     top7 = _top_plays(board, now_iso)
-    my_parlays = "".join(_parlay_card(p) for p in MY_PARLAYS) + _gen_parlays(board, now_iso)
+    my_parlays = _gen_parlays(board, now_iso)
     BUZZ_NOTE = "Ranked by how heavily each appears in posted parlays, filtered to who's playing. % = my model."
     buzz = (_buzz_block("💣", "Most bet-on HOME RUNS", HR_C, BUZZ_HR, BUZZ_NOTE)
             + _buzz_block("🟢", "Most bet-on HITS", HIT_C, BUZZ_HITS, BUZZ_NOTE)
@@ -375,13 +403,10 @@ def build_html() -> str:
   {_section_title("🗓️", "Slate Overview")}
   {_card(slate)}
 
-  {_section_title("🔥", "My Plays", "what I'd actually post")}
+  {_section_title("🔥", "My Plays", "7 locks · 7+7 HR · 10 K, in order")}
   {plays}
 
-  {_section_title("📋", "Top 7 by Prop", "ranked by my model · 🔥 = also buzzing")}
-  {top7}
-
-  {_section_title("🎰", "My Parlays", "your most-played ticket")}
+  {_section_title("🎰", "My Parlays", "3 versions of each type · your most-played")}
   {my_parlays}
 
   {_section_title("📡", "Most Bet-On", "Board A — from posted X parlays")}
@@ -396,6 +421,9 @@ def build_html() -> str:
 
   {_section_title("⭐", "Trending Elsewhere", "verify first")}
   {_notes_card(TRENDING, "trending")}
+
+  {_section_title("📋", "Top 7 by Prop", "ranked by my model · 🔥 = also buzzing")}
+  {top7}
 
   {_section_title("📊", "My Model Board", "Board C — pure math")}
   {_model_board(board, now_iso)}
