@@ -100,8 +100,9 @@ def test_dry_run_prints_and_sends_nothing(capsys, monkeypatch):
     rc = plays_deliver.main(["--dry-run"])
     out = capsys.readouterr().out
     assert rc == 0
-    assert "LOCK OF THE DAY" in out
+    assert "Full Board" in out  # the email subject
     assert "[push]" in out
+    assert "🔒" in out  # the phone push still carries the lock
 
 
 def test_empty_board_skips_sending(capsys, monkeypatch):
