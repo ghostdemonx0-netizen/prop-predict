@@ -1,0 +1,27 @@
+{
+  "_comment": "Today's buzz layer for the manual report. COPY this to manual_today.json and fill it fresh each run from a live X / last30days sweep, then run the report. 'date' MUST be today's date (YYYY-MM-DD) or the report refuses to send. Only who's actually in a lineup today goes in buzz_* (availability-filtered). model% = your model's number for that player; ranking ORDER is the buzz signal (no fabricated counts).",
+  "date": "2026-06-21",
+  "date_label": "June 21, 2026",
+  "slate": [
+    "📅 <b>N games</b> today — lineups confirmed / projected (say which).",
+    "🔁 Re-run closer to first pitch for confirmed lineups before betting.",
+    "🔥 One-line headline on the biggest buzz name today."
+  ],
+  "buzz_hr": [["Example Hitter", "24%"], ["Another Hitter", "21%"]],
+  "buzz_hits": [["Example Hitter", "70%"], ["Another Hitter", "66%"]],
+  "buzz_k": [["Example Pitcher", "78%"]],
+  "dropped": "Names that were in posted parlays but are NOT in today's lineups (injured/scratched).",
+  "flags": [
+    ["⏰", "LINEUP STATUS", "Confirmed or projected — state it plainly."],
+    ["🩹", "Injury / scratch notes", "Anything that moves a featured play."]
+  ],
+  "trending": [
+    "What content accounts / sharps are pushing today — verify each name is in a lineup.",
+    "K-prop volume note (light early, fills closer to game time)."
+  ],
+  "tweets": [
+    "🔒 Lock tweet — today's safest play + model % + [link] #MLB #PropBets",
+    "💣 HR-buzz tweet — the convergence name (slips + model agree) + [link]",
+    "🎰 Parlay tweet — your safe 3-leg, different games + [link]"
+  ]
+}
