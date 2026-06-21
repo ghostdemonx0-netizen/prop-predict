@@ -538,6 +538,9 @@ function ColBatterRow({
   tbKind: PropKind;
 }) {
   const adv = platoonAdvantage(hrRow.playerHand, hrRow.opponent?.hand);
+  // the matchup read can sit on any of the prop rows — use whichever has it so
+  // the K/C/N sphere never goes missing when one prop's row lacks `lean`.
+  const lean = hrRow.lean ?? hitsRow?.lean ?? tbRow?.lean ?? null;
   const sphereCell = (node: React.ReactNode, key: string) => (
     <span key={key} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>{node}</span>
   );
@@ -556,8 +559,8 @@ function ColBatterRow({
         textDecoration: "none",
       }}
     >
-      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, minWidth: 0 }}>
-        <span className="rl-name" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hrRow.player}</span>
+      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap", minWidth: 0 }}>
+        <span className="rl-name">{hrRow.player}</span>
         {hrRow.playerHand && (
           <span
             className="hand"
@@ -568,7 +571,7 @@ function ColBatterRow({
           </span>
         )}
       </span>
-      {sphereCell(hrRow.lean ? <MatchupSphere lean={hrRow.lean.lean} prob={hrRow.lean.prob} size={COL_SPHERE} /> : null, "kcn")}
+      {sphereCell(lean ? <MatchupSphere lean={lean.lean} prob={lean.prob} size={COL_SPHERE} /> : null, "kcn")}
       {sphereCell(<HeatSphere prob={hrRow.prob} kind="hr" size={COL_SPHERE} />, "hr")}
       {sphereCell(hitsRow ? <HeatSphere prob={hitsRow.prob} kind={hitsKind} size={COL_SPHERE} /> : null, "hits")}
       {sphereCell(tbRow ? <HeatSphere prob={tbRow.prob} kind={tbKind} size={COL_SPHERE} /> : null, "tb")}
