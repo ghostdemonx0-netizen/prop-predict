@@ -22,6 +22,10 @@ from model.plays_email import platoon_badge  # noqa: E402
 
 BOARD = "/Users/issiakadiawara/Projects/prop-predict/web/public/data/latest.json"
 RESEND_URL = "https://api.resend.com/emails"
+# Today's freshly-swept buzz layer (Most Bet-On / Slate / Tweets / Flags / Trending). Written
+# anew each run from the live X / last30days sweep; the staleness guard refuses to send if its
+# date isn't today, so the buzz can never go out stale. See scripts/manual_today.example.json.
+CONTENT = Path(__file__).resolve().parent / "manual_today.json"
 
 # ---- palette ----
 INK = "#0f172a"
@@ -605,17 +609,52 @@ def load_key() -> str:
     return os.environ.get("RESEND_API_KEY", "")
 
 
+def load_content() -> dict:
+    """The buzz layer for today, written fresh each run. Empty dict if not yet filled."""
+    if CONTENT.exists():
+        try:
+            return json.loads(CONTENT.read_text())
+        except Exception as exc:
+            print(f"[warn] could not read {CONTENT.name}: {exc}")
+    return {}
+
+
+def _apply_content(c: dict) -> None:
+    """Overlay today's swept buzz onto the module globals the renderers read."""
+    g = globals()
+    if c.get("date_label"):
+        g["DATE"] = c["date_label"]
+    for key, name in (("slate", "SLATE"), ("trending", "TRENDING"), ("tweets", "TWEETS")):
+        if key in c:
+            g[name] = c[key]
+    for key, name in (("buzz_hr", "BUZZ_HR"), ("buzz_hits", "BUZZ_HITS"),
+                      ("buzz_k", "BUZZ_K"), ("flags", "FLAGS")):
+        if key in c:
+            g[name] = [tuple(x) for x in c[key]]
+    if "dropped" in c:
+        g["DROPPED"] = c["dropped"]
+
+
 def _stale_guard(argv: list[str]) -> int | None:
-    """Refuse to build on a board that isn't today's — the Bryan-Woo / 2-day-stale failure."""
+    """Refuse to build on a stale board OR with stale (not-today) buzz. The board guard is the
+    Bryan-Woo 2-day-stale failure; the buzz guard is what forces a fresh X sweep every run."""
     import datetime
+    today = datetime.date.today().isoformat()
+    allow = "--allow-stale" in argv
     board = json.load(open(BOARD))
     bdate = board.get("date", "")
-    today = datetime.date.today().isoformat()
-    if bdate != today and "--allow-stale" not in argv:
+    if bdate != today and not allow:
         print(f"[STALE BOARD] board date is {bdate}, today is {today}.")
         print("Refusing to build a manual report on a stale board.")
         print("Refresh first: cd ~/Projects/prop-predict && .venv/bin/python -m model.jobs morning")
         print("(or pass --allow-stale to override for a test).")
+        return 1
+    cdate = load_content().get("date", "")
+    if cdate != today and not allow:
+        print(f"[BUZZ NOT FILLED] {CONTENT.name} date is {cdate or '(missing)'}, today is {today}.")
+        print("The Most Bet-On / Slate / Tweets layer must be swept fresh before sending.")
+        print(f"Fill {CONTENT} with today's X / last30days buzz (date set to {today}), then re-run.")
+        print("(or pass --allow-stale to send with the existing buzz for a test).")
         return 1
     return None
 
@@ -624,6 +663,7 @@ def main(argv: list[str]) -> int:
     guard = _stale_guard(argv)
     if guard is not None:
         return guard
+    _apply_content(load_content())  # overlay today's freshly-swept buzz before rendering
     html = build_html()
     if "--dry-run" in argv:
         Path("/tmp/manual_pretty.html").write_text(html)

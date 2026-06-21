@@ -39,3 +39,6 @@ web/public/data/*.json
 !web/public/data/index.json
 !web/public/data/2026-06-10.json
 !web/public/data/latest.json
+
+# live per-run manual buzz layer (written fresh each run; example is tracked)
+scripts/manual_today.json
