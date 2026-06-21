@@ -657,7 +657,6 @@ export function GameBreakdown({
   tbRows = [],
   hitsKind = "hits1",
   tbKind = "tb2",
-  layout = "columns",
 }: {
   matchup: string;
   hrRows: BoardRow[];
@@ -666,7 +665,6 @@ export function GameBreakdown({
   tbRows?: BoardRow[];
   hitsKind?: PropKind;
   tbKind?: PropKind;
-  layout?: "columns" | "stacked";
 }) {
   const hr = hrRows.filter((r) => r.matchup === matchup);
   const ks = kRows.filter((r) => r.matchup === matchup);
@@ -703,25 +701,7 @@ export function GameBreakdown({
           ))}
         </>
       )}
-      {hr.length > 0 && layout === "stacked" && (
-        <>
-          <div className="eyebrow" style={{ margin: "0.7rem 0 0.1rem" }}>Home run board</div>
-          <TeamSplit matchup={matchup} rows={hr} kind="hr" withLean />
-          {hits.length > 0 && (
-            <>
-              <div className="eyebrow" style={{ margin: "0.7rem 0 0.1rem" }}>Hits board</div>
-              <TeamSplit matchup={matchup} rows={hits} kind={hitsKind} />
-            </>
-          )}
-          {tb.length > 0 && (
-            <>
-              <div className="eyebrow" style={{ margin: "0.7rem 0 0.1rem" }}>Total bases board</div>
-              <TeamSplit matchup={matchup} rows={tb} kind={tbKind} />
-            </>
-          )}
-        </>
-      )}
-      {hr.length > 0 && layout === "columns" && (
+      {hr.length > 0 && (
         <>
           <div className="eyebrow" style={{ margin: "0.7rem 0 0.1rem" }}>Batter breakdown</div>
           <ColSplit

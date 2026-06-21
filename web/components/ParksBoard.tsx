@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { Game } from "../lib/types";
 import { GameBreakdown, type BoardRow } from "./PropBoard";
 import { heatColor, arrowColor, windText, gameTimeLabel, type PropKind } from "../lib/format";
@@ -92,7 +91,6 @@ export function ParksBoard({
   tbKind?: PropKind;
   expandable?: boolean;
 }) {
-  const [layout, setLayout] = useState<"columns" | "stacked">("columns");
   if (!games || games.length === 0) {
     return (
       <div className="panel" style={{ color: "var(--muted)", textAlign: "center" }}>
@@ -112,25 +110,7 @@ export function ParksBoard({
             <p className="factor-note" style={{ margin: 0 }}>
               Every game on the slate — click one for the full breakdown: starters, lineups, and edges.
             </p>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexShrink: 0 }}>
-              <span className="factor-note" style={{ margin: 0, whiteSpace: "nowrap" }}>spheres = park + weather boost</span>
-              <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>Layout:</span>
-                <div className="pillbar">
-                  {(["columns", "stacked"] as const).map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => setLayout(v)}
-                      data-active={layout === v}
-                      className="pill"
-                      style={{ padding: "0.16rem 0.4rem", fontSize: "0.58rem" }}
-                    >
-                      {v === "columns" ? "Columns" : "Stacked"}
-                    </button>
-                  ))}
-                </div>
-              </span>
-            </div>
+            <span className="factor-note" style={{ margin: 0, whiteSpace: "nowrap", flexShrink: 0 }}>spheres = park + weather boost</span>
           </div>
         </>
       ) : (
@@ -163,7 +143,6 @@ export function ParksBoard({
                   tbRows={tbRows}
                   hitsKind={hitsKind}
                   tbKind={tbKind}
-                  layout={layout}
                 />
               </details>
             );
