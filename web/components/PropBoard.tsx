@@ -570,6 +570,7 @@ function ColBatterRow({
             {hrRow.playerHand}
           </span>
         )}
+        {hrRow.status && <StatusChip status={hrRow.status} />}
       </span>
       {sphereCell(lean ? <MatchupSphere lean={lean.lean} prob={lean.prob} size={COL_SPHERE} /> : null, "kcn")}
       {sphereCell(<HeatSphere prob={hrRow.prob} kind="hr" size={COL_SPHERE} />, "hr")}
@@ -621,10 +622,7 @@ function ColSplit({
                 className="eyebrow"
                 style={{ margin: "0.6rem 0 0.15rem", padding: "0 0.25rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem", flexWrap: "wrap" }}
               >
-                <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "baseline", gap: "0.4rem" }}>
-                  {team} · {side}
-                  <StatusChip status={rs.find((r) => r.status)?.status} mode="pair" />
-                </span>
+                <span style={{ flexShrink: 0 }}>{team} · {side}</span>
                 {opp && (
                   <span style={{ letterSpacing: "normal", textTransform: "none", fontSize: "0.82rem" }}>
                     vs{" "}
