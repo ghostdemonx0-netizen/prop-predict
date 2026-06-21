@@ -602,54 +602,35 @@ function ColSplit({
   const awayHr = hrRows.filter((r) => r.team === away);
   const homeHr = hrRows.filter((r) => r.team === home);
   const split = home !== undefined && awayHr.length + homeHr.length === hrRows.length;
-
-  if (!split) {
-    // fallback: flat list
-    return (
-      <>
-        <ColHeaders hitsKind={hitsKind} tbKind={tbKind} />
-        {hrRows.map((r) => (
-          <ColBatterRow
-            key={r.id}
-            hrRow={r}
-            hitsRow={hitsByPlayer.get(r.player)}
-            tbRow={tbByPlayer.get(r.player)}
-            hitsKind={hitsKind}
-            tbKind={tbKind}
-          />
-        ))}
-      </>
-    );
-  }
+  // ONE full-width list (not two narrow side-by-side columns) so the name has
+  // room and all 4 sphere columns fit + stay aligned. Away/home shown as
+  // labeled divider rows instead of side-by-side columns.
+  const sections = split
+    ? [{ team: away, side: "away", rs: awayHr }, { team: home, side: "home", rs: homeHr }]
+    : [{ team: "", side: "", rs: hrRows }];
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-      {[
-        { label: `${away} · away`, rs: awayHr, style: { borderRight: "1px solid var(--line-strong)", paddingRight: "0.8rem" } as const },
-        { label: `${home} · home`, rs: homeHr, style: { paddingLeft: "0.8rem" } as const },
-      ].map(({ label, rs, style }) => {
+    <div>
+      <ColHeaders hitsKind={hitsKind} tbKind={tbKind} />
+      {sections.map(({ team, side, rs }) => {
         const opp = rs.find((r) => r.opponent)?.opponent;
         return (
-          <div key={label} style={style}>
-            <div
-              className="eyebrow"
-              style={{ margin: "0.5rem 0 0.2rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem", flexWrap: "nowrap", whiteSpace: "nowrap" }}
-            >
-              <span style={{ flexShrink: 0 }}>{label}</span>
-              {opp && (
-                <span style={{ letterSpacing: "normal", textTransform: "none", fontSize: "0.82rem" }}>
-                  vs{" "}
-                  <span style={{ color: "var(--text)", textShadow: "0 0 8px rgba(62, 224, 127, 0.45)" }}>{opp.name}</span>
-                  {opp.hand && <> <span className="hand">{opp.hand}</span></>}
-                </span>
-              )}
-            </div>
-            {rs.find((r) => r.status) && (
-              <div style={{ margin: "0 0 0.35rem" }}>
-                <StatusChip status={rs.find((r) => r.status)?.status} mode="pair" />
+          <div key={`${team}-${side}`}>
+            {team && (
+              <div
+                className="eyebrow"
+                style={{ margin: "0.6rem 0 0.15rem", padding: "0 0.25rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem", flexWrap: "wrap" }}
+              >
+                <span style={{ flexShrink: 0 }}>{team} · {side}</span>
+                {opp && (
+                  <span style={{ letterSpacing: "normal", textTransform: "none", fontSize: "0.82rem" }}>
+                    vs{" "}
+                    <span style={{ color: "var(--text)", textShadow: "0 0 8px rgba(62, 224, 127, 0.45)" }}>{opp.name}</span>
+                    {opp.hand && <> <span className="hand">{opp.hand}</span></>}
+                  </span>
+                )}
               </div>
             )}
-            <ColHeaders hitsKind={hitsKind} tbKind={tbKind} />
             {rs.map((r) => (
               <ColBatterRow
                 key={r.id}
