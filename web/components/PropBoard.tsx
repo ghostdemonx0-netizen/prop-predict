@@ -161,7 +161,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
         {r.time && <span style={{ opacity: 0.75 }}>🕐 {r.time}</span>}
         <StatusChip status={r.status} />
       </div>
-      {(r.playerHand || r.opponent) && (
+      {(r.playerHand || r.opponent || r.matchup) && (
         <div className="mt-1 flex flex-wrap items-center gap-2" style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
           {r.playerHand && (() => {
             const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
@@ -175,6 +175,11 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
               </span>
             );
           })()}
+          {r.matchup && (
+            <span style={{ fontWeight: 600, color: "var(--text)", opacity: 0.8 }} title="game">
+              {r.matchup}
+            </span>
+          )}
           {r.opponent && (
             <span className="inline-flex items-center gap-1.5">
               vs {r.opponent.name}
@@ -481,18 +486,26 @@ export function TeamSplit({ matchup, rows, kind, withLean = false }: { matchup: 
   );
 }
 
+// Shared grid track for the Columns layout: a flexible name column + 4 fixed
+// sphere columns. Header and every batter row use this SAME template + gap +
+// horizontal padding, so the columns line up exactly regardless of name length.
+const COL_GRID = `minmax(0, 1fr) repeat(4, ${COL_SLOT}px)`;
+const COL_GAP = "0.3rem";
+const COL_PAD = "0 0.25rem";
+
 /** Column headers for the 4-column layout: K/C/N · HR · Hits · TB */
 function ColHeaders({ hitsKind, tbKind }: { hitsKind: PropKind; tbKind: PropKind }) {
   const hitsLabel = hitsKind === "hits1" ? "1H+" : hitsKind === "hits2" ? "2H+" : "3H+";
   const tbLabel = tbKind === "tb2" ? "2TB+" : tbKind === "tb3" ? "3TB+" : "4TB+";
   const cell = (label: React.ReactNode, key: string) => (
-    <div key={key} style={{ width: COL_SLOT, textAlign: "center", flexShrink: 0 }}>
+    <div key={key} style={{ textAlign: "center" }}>
       <div style={{ fontSize: "0.55rem", letterSpacing: "0.07em", fontWeight: 700, color: "var(--muted)" }}>{label}</div>
       <div style={{ width: 1, height: 4, background: "var(--line-strong)", margin: "2px auto 0" }} />
     </div>
   );
   return (
-    <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.3rem", padding: "0 0.25rem", borderBottom: "1px solid var(--line-strong)" }}>
+    <div style={{ display: "grid", gridTemplateColumns: COL_GRID, gap: COL_GAP, padding: COL_PAD, alignItems: "end", borderBottom: "1px solid var(--line-strong)" }}>
+      <div />
       {cell(
         <>
           <span style={{ color: "#ffd9d6" }}>K</span>
@@ -525,14 +538,17 @@ function ColBatterRow({
   tbKind: PropKind;
 }) {
   const adv = platoonAdvantage(hrRow.playerHand, hrRow.opponent?.hand);
-  const emptyCell = <div style={{ width: COL_SLOT, flexShrink: 0 }} />;
+  const sphereCell = (node: React.ReactNode, key: string) => (
+    <span key={key} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>{node}</span>
+  );
   return (
     <Link
       href={hrRow.href}
       className="rowlink"
       style={{
-        display: "flex",
-        justifyContent: "space-between",
+        display: "grid",
+        gridTemplateColumns: COL_GRID,
+        gap: COL_GAP,
         alignItems: "center",
         padding: "0.5rem 0.25rem",
         borderBottom: "1px solid var(--line)",
@@ -540,8 +556,8 @@ function ColBatterRow({
         textDecoration: "none",
       }}
     >
-      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap", minWidth: 0 }}>
-        <span className="rl-name">{hrRow.player}</span>
+      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, minWidth: 0 }}>
+        <span className="rl-name" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hrRow.player}</span>
         {hrRow.playerHand && (
           <span
             className="hand"
@@ -552,24 +568,10 @@ function ColBatterRow({
           </span>
         )}
       </span>
-      <span style={{ display: "flex", gap: "0.3rem", alignItems: "center", flexShrink: 0 }}>
-        <span style={{ width: COL_SLOT, display: "flex", justifyContent: "center", flexShrink: 0 }}>
-          {hrRow.lean ? <MatchupSphere lean={hrRow.lean.lean} prob={hrRow.lean.prob} size={COL_SPHERE} /> : null}
-        </span>
-        <span style={{ width: COL_SLOT, display: "flex", justifyContent: "center", flexShrink: 0 }}>
-          <HeatSphere prob={hrRow.prob} kind="hr" size={COL_SPHERE} />
-        </span>
-        {hitsRow ? (
-          <span style={{ width: COL_SLOT, display: "flex", justifyContent: "center", flexShrink: 0 }}>
-            <HeatSphere prob={hitsRow.prob} kind={hitsKind} size={COL_SPHERE} />
-          </span>
-        ) : emptyCell}
-        {tbRow ? (
-          <span style={{ width: COL_SLOT, display: "flex", justifyContent: "center", flexShrink: 0 }}>
-            <HeatSphere prob={tbRow.prob} kind={tbKind} size={COL_SPHERE} />
-          </span>
-        ) : emptyCell}
-      </span>
+      {sphereCell(hrRow.lean ? <MatchupSphere lean={hrRow.lean.lean} prob={hrRow.lean.prob} size={COL_SPHERE} /> : null, "kcn")}
+      {sphereCell(<HeatSphere prob={hrRow.prob} kind="hr" size={COL_SPHERE} />, "hr")}
+      {sphereCell(hitsRow ? <HeatSphere prob={hitsRow.prob} kind={hitsKind} size={COL_SPHERE} /> : null, "hits")}
+      {sphereCell(tbRow ? <HeatSphere prob={tbRow.prob} kind={tbKind} size={COL_SPHERE} /> : null, "tb")}
     </Link>
   );
 }
