@@ -492,7 +492,7 @@ function ColHeaders({ hitsKind, tbKind }: { hitsKind: PropKind; tbKind: PropKind
     </div>
   );
   return (
-    <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.3rem", borderBottom: "1px solid var(--line-strong)" }}>
+    <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.3rem", padding: "0 0.25rem", borderBottom: "1px solid var(--line-strong)" }}>
       {cell(
         <>
           <span style={{ color: "#ffd9d6" }}>K</span>
