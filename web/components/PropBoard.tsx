@@ -670,7 +670,7 @@ export function GameBreakdown({
   const ks = kRows.filter((r) => r.matchup === matchup);
   const hits = hitsRows.filter((r) => r.matchup === matchup);
   const tb = tbRows.filter((r) => r.matchup === matchup);
-  if (hr.length === 0 && ks.length === 0) {
+  if (hr.length === 0 && ks.length === 0 && hits.length === 0 && tb.length === 0) {
     return <p className="factor-note" style={{ marginBottom: 0 }}>No player projections yet — lineups may not be posted.</p>;
   }
   return (
