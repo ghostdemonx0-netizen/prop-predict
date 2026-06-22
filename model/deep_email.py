@@ -5,15 +5,19 @@ section · 🧠 Factor Edge section · 🎟 money-line ladder. All free (math on
 """
 from __future__ import annotations
 
+from model.parlays import build_all_parlays
 from model.plays import _not_started, _now_utc, select_plays
 from model.plays_email import (_BG, _HIT_C, _HR_C, _INK, _K_C, _LINE, _SUB, _et_stamp, _pct,
                                factor_strength, factor_tags, platoon_badge)
 
+TB_C = "#7048e8"  # purple — total bases
+
 # (color, metric, status field, bet label)
 META = {"HR": (_HR_C, "probability", "lineup_status", "to HR"),
         "HITS": (_HIT_C, "p_ge1", "lineup_status", "1+ hit"),
-        "K": (_K_C, "over_prob", "pitcher_status", None)}
-KEYS = {"HR": "hr", "HITS": "hits", "K": "strikeouts"}
+        "K": (_K_C, "over_prob", "pitcher_status", None),
+        "TB": (TB_C, "p_ge2", "lineup_status", "2+ TB")}
+KEYS = {"HR": "hr", "HITS": "hits", "K": "strikeouts", "TB": "total_bases"}
 MONEYLINE_LEGS = (5, 6, 8, 9, 10, 11, 12, 13, 14, 15)
 
 
@@ -54,8 +58,8 @@ def _list(plays: list, prop: str, color: str) -> str:
 
 # ---------- parlays (diverse, factor-reasoned) ----------
 # metric per prop, by mode: season number, 3-yr history number, or blend of both
-_SEASON_M = {"HR": "probability", "HITS": "p_ge1", "K": "over_prob"}
-_HIST_M = {"HR": "probability_hist", "HITS": "p_ge1_hist", "K": "over_prob_hist"}
+_SEASON_M = {"HR": "probability", "HITS": "p_ge1", "K": "over_prob", "TB": "p_ge2"}
+_HIST_M = {"HR": "probability_hist", "HITS": "p_ge1_hist", "K": "over_prob_hist", "TB": "p_ge2_hist"}
 
 
 def _metp(p, prop, mode="season"):
@@ -86,7 +90,8 @@ def _met(p, prop):
 
 def _lab(p, prop):
     return (f'{p["player"]} 1+ hit' if prop == "HITS"
-            else f'{p["player"]} O{p.get("line")} K' if prop == "K" else f'{p["player"]} HR')
+            else f'{p["player"]} O{p.get("line")} K' if prop == "K"
+            else f'{p["player"]} 2+ TB' if prop == "TB" else f'{p["player"]} HR')
 
 
 def _why(legs):
@@ -146,6 +151,67 @@ def _parlays(hp, kp, rp, mode="season"):
             + _type_card("HR Bomb 3-Leg", "longshot", _HR_C, win(rp, "HR"), mode)
             + _type_card("Mixed Safe 3-Leg", "hits + K", _INK, clean(mixed), mode)
             + _type_card("Balanced 3-Leg", "hit + HR + K", _HR_C, clean(bal), mode))
+
+
+# ---------- Full Parlay Section (the complete per-board menu + factor edge per prop) ----------
+def _menu_sub(label):
+    return f'<div style="font:700 11px/1 Arial;color:#94a3b8;margin:8px 0 2px;">{label}</div>'
+
+
+def _menu_rows(parlays, color):
+    if not parlays:
+        return f'<div style="font:400 11px/1.4 Arial;color:{_SUB};">(slate too small)</div>'
+    out = ""
+    for pl in parlays:
+        pc = pl["prob"]
+        pcs = f"{pc*100:.0f}%" if pc >= 0.1 else (f"{pc*100:.1f}%" if pc >= 0.001 else "<0.1%")
+        legs = " + ".join(l["label"] for l in pl["legs"])
+        out += (f'<div style="padding:6px 0;border-bottom:1px solid {_LINE};font:400 11px/1.4 Arial;color:{_SUB};">'
+                f'<b style="color:{color};">{pcs}</b> · {legs}</div>')
+    return out
+
+
+def _full_parlay_menu(board, now_iso):
+    par = build_all_parlays(board, now_iso)
+    ls = par["hr"]["longshots"]
+    hr = _card(_title("💣", "HR parlays", _HR_C)
+               + _menu_sub("2-LEG · 7") + _menu_rows(par["hr"]["2leg"], _HR_C)
+               + _menu_sub("3-LEG · 5") + _menu_rows(par["hr"]["3leg"], _HR_C)
+               + _menu_sub("LONGSHOTS · 4/5/6-LEG · 3 each")
+               + _menu_rows(ls[4] + ls[5] + ls[6], _HR_C), _HR_C)
+    hits = _card(_title("🟢", "Hits parlays", _HIT_C)
+                 + _menu_sub("6-LEG · 5") + _menu_rows(par["hits"]["6leg"], _HIT_C)
+                 + _menu_sub("7-LEG · 5") + _menu_rows(par["hits"]["7leg"], _HIT_C), _HIT_C)
+    ks = _card(_title("🔥", "Ks parlays", _K_C)
+               + _menu_sub("6-LEG · 5") + _menu_rows(par["ks"]["6leg"], _K_C)
+               + _menu_sub("7-LEG · 5") + _menu_rows(par["ks"]["7leg"], _K_C), _K_C)
+    return hr + hits + ks
+
+
+def _factor_edge_parlays(board, now):
+    """A diverse 3-leg 'every leg in a strong spot' parlay for EACH prop — HR, Hits, Ks, Bases —
+    built from each prop's best-per-game pool ranked by how many strong factors a play stacks."""
+    out = ""
+    for prop, key, metric, color, label in (
+            ("HR", "hr", "probability", _HR_C, "HR"),
+            ("HITS", "hits", "p_ge1", _HIT_C, "Hits"),
+            ("K", "strikeouts", "over_prob", _K_C, "Ks"),
+            ("TB", "total_bases", "p_ge2", TB_C, "Total Bases")):
+        bg = {}
+        for p in (q for q in board.get(key, []) if _not_started(q, now)):
+            g = p.get("game_id")
+            if g is None:
+                continue
+            cur = bg.get(g)
+            if cur is None or (factor_strength(p, prop), p.get(metric, 0) or 0) > (factor_strength(cur, prop), cur.get(metric, 0) or 0):
+                bg[g] = p
+        pool = sorted(bg.values(), key=lambda p: (factor_strength(p, prop), p.get(metric, 0) or 0), reverse=True)
+        pool = [p for p in pool if factor_strength(p, prop) >= 1]
+        if len(pool) < 3:
+            continue
+        legs = [[(pool[i], prop) for i in win if i < len(pool)] for win in ((0, 1, 2), (3, 4, 5), (0, 2, 4))]
+        out += _type_card(f"Factor Edge — {label}", "every leg in a strong spot", color, legs)
+    return out
 
 
 def _moneyline(allpool):
@@ -229,6 +295,12 @@ def render_deep_email(board: dict, now_iso: str | None = None) -> dict:
             ml_pool.append((p, prop))
 
     body = (tops
+            + f'<div style="font:800 17px/1.2 Arial;color:{_INK};margin:20px 0 4px;">🧰 Full Parlay Section</div>'
+            + f'<div style="font:400 12px/1.4 Arial;color:{_SUB};margin-bottom:8px;">The complete board menu — '
+            f'HR 2/3-leg + 4/5/6-leg longshots · Hits & Ks 6/7-leg · plus a Factor-Edge parlay for every prop.</div>'
+            + _full_parlay_menu(board, now_iso)
+            + f'<div style="font:800 14px/1.2 Arial;color:#f08c00;margin:14px 0 8px;">🧠 Factor-Edge Parlays (HR · Hits · Ks · Bases)</div>'
+            + _factor_edge_parlays(board, now)
             + f'<div style="font:800 16px/1.2 Arial;color:{_INK};margin:18px 0 8px;">🎰 Parlays — Season (diverse · 3 versions each)</div>'
             + _parlays(hp, kp, rp, "season")
             + f'<div style="font:800 16px/1.2 Arial;color:{_INK};margin:18px 0 8px;">📜 Parlays — History-Weighted (3-yr · diverse · 3 each)</div>'

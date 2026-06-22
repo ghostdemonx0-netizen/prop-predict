@@ -232,19 +232,19 @@ def _model_board(board: dict, now_iso: str) -> str:
 
     def conf(plays, field):
         c = [p for p in plays if p.get(field) == "confirmed"]
-        return c[:8] if c else plays[:8]  # fall back to projected when nothing's confirmed yet
+        return c[:7] if c else plays[:7]  # fall back to projected when nothing's confirmed yet
     any_conf = any(p.get("lineup_status") == "confirmed" for p in sel["hr"])
     hr = [(p["player"], p.get("matchup", ""), f'{p["probability"]*100:.0f}%', platoon_badge(p)) for p in conf(sel["hr"], "lineup_status")]
     k = [(p["player"], f'O{p.get("line")}', f'{p["over_prob"]*100:.0f}%') for p in conf(sel["strikeouts"], "pitcher_status")]
     hits = [(p["player"], p.get("matchup", ""), f'{p["p_ge1"]*100:.0f}%', platoon_badge(p)) for p in conf(sel["hits"], "lineup_status")]
     note = (f'<div style="font:400 11px/1.3 Arial;color:'
-            + ('#94a3b8;">confirmed lineups only · Top 8 (full 25 in Deep Board email)</div>' if any_conf
-               else '#d97706;">⚠️ projected — lineups not confirmed yet · Top 8</div>'))
-    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:4px;">💣 Top 8 — Home Runs</div>'
+            + ('#94a3b8;">confirmed lineups only · Top 7 (full 25 in Deep Board email)</div>' if any_conf
+               else '#d97706;">⚠️ projected — lineups not confirmed yet · Top 7</div>'))
+    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:4px;">💣 Top 7 — Home Runs</div>'
                 + note + _ranklist(hr, HR_C), HR_C)
-    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:4px;">🟢 Top 8 — Hits</div>'
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:4px;">🟢 Top 7 — Hits</div>'
                  + note + _ranklist(hits, HIT_C), HIT_C)
-    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:4px;">🔥 Top 8 — Strikeouts</div>'
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:4px;">🔥 Top 7 — Strikeouts</div>'
                  + note + _ranklist(k, K_C), K_C)
     return out
 
@@ -315,7 +315,7 @@ def _board_b(board: dict, now_iso: str) -> str:
         return s
 
     def blend(plays, metric, buzz):
-        return sorted(plays, key=lambda p: score(p, metric, buzz), reverse=True)[:8]
+        return sorted(plays, key=lambda p: score(p, metric, buzz), reverse=True)[:6]
 
     def rows(plays, metric, prop, buzz, betfn):
         return [(p["player"] + (" ✅" if p["player"] in buzz else ""), betfn(p), f'{p[metric]*100:.0f}%',
@@ -323,11 +323,11 @@ def _board_b(board: dict, now_iso: str) -> str:
     hr = blend(sel["hr"], "probability", bh)
     hits = blend(sel["hits"], "p_ge1", bhit)
     k = blend(sel["strikeouts"], "over_prob", set())
-    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:8px;">💣 Blend — Home Runs (top 8)</div>'
+    out = _card(f'<div style="font:800 15px/1.2 Arial;color:{HR_C};margin-bottom:8px;">💣 Blend — Home Runs (top 6)</div>'
                 + _factor_list(rows(hr, "probability", "HR", bh, lambda p: "to HR"), HR_C), HR_C)
-    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:8px;">🟢 Blend — Hits (top 8)</div>'
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{HIT_C};margin-bottom:8px;">🟢 Blend — Hits (top 6)</div>'
                  + _factor_list(rows(hits, "p_ge1", "HITS", bhit, lambda p: "1+ hit"), HIT_C), HIT_C)
-    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:8px;">🔥 Blend — Strikeouts (top 8)</div>'
+    out += _card(f'<div style="font:800 15px/1.2 Arial;color:{K_C};margin-bottom:8px;">🔥 Blend — Strikeouts (top 6)</div>'
                  + _factor_list(rows(k, "over_prob", "K", set(), lambda p: f'O{p.get("line")}'), K_C), K_C)
     return out
 

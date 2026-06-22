@@ -17,7 +17,8 @@ PROPS = [
     ("Strikeouts", "strikeouts", _K_C, "over_prob", "over_prob_hist", "pitcher_status", "🔥", False),
     ("Total Bases (2+)", "total_bases", TB_C, "p_ge2", "p_ge2_hist", "lineup_status", "📊", True),
 ]
-DEPTH = 10  # per prop section. 12 sections + 3 lock blocks must fit Gmail's ~102KB clip limit.
+DEPTH = 8  # per prop section. 12 sections + 3 lock blocks (now with 2-box platoon) must fit
+# Gmail's ~102KB clip. 8 lands ~95KB (~5KB buffer); the two-box platoon is the size cost.
 
 
 def _up(board, key, now):
@@ -75,6 +76,14 @@ def _both_block(emoji, title, color, plays, m, mh, statusf, batter=False):
     return _wrap(emoji, title, color, rows)
 
 
+def _lock_bet(p):
+    """Short prop label for a lock row — so each name shows WHICH bet it is."""
+    prop = p.get("prop")
+    if prop == "K":
+        return f'O{p.get("line")} K'
+    return {"HR": "HR", "HITS": "1+ Hit", "TB": "2+ TB"}.get(prop, prop or "")
+
+
 def _lock_items(board, now, kind, n=10):
     items = []
     for _, key, color, m, mh, statusf, emoji, batter in PROPS:
@@ -109,8 +118,10 @@ def _lock_block(title, plays_items):
         f'<tr><td style="padding:6px 0;border-bottom:1px solid {_LINE};">'
         f'<span style="display:inline-block;width:20px;height:20px;background:{GOLD};color:#fff;'
         f'border-radius:50%;text-align:center;font:800 11px/20px Arial;">{i}</span> '
-        f'{emoji} <span style="font:600 13px Arial;color:{_INK};">{p.get("player")}</span>{_proj(p, statusf)}'
-        f'{platoon_badge(p) if batter else ""}'
+        f'{emoji} <span style="font:600 13px Arial;color:{_INK};">{p.get("player")}</span>'
+        f'<span style="background:#fff;border:1px solid {color};color:{color};font:700 9px/1 Arial;'
+        f'padding:2px 6px;border-radius:5px;margin-left:6px;">{_lock_bet(p)}</span>'
+        f'{_proj(p, statusf)}{platoon_badge(p) if batter else ""}'
         f'<span style="float:right;font:700 13px Arial;color:{color};">{_pct(p.get(met))}</span></td></tr>'
         for i, (v, p, emoji, color, statusf, met, batter) in enumerate(plays_items, 1))
     return _wrap("🔒", title, GOLD, rows)
@@ -139,7 +150,7 @@ def render_full_board(board: dict, now_iso: str | None = None) -> dict:
     history = section("📜 History-Weighted (3-yr)", _INK,
                       lambda label, key, c, m, mh, sf, e, b: _list_block(e, f"{label} (hist) — top {DEPTH}", c, _rank(_up(board, key, now), mh, DEPTH), mh, sf, b))
     both = section("🎯 Both — must rank in season AND history", _INK,
-                   lambda label, key, c, m, mh, sf, e, b: _both_block(e, f"{label} — in both", c, _both(_up(board, key, now), m, mh), m, mh, sf, b))
+                   lambda label, key, c, m, mh, sf, e, b: _both_block(e, f"{label} — in both", c, _both(_up(board, key, now), m, mh, DEPTH), m, mh, sf, b))
 
     body = locks + season + history + both
     stamp = _et_stamp(board.get("updated"))
