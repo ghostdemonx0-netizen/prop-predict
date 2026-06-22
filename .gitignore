@@ -34,11 +34,12 @@ build/
 projections-*.json
 .cache/
 
-# generated per-date data (keep only the committed samples)
+# generated board data — IGNORED so the regenerated board can never be committed.
+# (It leaked twice because latest.json/index.json were whitelisted back in here.)
+# Local sessions pull a fresh board from the `board-data` branch via
+# scripts/pull_board.sh; CI builds its own at deploy time. Nothing depends on a
+# committed board (tests use tests/fixtures/, reports read cache/rebuild).
 web/public/data/*.json
-!web/public/data/index.json
-!web/public/data/2026-06-10.json
-!web/public/data/latest.json
 
 # live per-run manual buzz layer (written fresh each run; example is tracked)
 scripts/manual_today.json

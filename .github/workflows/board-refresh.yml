@@ -10,7 +10,7 @@ concurrency:
   group: refresh-board
   cancel-in-progress: false
 permissions:
-  contents: read
+  contents: write
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -42,3 +42,21 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx vercel deploy --prod --cwd web --token ${{ secrets.VERCEL_TOKEN }} --yes
+      - name: Publish board to data branch
+        # Snapshots the fresh board JSON to the orphan-ish `board-data` branch so
+        # local curating sessions can pull it fast (force-push = one tiny snapshot,
+        # no history bloat). JSON only — never touches main.
+        if: steps.job.outputs.changed == 'true' || inputs.force_deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tmp=$(mktemp -d)
+          cp web/public/data/*.json "$tmp"/ 2>/dev/null || true
+          cd "$tmp"
+          mkdir -p web/public/data && mv *.json web/public/data/ 2>/dev/null || true
+          git init -q
+          git config user.email "board-bot@users.noreply.github.com"
+          git config user.name "board-bot"
+          git add web/public/data
+          git commit -q -m "board snapshot $(date -u +%FT%TZ)"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:board-data
