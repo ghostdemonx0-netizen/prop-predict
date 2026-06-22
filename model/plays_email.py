@@ -160,6 +160,15 @@ def factor_tags(p: dict, prop: str) -> list:
         ek, ln = p.get("expected_ks"), p.get("line")
         if isinstance(ek, (int, float)) and isinstance(ln, (int, float)) and ek - ln >= 1.0:
             tags.append(f"proj {ek:.1f} vs {ln}")
+    elif prop == "TB":
+        if p.get("recent_form_mult", 1) >= 1.05:
+            tags.append("🔥hot")
+        if p.get("park_mult", 1) >= 1.05:
+            tags.append("hitter park")
+        if p.get("pitcher_factor", 1) >= 1.2 or p.get("pitcher_mult", 1) >= 1.12:
+            tags.append("vs hittable arm")
+        if (p.get("vs") or {}).get("lean") == "H":
+            tags.append("matchup→bases")
     return tags
 
 
@@ -169,9 +178,10 @@ def factor_strength(p: dict, prop: str) -> int:
 
 
 def platoon_badge(p: dict) -> str:
-    """A lit-up box next to a BATTER who has the platoon edge — opposite-handed vs the
-    pitcher, or a switch hitter (always has it). Shows ⚡ vs RHP/LHP + pitcher name.
-    Returns '' when there's no edge or the data's missing. Batters only (not pitchers)."""
+    """Two little boxes next to a BATTER who has the platoon edge, matching the site:
+    a turquoise handedness box (LHB / RHB / SW) that lights up only on an edge
+    (opposite-handed vs the pitcher, or a switch hitter), then a separate 'vs <pitcher>'
+    box. Returns '' when there's no edge or data's missing. Batters only (not pitchers)."""
     bats = p.get("bats")
     vs = p.get("vs") or {}
     throws, name = vs.get("throws"), vs.get("name")
@@ -180,11 +190,14 @@ def platoon_badge(p: dict) -> str:
     edge = bats == "S" or (bats == "L" and throws == "R") or (bats == "R" and throws == "L")
     if not edge:
         return ""
-    hand = "RHP" if throws == "R" else "LHP"
-    nm = f" {name}" if name else ""
-    return (f'<span style="background:#fff9db;color:#a37500;border:1px solid #ffe066;'
-            f'font:700 9px/1 Arial;padding:2px 6px;border-radius:5px;margin-left:6px;">'
-            f'⚡ vs {hand}{nm}</span>')
+    hand = "SW" if bats == "S" else ("LHB" if bats == "L" else "RHB")
+    box1 = (f'<span style="background:#c3fae8;color:#0b7285;font:700 9px/1 Arial;'
+            f'padding:2px 5px;border-radius:4px;margin-left:5px;">{hand}</span>')
+    box2 = ""
+    if name:
+        box2 = (f'<span style="background:#f1f3f5;color:#495057;font:700 9px/1 Arial;'
+                f'padding:2px 5px;border-radius:4px;margin-left:3px;">vs {name}</span>')
+    return box1 + box2
 
 
 def render_push(selection: dict) -> str:
