@@ -659,7 +659,28 @@ def _stale_guard(argv: list[str]) -> int | None:
     return None
 
 
+def _pull_fresh_board() -> None:
+    """Pull the current board from the `board-data` branch (scripts/pull_board.sh) so every
+    manual run curates on a fresh board — no rebuild, no login wall, no stale-guard trip.
+    Resilient: if it fails (offline / branch not seeded) we warn and fall back to whatever
+    board is already on disk, which the staleness guard still checks."""
+    import subprocess
+    script = Path(__file__).resolve().parent / "pull_board.sh"
+    if not script.exists():
+        print("[warn] pull_board.sh not found — using existing board")
+        return
+    try:
+        r = subprocess.run(["bash", str(script)], cwd=str(script.parent.parent),
+                           capture_output=True, text=True, timeout=90)
+        msg = ((r.stdout or "") + (r.stderr or "")).strip()
+        print(msg.splitlines()[-1] if msg else "(board pull: no output)")
+    except Exception as exc:
+        print(f"[warn] board pull failed ({exc}) — using existing board")
+
+
 def main(argv: list[str]) -> int:
+    if "--no-pull" not in argv:
+        _pull_fresh_board()  # 3a: fresh board from the board-data branch before anything reads it
     guard = _stale_guard(argv)
     if guard is not None:
         return guard
