@@ -52,27 +52,6 @@ SLATE = [
     "🔥 Ben Rice is the most-posted HR name in early parlays — and he's in a lineup.",
 ]
 
-MY_PLAYS = [
-    {"prop": "HITS", "lead": "LOCK", "player": "Kody Clemens", "bet": "1+ hit", "model": "83%",
-     "tag": "lean", "why": "Highest single probability on the whole board today — the safest floor play (projected; confirm lineup)."},
-    {"prop": "HR", "player": "Ben Rice", "bet": "To hit a HR", "model": "24%",
-     "tag": "agree", "why": "Most-posted HR name in the early parlays (10+ mentions) AND on my board. Bettors and the math agree."},
-    {"prop": "HR", "player": "Byron Buxton", "bet": "To hit a HR", "model": "32%",
-     "tag": "contrarian", "why": "My model's #1 HR play (32%) but not in the early parlay buzz — your differentiated angle."},
-    {"prop": "K", "player": "J.T. Ginn", "bet": "Over 3.5 Ks", "model": "79%",
-     "tag": "lean", "why": "Top strikeout edge on the board, and K parlay buzz is light this early — quiet money."},
-]
-
-MY_PARLAYS = [
-    {"name": "The Safe 3-Leg", "tag": "your most-played type", "combined": "55%", "color": HIT_C,
-     "legs": [("Kody Clemens", "1+ hit", "83%"), ("Matt Shaw", "1+ hit", "82%"),
-              ("Endy Rodríguez", "1+ hit", "81%")],
-     "why": "Three highest-floor hit props on the board, different games — ~55% combined. The ticket I'd fire (confirm lineups first)."},
-    {"name": "Model + Buzz HR Bomb", "tag": "longshot, big upside", "combined": "2.0%", "color": HR_C,
-     "legs": [("Byron Buxton", "HR", "32%"), ("Kyle Schwarber", "HR", "26%"), ("Ben Rice", "HR", "24%")],
-     "why": "My three best HR numbers, all playing today — Ben Rice & Schwarber also buzzing. Small stake, big ceiling."},
-]
-
 # (player, model%) ranked MOST bet-on at top. Filled each run from a DEEP multi-account X
 # sweep, availability-filtered to who's playing. Target depth: 15 per prop. No fake counts.
 BUZZ_HR = [("Ben Rice", "24%"), ("Kyle Schwarber", "26%"), ("Yordan Alvarez", "22%"),
@@ -85,12 +64,6 @@ TWEETS = [
     "🔒 Lock: Kody Clemens 1+ hit (my model 83%) — quietly the safest play on today's board. 👉 [link] #MLB #PropBets",
     "💣 Ben Rice is in everybody's early HR parlay — and my model backs it (24%). When the slips and the math agree, I'm in. 👉 [link] #HomeRunProps",
     "🎰 My safe 3-leg: Kody Clemens + Matt Shaw + Endy Rodríguez, all 1+ hit. ~55% combined, three different games. 👉 [link] #GamblingTwitter",
-]
-
-BLEND = [
-    ("✅", HIT_C, "Convergence (safest)", "Ben Rice — top of the early HR parlays AND on my board (24% HR / 70% hit). Lead with him."),
-    ("⚠️", HR_C, "My contrarian edges", "Byron Buxton — my #1 HR at 32% with zero early buzz. J.T. Ginn K (79%) — no public K parlays yet. Pure model edges."),
-    ("🌀", SUB, "Buzz I'm fading", "Jordan Walker & Christian Scott showed up in slips but aren't in today's lineups. Don't bet names that aren't playing."),
 ]
 
 FLAGS = [
@@ -532,10 +505,59 @@ def _parlays_section(board: dict, now_iso: str) -> str:
     return out
 
 
-def build_html() -> str:
+# ---- Claude's Read (3c): convergence / contrarian / floor vs ceiling, filled fresh each run ----
+# Pure free signals — model number + X buzz + matchup. No odds, no +EV claim (that's the one
+# paywalled piece, intentionally left out). The live AI session fills the "curated" block in
+# manual_today.json each run, same flow as the buzz.
+_READ_GROUPS = [
+    ("convergence", "✅", "Convergence", "model number + X buzz + matchup all agree — highest conviction", "#1e7d34"),
+    ("contrarian", "🥷", "Contrarian Edge", "model loves it, the public hasn't caught on yet", HR_C),
+    ("safe_floor", "🛡️", "Safe Floor", "bank-it plays — highest floor, lowest variance", HIT_C),
+    ("ceiling", "🚀", "Ceiling", "swing-for-it upside — bigger payout, more variance", "#7048e8"),
+]
+
+
+def _read_group(emoji: str, title: str, subtitle: str, color: str, items) -> str:
+    if not items:
+        return ""
+    rows = ""
+    for it in items:
+        prop = it.get("prop", "")
+        prop_box = (f'<span style="background:#fff;border:1px solid {color};color:{color};font:700 9px/1 Arial;'
+                    f'padding:2px 6px;border-radius:5px;margin-left:6px;">{prop}</span>' if prop else "")
+        pct = it.get("pct", "")
+        pct_box = f'<span style="float:right;font:700 13px Arial;color:{color};">{pct}</span>' if pct else ""
+        why = it.get("why", "")
+        why_box = f'<div style="font:400 11px/1.4 Arial;color:{SUB};margin-top:3px;">{why}</div>' if why else ""
+        rows += (f'<div style="padding:8px 0;border-bottom:1px solid {LINE};">'
+                 f'<span style="font:700 13px Arial;color:{INK};">{it.get("player", "")}</span>'
+                 f'{prop_box}{pct_box}{why_box}</div>')
+    return _card(f'<div style="font:800 14px/1.2 Arial;color:{color};">{emoji} {title}</div>'
+                 f'<div style="font:400 11px/1.3 Arial;color:{SUB};margin-bottom:4px;">{subtitle}</div>{rows}', color)
+
+
+def _curated_section(curated) -> str:
+    """The headline 'Claude's Read' — only renders when manual_today.json has a filled curated block."""
+    if not curated:
+        return ""
+    groups = "".join(_read_group(e, t, s, c, curated.get(k)) for k, e, t, s, c in _READ_GROUPS)
+    if not groups:
+        return ""
+    intro = curated.get("intro", "")
+    intro_html = (f'<tr><td style="padding:0 4px 10px;font:400 13px/1.5 Arial;color:{SUB};">{intro}</td></tr>'
+                  if intro else "")
+    note = ('<tr><td style="padding:2px 4px 6px;font:400 11px/1.4 Arial;color:#94a3b8;">'
+            'Edge = model confidence + buzz alignment + matchup. Ranked by signal quality, not hype.</td></tr>')
+    return (_section_title("🎯", "Claude's Read", "convergence · contrarian · floor vs ceiling")
+            + intro_html + note + groups)
+
+
+def build_html(content: dict | None = None) -> str:
+    content = content if content is not None else load_content()
     board = json.load(open(BOARD))
     now_iso = f"{board.get('date', '2026-01-01')}T00:00:00+00:00"
     fresh = board.get("updated", "")
+    curated = _curated_section(content.get("curated"))
 
     plays = _my_plays(board, now_iso)
     top7 = _top_plays(board, now_iso)
@@ -562,6 +584,8 @@ def build_html() -> str:
 
   {_section_title("🗓️", "Slate Overview")}
   {_card(slate)}
+
+  {curated}
 
   {_section_title("🔥", "My Plays", "7 locks · 7+7 HR · 10 K, in order")}
   {plays}
@@ -684,8 +708,9 @@ def main(argv: list[str]) -> int:
     guard = _stale_guard(argv)
     if guard is not None:
         return guard
-    _apply_content(load_content())  # overlay today's freshly-swept buzz before rendering
-    html = build_html()
+    content = load_content()
+    _apply_content(content)  # overlay today's freshly-swept buzz + curation before rendering
+    html = build_html(content)
     if "--dry-run" in argv:
         Path("/tmp/manual_pretty.html").write_text(html)
         print(f"html built: {len(html)} bytes -> /tmp/manual_pretty.html")
