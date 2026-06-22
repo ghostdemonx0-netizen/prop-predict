@@ -23,5 +23,20 @@
     "🔒 Lock tweet — today's safest play + model % + [link] #MLB #PropBets",
     "💣 HR-buzz tweet — the convergence name (slips + model agree) + [link]",
     "🎰 Parlay tweet — your safe 3-leg, different games + [link]"
-  ]
+  ],
+  "curated": {
+    "intro": "One-line read of the slate — the through-line for today (optional).",
+    "convergence": [
+      {"player": "Example Hitter", "prop": "HR", "pct": "24%", "why": "model top-3 + most-posted HR + opposite-hand vs the RHP starter — all three signals point the same way."}
+    ],
+    "contrarian": [
+      {"player": "Example Hitter", "prop": "HR", "pct": "32%", "why": "my model's #1 HR but zero public buzz yet — the differentiated angle."}
+    ],
+    "safe_floor": [
+      {"player": "Example Hitter", "prop": "1+ hit", "pct": "83%", "why": "highest floor on the board, soft matchup — bank-it play."}
+    ],
+    "ceiling": [
+      {"player": "Example Hitter", "prop": "2+ TB", "pct": "41%", "why": "hot bat + hitter park + platoon edge — swing for the upside."}
+    ]
+  }
 }
