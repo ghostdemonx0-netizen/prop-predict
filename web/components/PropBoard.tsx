@@ -100,6 +100,10 @@ function WeatherChips({ r }: { r: BoardRow }) {
 export const HUB_SPHERE = 46;
 export const HUB_SLOT = 52;
 
+// smaller spheres for the 4-column "Columns" layout
+const COL_SPHERE = 34;
+const COL_SLOT = 40;
+
 // platoon-advantage highlight — cyan (distinct from the green CONF status chip)
 export const ADV_CHIP = {
   color: "#34dfe8",
@@ -157,7 +161,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
         {r.time && <span style={{ opacity: 0.75 }}>🕐 {r.time}</span>}
         <StatusChip status={r.status} />
       </div>
-      {(r.playerHand || r.opponent) && (
+      {(r.playerHand || r.opponent || r.matchup) && (
         <div className="mt-1 flex flex-wrap items-center gap-2" style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
           {r.playerHand && (() => {
             const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
@@ -171,6 +175,11 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
               </span>
             );
           })()}
+          {r.matchup && (
+            <span style={{ fontWeight: 600, color: "var(--text)", opacity: 0.8 }} title="game">
+              {r.matchup}
+            </span>
+          )}
           {r.opponent && (
             <span className="inline-flex items-center gap-1.5">
               vs {r.opponent.name}
@@ -477,11 +486,192 @@ export function TeamSplit({ matchup, rows, kind, withLean = false }: { matchup: 
   );
 }
 
+// Shared grid track for the Columns layout: a flexible name column + 4 fixed
+// sphere columns. Header and every batter row use this SAME template + gap +
+// horizontal padding, so the columns line up exactly regardless of name length.
+const COL_GRID = `minmax(0, 1fr) repeat(4, ${COL_SLOT}px)`;
+const COL_GAP = "0.3rem";
+const COL_PAD = "0 0.25rem";
+
+/** Column headers for the 4-column layout: K/C/N · HR · Hits · TB */
+function ColHeaders({ hitsKind, tbKind }: { hitsKind: PropKind; tbKind: PropKind }) {
+  const hitsLabel = hitsKind === "hits1" ? "1H+" : hitsKind === "hits2" ? "2H+" : "3H+";
+  const tbLabel = tbKind === "tb2" ? "2TB+" : tbKind === "tb3" ? "3TB+" : "4TB+";
+  const cell = (label: React.ReactNode, key: string) => (
+    <div key={key} style={{ textAlign: "center" }}>
+      <div style={{ fontSize: "0.55rem", letterSpacing: "0.07em", fontWeight: 700, color: "var(--muted)" }}>{label}</div>
+      <div style={{ width: 1, height: 4, background: "var(--line-strong)", margin: "2px auto 0" }} />
+    </div>
+  );
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: COL_GRID, gap: COL_GAP, padding: COL_PAD, alignItems: "end", borderBottom: "1px solid var(--line-strong)" }}>
+      <div />
+      {cell(
+        <>
+          <span style={{ color: "#ffd9d6" }}>K</span>
+          <span style={{ opacity: 0.5 }}>/</span>
+          <span style={{ color: "#bff3d2" }}>C</span>
+          <span style={{ opacity: 0.5 }}>/</span>
+          <span style={{ color: "#c5d6e8" }}>N</span>
+        </>,
+        "kcn"
+      )}
+      {cell("HR", "hr")}
+      {cell(hitsLabel, "hits")}
+      {cell(tbLabel, "tb")}
+    </div>
+  );
+}
+
+/** One batter row in the Columns layout: name + hand chip + 4 spheres (K/C/N, HR, Hits, TB). */
+function ColBatterRow({
+  hrRow,
+  hitsRow,
+  tbRow,
+  hitsKind,
+  tbKind,
+}: {
+  hrRow: BoardRow;
+  hitsRow: BoardRow | undefined;
+  tbRow: BoardRow | undefined;
+  hitsKind: PropKind;
+  tbKind: PropKind;
+}) {
+  const adv = platoonAdvantage(hrRow.playerHand, hrRow.opponent?.hand);
+  // the matchup read can sit on any of the prop rows — use whichever has it so
+  // the K/C/N sphere never goes missing when one prop's row lacks `lean`.
+  const lean = hrRow.lean ?? hitsRow?.lean ?? tbRow?.lean ?? null;
+  const sphereCell = (node: React.ReactNode, key: string) => (
+    <span key={key} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>{node}</span>
+  );
+  return (
+    <Link
+      href={hrRow.href}
+      className="rowlink"
+      style={{
+        display: "grid",
+        gridTemplateColumns: COL_GRID,
+        gap: COL_GAP,
+        alignItems: "center",
+        padding: "0.5rem 0.25rem",
+        borderBottom: "1px solid var(--line)",
+        color: "var(--text)",
+        textDecoration: "none",
+      }}
+    >
+      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap", minWidth: 0 }}>
+        <span className="rl-name">{hrRow.player}</span>
+        {hrRow.playerHand && (
+          <span
+            className="hand"
+            title={adv ? "platoon advantage vs this pitcher" : undefined}
+            style={adv ? ADV_CHIP : undefined}
+          >
+            {hrRow.playerHand}
+          </span>
+        )}
+        {hrRow.status && <StatusChip status={hrRow.status} />}
+      </span>
+      {sphereCell(lean ? <MatchupSphere lean={lean.lean} prob={lean.prob} size={COL_SPHERE} /> : null, "kcn")}
+      {sphereCell(<HeatSphere prob={hrRow.prob} kind="hr" size={COL_SPHERE} />, "hr")}
+      {sphereCell(hitsRow ? <HeatSphere prob={hitsRow.prob} kind={hitsKind} size={COL_SPHERE} /> : null, "hits")}
+      {sphereCell(tbRow ? <HeatSphere prob={tbRow.prob} kind={tbKind} size={COL_SPHERE} /> : null, "tb")}
+    </Link>
+  );
+}
+
+/** Columns layout: one row per batter with 4 sphere columns (K/C/N, HR, Hits, TB). */
+function ColSplit({
+  matchup,
+  hrRows,
+  hitsRows,
+  tbRows,
+  hitsKind,
+  tbKind,
+}: {
+  matchup: string;
+  hrRows: BoardRow[];
+  hitsRows: BoardRow[];
+  tbRows: BoardRow[];
+  hitsKind: PropKind;
+  tbKind: PropKind;
+}) {
+  const [away, home] = matchup.split(" @ ");
+  const hitsByPlayer = new Map(hitsRows.map((r) => [r.player, r]));
+  const tbByPlayer = new Map(tbRows.map((r) => [r.player, r]));
+
+  const awayHr = hrRows.filter((r) => r.team === away);
+  const homeHr = hrRows.filter((r) => r.team === home);
+  const split = home !== undefined && awayHr.length + homeHr.length === hrRows.length;
+  // ONE full-width list (not two narrow side-by-side columns) so the name has
+  // room and all 4 sphere columns fit + stay aligned. Away/home shown as
+  // labeled divider rows instead of side-by-side columns.
+  const sections = split
+    ? [{ team: away, side: "away", rs: awayHr }, { team: home, side: "home", rs: homeHr }]
+    : [{ team: "", side: "", rs: hrRows }];
+
+  return (
+    <div>
+      <ColHeaders hitsKind={hitsKind} tbKind={tbKind} />
+      {sections.map(({ team, side, rs }) => {
+        const opp = rs.find((r) => r.opponent)?.opponent;
+        return (
+          <div key={`${team}-${side}`}>
+            {team && (
+              <div
+                className="eyebrow"
+                style={{ margin: "0.6rem 0 0.15rem", padding: "0 0.25rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem", flexWrap: "wrap" }}
+              >
+                <span style={{ flexShrink: 0 }}>{team} · {side}</span>
+                {opp && (
+                  <span style={{ letterSpacing: "normal", textTransform: "none", fontSize: "0.82rem" }}>
+                    vs{" "}
+                    <span style={{ color: "var(--text)", textShadow: "0 0 8px rgba(62, 224, 127, 0.45)" }}>{opp.name}</span>
+                    {opp.hand && <> <span className="hand">{opp.hand}</span></>}
+                  </span>
+                )}
+              </div>
+            )}
+            {rs.map((r) => (
+              <ColBatterRow
+                key={r.id}
+                hrRow={r}
+                hitsRow={hitsByPlayer.get(r.player)}
+                tbRow={tbByPlayer.get(r.player)}
+                hitsKind={hitsKind}
+                tbKind={tbKind}
+              />
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Full game drilldown: both starting pitchers, then the hitters split by side. */
-export function GameBreakdown({ matchup, hrRows, kRows }: { matchup: string; hrRows: BoardRow[]; kRows: BoardRow[] }) {
+export function GameBreakdown({
+  matchup,
+  hrRows,
+  kRows,
+  hitsRows = [],
+  tbRows = [],
+  hitsKind = "hits1",
+  tbKind = "tb2",
+}: {
+  matchup: string;
+  hrRows: BoardRow[];
+  kRows: BoardRow[];
+  hitsRows?: BoardRow[];
+  tbRows?: BoardRow[];
+  hitsKind?: PropKind;
+  tbKind?: PropKind;
+}) {
   const hr = hrRows.filter((r) => r.matchup === matchup);
   const ks = kRows.filter((r) => r.matchup === matchup);
-  if (hr.length === 0 && ks.length === 0) {
+  const hits = hitsRows.filter((r) => r.matchup === matchup);
+  const tb = tbRows.filter((r) => r.matchup === matchup);
+  if (hr.length === 0 && ks.length === 0 && hits.length === 0 && tb.length === 0) {
     return <p className="factor-note" style={{ marginBottom: 0 }}>No player projections yet — lineups may not be posted.</p>;
   }
   return (
@@ -514,8 +704,15 @@ export function GameBreakdown({ matchup, hrRows, kRows }: { matchup: string; hrR
       )}
       {hr.length > 0 && (
         <>
-          <div className="eyebrow" style={{ margin: "0.7rem 0 0.1rem" }}>Home run board</div>
-          <TeamSplit matchup={matchup} rows={hr} kind="hr" withLean />
+          <div className="eyebrow" style={{ margin: "0.7rem 0 0.1rem" }}>Batter breakdown</div>
+          <ColSplit
+            matchup={matchup}
+            hrRows={hr}
+            hitsRows={hits}
+            tbRows={tb}
+            hitsKind={hitsKind}
+            tbKind={tbKind}
+          />
         </>
       )}
     </div>

@@ -351,7 +351,16 @@ export default function Home() {
       </div>
 
       {section === "parks" || section === "hub" ? (
-        <ParksBoard games={data.games ?? []} hrRows={hrRows} kRows={kRows} expandable={section === "hub"} />
+        <ParksBoard
+          games={data.games ?? []}
+          hrRows={hrRows}
+          kRows={kRows}
+          hitsRows={hitsRows}
+          tbRows={tbRows}
+          hitsKind={`hits${threshold.hits}` as "hits1" | "hits2" | "hits3"}
+          tbKind={`tb${threshold.tb}` as "tb2" | "tb3" | "tb4"}
+          expandable={section === "hub"}
+        />
       ) : section === "topplays" ? (
         <TopPlays
           hrRows={hrRows}

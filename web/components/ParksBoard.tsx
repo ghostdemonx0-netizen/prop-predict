@@ -2,7 +2,7 @@
 
 import type { Game } from "../lib/types";
 import { GameBreakdown, type BoardRow } from "./PropBoard";
-import { heatColor, arrowColor, windText, gameTimeLabel } from "../lib/format";
+import { heatColor, arrowColor, windText, gameTimeLabel, type PropKind } from "../lib/format";
 
 function signed(mult: number) {
   const v = Math.round((mult - 1) * 100);
@@ -72,7 +72,25 @@ function Face({ g, variant }: { g: Game; variant: "parks" | "hub" }) {
   );
 }
 
-export function ParksBoard({ games, hrRows = [], kRows = [], expandable = false }: { games: Game[]; hrRows?: BoardRow[]; kRows?: BoardRow[]; expandable?: boolean }) {
+export function ParksBoard({
+  games,
+  hrRows = [],
+  kRows = [],
+  hitsRows = [],
+  tbRows = [],
+  hitsKind = "hits1",
+  tbKind = "tb2",
+  expandable = false,
+}: {
+  games: Game[];
+  hrRows?: BoardRow[];
+  kRows?: BoardRow[];
+  hitsRows?: BoardRow[];
+  tbRows?: BoardRow[];
+  hitsKind?: PropKind;
+  tbKind?: PropKind;
+  expandable?: boolean;
+}) {
   if (!games || games.length === 0) {
     return (
       <div className="panel" style={{ color: "var(--muted)", textAlign: "center" }}>
@@ -88,11 +106,11 @@ export function ParksBoard({ games, hrRows = [], kRows = [], expandable = false 
       {expandable ? (
         <>
           <div className="eyebrow" style={{ marginBottom: "0.3rem" }}>Tonight&apos;s games · first pitch order</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "1rem", marginBottom: "0.8rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "0.8rem", flexWrap: "wrap" }}>
             <p className="factor-note" style={{ margin: 0 }}>
               Every game on the slate — click one for the full breakdown: starters, lineups, and edges.
             </p>
-            <span className="factor-note" style={{ margin: 0, whiteSpace: "nowrap" }}>spheres = park + weather boost</span>
+            <span className="factor-note" style={{ margin: 0, whiteSpace: "nowrap", flexShrink: 0 }}>spheres = park + weather boost</span>
           </div>
         </>
       ) : (
@@ -117,7 +135,15 @@ export function ParksBoard({ games, hrRows = [], kRows = [], expandable = false 
                 <summary style={{ cursor: "pointer" }}>
                   <Face g={g} variant="hub" />
                 </summary>
-                <GameBreakdown matchup={g.matchup} hrRows={hrRows} kRows={kRows} />
+                <GameBreakdown
+                  matchup={g.matchup}
+                  hrRows={hrRows}
+                  kRows={kRows}
+                  hitsRows={hitsRows}
+                  tbRows={tbRows}
+                  hitsKind={hitsKind}
+                  tbKind={tbKind}
+                />
               </details>
             );
           })}
