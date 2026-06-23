@@ -6,8 +6,6 @@ regenerating a past date cannot peek at games played after it (no
 lookahead bias in backfills or future backtests).
 """
 
-import datetime as dt
-
 from model.blend import marcel_blend, regress
 from model.projections import LEAGUE_HR_RATE
 from model.matchup import LEAGUE_K, LEAGUE_HIT
@@ -43,6 +41,10 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
     s3 = sum(1 for e in pa_rows if e["events"] == "triple")
 
     bip = [e for e in past if e["launch_speed"] is not None]
+    # season_hard is the full-season baseline (includes the recent window). recent
+    # form = last _RECENT_BIP batted balls, shrunk toward season by sample size so
+    # thin samples don't over-swing. The overlap mutes the delta slightly but
+    # direction is always preserved (hot -> >1, cold -> <1).
     season_hard = _hard_hit_rate(bip)
     recent = sorted(bip, key=lambda e: e["game_date"])[-_RECENT_BIP:]
     n = len(recent)
