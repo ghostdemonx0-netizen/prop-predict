@@ -67,3 +67,51 @@ export function ElectricBat({ size = 50 }: { size?: number }) {
     </svg>
   );
 }
+
+/* ---- PP monogram logo concepts (brand refresh) ---- */
+
+/** Interlocking "PP" in a rounded-square badge with a green glow — app-icon / profile-pic ready. */
+export function PPBadge({ size = 44 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
+      <defs>
+        <linearGradient id="ppbadgeg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#13211a" />
+          <stop offset="100%" stopColor="#0a120e" />
+        </linearGradient>
+        <filter id="ppglow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="1.5" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#ppbadgeg)" stroke="#3ee07f" strokeOpacity="0.45" strokeWidth="1.5" />
+      <g fill="none" stroke="#3ee07f" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#ppglow)">
+        <path d="M15 16 V48" />
+        <path d="M15 16 H23 a8 8 0 0 1 0 16 H15" />
+        <path d="M31 16 V48" />
+        <path d="M31 16 H39 a8 8 0 0 1 0 16 H31" />
+      </g>
+    </svg>
+  );
+}
+
+/** Monoline "PP" inside a circle — minimal, premium. */
+export function PPCircle({ size = 44 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
+      <defs>
+        <filter id="ppglow2" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="1.1" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <circle cx="32" cy="32" r="29" fill="#0a120e" stroke="#3ee07f" strokeOpacity="0.4" strokeWidth="1.4" />
+      <g fill="none" stroke="#3ee07f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#ppglow2)">
+        <path d="M19 20 V44" />
+        <path d="M19 20 H26 a7 7 0 0 1 0 14 H19" />
+        <path d="M33 20 V44" />
+        <path d="M33 20 H40 a7 7 0 0 1 0 14 H33" />
+      </g>
+    </svg>
+  );
+}
