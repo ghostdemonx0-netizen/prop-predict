@@ -1,5 +1,5 @@
 import pytest
-from model.parks import get_park, hr_park_factor, PARKS
+from model.parks import get_park, hr_park_factor, PARKS, hit_park_factor, hit_factors_stale
 
 
 def test_known_park_has_required_fields():
@@ -44,3 +44,35 @@ def test_park_names_are_title_cased():
         for word in park["name"].split():
             first = word[0]
             assert not first.isalpha() or first.isupper(), f"{abbr}: {park['name']!r}"
+
+
+# --- hit_park_factor tests ---
+
+def test_hit_park_factor_col_3b():
+    assert hit_park_factor("COL", "3b") == pytest.approx(1.35)
+
+
+def test_hit_park_factor_sea_3b():
+    assert hit_park_factor("SEA", "3b") == pytest.approx(0.80)
+
+
+def test_hit_park_factor_unknown_park():
+    assert hit_park_factor("UNKNOWN", "1b") == pytest.approx(1.0)
+
+
+def test_hit_park_factor_unknown_kind():
+    assert hit_park_factor("COL", "4b") == pytest.approx(1.0)
+
+
+# --- hit_factors_stale tests ---
+
+def test_hit_factors_stale_same_day():
+    assert hit_factors_stale("2026-06-22") is False
+
+
+def test_hit_factors_stale_over_400_days():
+    assert hit_factors_stale("2027-09-01") is True
+
+
+def test_hit_factors_stale_exactly_365_days():
+    assert hit_factors_stale("2027-06-22") is False

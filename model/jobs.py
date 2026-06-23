@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from model import daily, fetch
+from model import daily, fetch, parks
 from model.cache import DEFAULT_DIR
 
 
@@ -55,6 +55,8 @@ def morning(date_str: str | None = None) -> bool:
     print(f"bvp pairs cleared: {_clear_bvp()}")
     print(f"stat days ingested: {daily.update_events(date_str)}")
     changed = daily.refresh_today(date_str)
+    if parks.hit_factors_stale(date_str):
+        print("[warn] park hit factors are >400 days old — refresh the FanGraphs anchor (model/parks.py HIT_FACTORS_LAST_PULLED). See spec.")
     _record_current_signature(date_str, published=changed)
     return changed
 
@@ -82,6 +84,8 @@ def refresh(date_str: str | None = None) -> bool:
         daily.record_run(sig, published=False)
         return False
     changed = daily.refresh_today(date_str)
+    if parks.hit_factors_stale(date_str):
+        print("[warn] park hit factors are >400 days old — refresh the FanGraphs anchor (model/parks.py HIT_FACTORS_LAST_PULLED). See spec.")
     # a compute VERIFIES the board is current even when unchanged - advance
     # the freshness window so quiet stretches skip cheaply instead of
     # recomputing every run after 90 minutes

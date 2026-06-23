@@ -15,7 +15,7 @@ Fetcher contracts:
 
 from math import sqrt
 
-from model.parks import get_park, hr_park_factor
+from model.parks import get_park, hr_park_factor, hit_park_factor
 from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf
 from model.projections import (
     hr_probability, hr_rate_per_pa, expected_strikeouts, poisson_over_prob,
@@ -193,13 +193,14 @@ def build_games(slate: list[dict], weather_fn) -> list[dict]:
     return out
 
 
-def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_xbh_park: bool = False):
+def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_xbh_park: bool = False, park_1b: float = 1.0, park_2b: float = 1.0, park_3b: float = 1.0):
     """Per-PA [p0,p1,p2,p3,p4] (0..4 bases). HR reuses the adjusted HR rate;
-    1B/2B/3B are regressed + matchup/platoon/recent-form (park/weather HR-only, v1).
+    1B/2B/3B are regressed + matchup/platoon/recent-form.
 
-    apply_xbh_park=True (TB rows only): doubles/triples also receive a dampened
-    park/weather multiplier (_XBH_PARK_DAMPEN * (eff_park * weather_mult - 1)).
-    apply_xbh_park=False (default): output is byte-for-byte identical to old behavior.
+    apply_xbh_park=True (TB rows only): doubles/triples receive a dampened weather
+    multiplier (wx) plus per-component park factors (park_1b/2b/3b).
+    apply_xbh_park=False (Hits path): all park factors forced to 1.0 and wx=1.0 —
+    output is byte-for-byte park-neutral for 1B/2B/3B.
 
     Returns (actual_vec, neutral_vec) where neutral_vec uses league-average pitcher
     and no platoon/bvp so only park/weather/form remain (matchup adjustments cancel
@@ -219,15 +220,17 @@ def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_x
         hit_factor = platoon = p_mult = b_mult = 1.0
     form = b.get("recent_form_mult", 1.0)
 
-    # Dampened park/weather multiplier for doubles + triples (TB rows only)
+    # Per-component park factors + dampened weather for TB rows.
+    # When apply_xbh_park is False (Hits path), all factors stay 1.0 → park-neutral.
     if apply_xbh_park:
-        xbh_mult = 1.0 + _XBH_PARK_DAMPEN * (eff_park * weather_mult - 1.0)
+        wx = 1.0 + _XBH_PARK_DAMPEN * (weather_mult - 1.0)
     else:
-        xbh_mult = 1.0
+        wx = 1.0
+        park_1b = park_2b = park_3b = 1.0
 
-    p1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * hit_factor * form
-    p2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * hit_factor * form * xbh_mult
-    p3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * hit_factor * form * xbh_mult
+    p1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * hit_factor * form * park_1b
+    p2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * hit_factor * form * park_2b * wx
+    p3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * hit_factor * form * park_3b * wx
     p4 = hr_rate_per_pa(b.get("season_hr", 0), pa, recent_form_mult=form, matchup_mult=platoon,
                         park_mult=eff_park, weather_mult=weather_mult, pitcher_mult=p_mult, bvp_mult=b_mult)
     p1, p2, p3, p4 = (max(0.0, x) for x in (p1, p2, p3, p4))
@@ -239,9 +242,9 @@ def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_x
 
     # Neutral vector: same batter form + park/weather, but league-average pitcher
     # (no platoon, no pitcher quality, no bvp) so the ratio isolates pitcher effect.
-    n1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * form
-    n2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * form * xbh_mult
-    n3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * form * xbh_mult
+    n1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * form * park_1b
+    n2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * form * park_2b * wx
+    n3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * form * park_3b * wx
     n4 = hr_rate_per_pa(b.get("season_hr", 0), pa, recent_form_mult=form,
                         park_mult=eff_park, weather_mult=weather_mult)
     n1, n2, n3, n4 = (max(0.0, x) for x in (n1, n2, n3, n4))
@@ -265,6 +268,14 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
         lineups = lineups_fn(game)
         home_p = pitcher_fn(game["home_pitcher_id"]) if game.get("home_pitcher_id") else None
         away_p = pitcher_fn(game["away_pitcher_id"]) if game.get("away_pitcher_id") else None
+        # Per-component hit park factors for TB (Hits stays park-neutral)
+        if units == "bases":
+            p1f = hit_park_factor(game["park_team"], "1b")
+            p2f = hit_park_factor(game["park_team"], "2b")
+            p3f = hit_park_factor(game["park_team"], "3b")
+        else:
+            p1f = p2f = p3f = 1.0
+
         for side, opp in (("home", away_p), ("away", home_p)):
             team = game.get(side, "?")
             eff_park = park_mult / sqrt(hr_park_factor(team))
@@ -273,6 +284,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                 actual_vec, neutral_vec = _batter_outcome_vector(
                     b, opp, eff_park, weather_mult, slot, bvp,
                     apply_xbh_park=(units == "bases"),
+                    park_1b=p1f, park_2b=p2f, park_3b=p3f,
                 )
                 outcomes = [actual_vec[0], actual_vec[1] + actual_vec[2] + actual_vec[3] + actual_vec[4]] if units == "hits" else actual_vec
 
@@ -287,7 +299,11 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
 
                 park_weather_factor = 1.0
                 if units == "bases":
-                    nenv_vec, _ = _batter_outcome_vector(b, opp, 1.0, 1.0, slot, bvp, apply_xbh_park=True)
+                    nenv_vec, _ = _batter_outcome_vector(
+                        b, opp, 1.0, 1.0, slot, bvp,
+                        apply_xbh_park=True,
+                        park_1b=1.0, park_2b=1.0, park_3b=1.0,
+                    )
                     nenv_ev = nenv_vec[1] + 2 * nenv_vec[2] + 3 * nenv_vec[3] + 4 * nenv_vec[4]
                     park_weather_factor = (actual_ev / nenv_ev) if nenv_ev > 0 else 1.0
 

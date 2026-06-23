@@ -290,10 +290,13 @@ def test_hits_rows_no_xbh_dampening():
         f"HITS path: p3 should be park-neutral: Coors={vec_coors_hits[3]:.6f} vs neutral={vec_neutral_hits[3]:.6f}"
     )
 
-    # TB path: apply_xbh_park=True — Coors should give higher p2/p3
-    vec_coors_tb, _ = _batter_outcome_vector(b_xbh, None, 1.22, 1.0, 3, None, apply_xbh_park=True)
+    # TB path: apply_xbh_park=True + per-component park factors — Coors should give higher p2/p3.
+    # Under the new design the XBH boost comes from park_2b/3b, not from eff_park.
+    # Passing Coors-like park factors (2B=1.11, 3B=1.35) must produce a higher p2/p3.
+    vec_coors_tb, _ = _batter_outcome_vector(b_xbh, None, 1.22, 1.0, 3, None,
+                                             apply_xbh_park=True, park_2b=1.11, park_3b=1.35)
     assert vec_coors_tb[2] > vec_neutral_hits[2], (
-        f"TB path: p2 should be boosted by Coors park: {vec_coors_tb[2]:.6f} vs {vec_neutral_hits[2]:.6f}"
+        f"TB path: p2 should be boosted by park_2b=1.11: {vec_coors_tb[2]:.6f} vs {vec_neutral_hits[2]:.6f}"
     )
 
 
@@ -429,3 +432,87 @@ def test_tb_singles_unchanged_by_park():
     assert vec_park[1] == vec_neutral[1], (
         f"p1 (singles) changed with apply_xbh_park: park={vec_park[1]:.6f} vs neutral={vec_neutral[1]:.6f}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Tests for per-component hit park factors in TB rows (Task 2)
+# ---------------------------------------------------------------------------
+
+def _col_slate():
+    """A COL home game — Coors Field, the strongest hitter-friendly park."""
+    return [{"game_id": 10, "home": "COL", "away": "SEA", "park_team": "COL",
+             "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+
+
+def _sea_slate():
+    """A SEA home game — T-Mobile Park, suppressive for extra bases."""
+    return [{"game_id": 11, "home": "SEA", "away": "COL", "park_team": "SEA",
+             "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+
+
+def _neutral_slate():
+    return [{"game_id": 12, "home": "ZZZ", "away": "YYY", "park_team": "ZZZ",
+             "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+
+
+def test_tb_col_higher_than_neutral():
+    """COL TB row should have higher p_ge2/p_ge3 than a neutral/unknown park."""
+    batter = _typical_batter()
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_neutral()
+    col_rows = build_total_bases_rows(_col_slate(), lf, pf, _w, bvp_fn=None)
+    neutral_rows = build_total_bases_rows(_neutral_slate(), lf, pf, _w, bvp_fn=None)
+    assert col_rows and neutral_rows
+    col_r = col_rows[0]
+    neutral_r = neutral_rows[0]
+    assert col_r["p_ge2"] > neutral_r["p_ge2"], f"COL p_ge2={col_r['p_ge2']:.4f} should exceed neutral {neutral_r['p_ge2']:.4f}"
+    assert col_r["p_ge3"] > neutral_r["p_ge3"], f"COL p_ge3={col_r['p_ge3']:.4f} should exceed neutral {neutral_r['p_ge3']:.4f}"
+
+
+def test_tb_sea_lower_than_neutral():
+    """SEA TB row should have lower p_ge2/p_ge3 than a neutral/unknown park."""
+    batter = _typical_batter()
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_neutral()
+    sea_rows = build_total_bases_rows(_sea_slate(), lf, pf, _w, bvp_fn=None)
+    neutral_rows = build_total_bases_rows(_neutral_slate(), lf, pf, _w, bvp_fn=None)
+    assert sea_rows and neutral_rows
+    sea_r = sea_rows[0]
+    neutral_r = neutral_rows[0]
+    assert sea_r["p_ge2"] < neutral_r["p_ge2"], f"SEA p_ge2={sea_r['p_ge2']:.4f} should be below neutral {neutral_r['p_ge2']:.4f}"
+    assert sea_r["p_ge3"] < neutral_r["p_ge3"], f"SEA p_ge3={sea_r['p_ge3']:.4f} should be below neutral {neutral_r['p_ge3']:.4f}"
+
+
+def test_hits_park_neutral_col_vs_neutral():
+    """Hits 1B/2B/3B components must be park-neutral (park_1b=park_2b=park_3b=1.0 forced).
+
+    We verify at the _batter_outcome_vector level where we can isolate the 1B/2B/3B
+    components cleanly: apply_xbh_park=False must produce identical p1/p2/p3 regardless
+    of eff_park (HR still differs, but that is pre-existing and correct behaviour).
+    """
+    from model.pipeline import _batter_outcome_vector
+    batter = _typical_batter()
+    # Coors eff_park ~1.105 vs neutral 1.0 — 1B/2B/3B components must be identical
+    vec_col, _ = _batter_outcome_vector(batter, None, 1.105, 1.0, 3, None,
+                                        apply_xbh_park=False, park_1b=1.09, park_2b=1.11, park_3b=1.35)
+    vec_neutral, _ = _batter_outcome_vector(batter, None, 1.0, 1.0, 3, None, apply_xbh_park=False)
+    # apply_xbh_park=False forces park_1b=park_2b=park_3b=1.0, overriding any passed values
+    assert vec_col[1] == vec_neutral[1], f"Hits p1 should be park-neutral: COL={vec_col[1]:.6f} neutral={vec_neutral[1]:.6f}"
+    assert vec_col[2] == vec_neutral[2], f"Hits p2 should be park-neutral: COL={vec_col[2]:.6f} neutral={vec_neutral[2]:.6f}"
+    assert vec_col[3] == vec_neutral[3], f"Hits p3 should be park-neutral: COL={vec_col[3]:.6f} neutral={vec_neutral[3]:.6f}"
+
+
+def test_pitcher_factor_neutral_matchup_col_tb():
+    """pitcher_factor for a league-average pitcher vs a typical batter in COL should be ≈1.0.
+
+    The ±0.10 window accommodates the R-vs-R same-hand platoon penalty (~0.93 hit_factor)
+    which is baked into pitcher_factor even for a league-average pitcher — the same reason
+    the existing test_pitcher_factor_neutral_approx_1 uses a ±0.15 window.
+    """
+    batter = _typical_batter()
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit_neutral()
+    rows = build_total_bases_rows(_col_slate(), lf, pf, _w, bvp_fn=None)
+    assert rows
+    r = rows[0]
+    assert abs(r["pitcher_factor"] - 1.0) < 0.10, f"pitcher_factor={r['pitcher_factor']:.4f} should be ≈1.0 for neutral matchup in COL"

@@ -7,6 +7,10 @@ dome: True if a fixed/closed roof neutralizes wind.
 Values are reasonable v1 estimates; refine later from data.
 """
 
+HIT_FACTORS_LAST_PULLED = "2026-06-22"
+# source: https://www.fangraphs.com/guts.aspx?type=pfh
+# FanGraphs multi-year, normalized to multipliers, 1.00=neutral; refresh ~annually preseason.
+
 PARKS: dict[str, dict] = {
     "ARI": {"name": "Chase Field", "hr_factor": 1.04, "cf_bearing_deg": 0, "dome": True},
     "ATL": {"name": "Truist Park", "hr_factor": 1.05, "cf_bearing_deg": 25, "dome": False},
@@ -42,6 +46,39 @@ PARKS: dict[str, dict] = {
 
 _NEUTRAL = {"name": "Unknown Park", "hr_factor": 1.0, "cf_bearing_deg": 0, "dome": False}
 
+HIT_FACTORS: dict[str, dict] = {
+    "ARI": {"1b": 1.03, "2b": 1.05, "3b": 1.20},
+    "ATL": {"1b": 1.01, "2b": 0.98, "3b": 1.01},
+    "BAL": {"1b": 1.03, "2b": 0.97, "3b": 1.06},
+    "BOS": {"1b": 1.05, "2b": 1.11, "3b": 1.17},
+    "CHC": {"1b": 1.01, "2b": 0.96, "3b": 1.13},
+    "CWS": {"1b": 1.00, "2b": 0.96, "3b": 0.87},
+    "CIN": {"1b": 1.02, "2b": 1.01, "3b": 0.84},
+    "CLE": {"1b": 1.01, "2b": 1.01, "3b": 0.89},
+    "COL": {"1b": 1.09, "2b": 1.11, "3b": 1.35},
+    "DET": {"1b": 1.01, "2b": 1.01, "3b": 1.20},
+    "HOU": {"1b": 0.99, "2b": 1.00, "3b": 1.14},
+    "KC":  {"1b": 1.03, "2b": 1.08, "3b": 1.23},
+    "LAA": {"1b": 1.00, "2b": 0.96, "3b": 1.01},
+    "LAD": {"1b": 0.97, "2b": 0.98, "3b": 0.85},
+    "MIA": {"1b": 1.01, "2b": 1.01, "3b": 1.09},
+    "MIL": {"1b": 0.96, "2b": 0.96, "3b": 1.04},
+    "MIN": {"1b": 1.00, "2b": 1.04, "3b": 0.92},
+    "NYM": {"1b": 0.98, "2b": 0.96, "3b": 0.88},
+    "NYY": {"1b": 0.97, "2b": 0.96, "3b": 0.86},
+    "OAK": {"1b": 1.02, "2b": 1.00, "3b": 1.02},  # low confidence — new park
+    "PHI": {"1b": 1.00, "2b": 0.98, "3b": 1.03},
+    "PIT": {"1b": 1.02, "2b": 1.05, "3b": 0.99},
+    "SD":  {"1b": 0.97, "2b": 0.96, "3b": 0.86},
+    "SF":  {"1b": 1.01, "2b": 1.02, "3b": 1.11},
+    "SEA": {"1b": 0.95, "2b": 0.93, "3b": 0.80},
+    "STL": {"1b": 1.01, "2b": 0.98, "3b": 0.89},
+    "TB":  {"1b": 1.04, "2b": 0.96, "3b": 0.91},
+    "TEX": {"1b": 0.98, "2b": 1.00, "3b": 0.93},
+    "TOR": {"1b": 0.98, "2b": 1.02, "3b": 0.89},
+    "WSH": {"1b": 1.01, "2b": 1.00, "3b": 0.98},
+}
+
 
 def get_park(team_abbr: str) -> dict:
     """Return a copy of the park dict for a home-team abbreviation, or a neutral default."""
@@ -51,3 +88,22 @@ def get_park(team_abbr: str) -> dict:
 def hr_park_factor(team_abbr: str) -> float:
     """Return the multiplicative HR park factor for a home-team abbreviation."""
     return get_park(team_abbr)["hr_factor"]
+
+
+def hit_park_factor(team_abbr: str, kind: str) -> float:
+    """Return the per-component hit park factor (kind in {'1b','2b','3b'}).
+
+    Returns 1.0 (neutral) for unknown parks or unknown kind.
+    """
+    return HIT_FACTORS.get(team_abbr, {}).get(kind, 1.0)
+
+
+def hit_factors_stale(today_iso: str, max_days: int = 400) -> bool:
+    """Return True if HIT_FACTORS_LAST_PULLED is more than max_days before today_iso.
+
+    Pure function — caller passes today (no clock calls inside).
+    """
+    from datetime import date
+    pulled = date.fromisoformat(HIT_FACTORS_LAST_PULLED)
+    today = date.fromisoformat(today_iso)
+    return (today - pulled).days > max_days
