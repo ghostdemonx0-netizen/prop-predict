@@ -29,9 +29,10 @@ def test_batter_profile_excludes_games_on_or_after_as_of():
 
 
 def test_batter_recent_form_hot_when_recent_contact_harder():
-    cold = [_ev("2026-04-01", "field_out", 85.0)] * 10
-    hot = [_ev("2026-06-08", "field_out", 105.0)] * 10
-    p = batter_profile_from_events(cold + hot, as_of="2026-06-10", player_id=1)
+    # 200 soft-season balls, then 55 hard recent balls — last 55 BIP are all hard
+    season = [_ev("2026-04-01", "field_out", 85.0)] * 200
+    hot = [_ev("2026-06-08", "field_out", 105.0)] * 55
+    p = batter_profile_from_events(season + hot, as_of="2026-06-10", player_id=1)
     assert p["recent_form_mult"] > 1.0
     assert p["recent_form_mult"] <= 1.25
 
@@ -70,8 +71,9 @@ def test_batter_profile_no_data_defaults():
 
 
 def test_batter_recent_form_cold_clamps_at_floor():
-    hot_season = [_ev("2026-04-01", "field_out", 105.0)] * 30
-    cold_recent = [_ev("2026-06-08", "field_out", 80.0)] * 10
+    # 200 hard-season balls, then 55 very soft recent — enough to push to the floor
+    hot_season = [_ev("2026-04-01", "field_out", 105.0)] * 200
+    cold_recent = [_ev("2026-06-08", "field_out", 65.0)] * 55
     p = batter_profile_from_events(hot_season + cold_recent, as_of="2026-06-10", player_id=1)
     assert p["recent_form_mult"] == pytest.approx(0.8)  # clamped at the floor
 
@@ -107,3 +109,74 @@ def test_pitcher_profile_computes_personal_k_line():
     )
     p = pitcher_profile_from_events(events, as_of="2026-06-01", player_id=9)
     assert p["k_line"] == 0.5  # median of [2, 1, 0] is 1 -> 0.5
+
+
+# --- recent-form: BIP-count window + shrinkage ---
+
+def _make_bip_events(n, game_date, launch_speed):
+    """Helper: n batted-ball events all on game_date with given launch_speed."""
+    return [
+        {"game_date": game_date, "launch_speed": launch_speed, "events": "single", "woba_value": 0.45}
+        for _ in range(n)
+    ]
+
+def test_recent_form_bip_window_not_calendar():
+    """Batted balls older than 15 days still count (window is BIP-count, not calendar)."""
+    # 55 balls from 60 days ago — all hard-hit (launch_speed=105)
+    old_hard = _make_bip_events(55, "2025-04-01", 105.0)
+    # 10 balls from yesterday — soft (launch_speed=75)
+    recent_soft = _make_bip_events(10, "2025-05-30", 75.0)
+    profile = batter_profile_from_events(old_hard + recent_soft, as_of="2025-06-17", player_id=1)
+    # Window = last 55 BIP = mix of some old hard + some recent soft
+    # Either way, result must NOT be 1.0 (which 15-day window would give for all-old hard balls)
+    assert profile["recent_form_mult"] != 1.0
+
+def test_recent_form_hot_direction():
+    """Recent balls harder than season → mult > 1.0."""
+    season = _make_bip_events(100, "2025-04-01", 85.0)   # season avg ~85 mph
+    recent = _make_bip_events(55, "2025-06-01", 100.0)    # last 55 all hard-hit
+    profile = batter_profile_from_events(season + recent, as_of="2025-06-17", player_id=1)
+    assert profile["recent_form_mult"] > 1.0
+
+def test_recent_form_cold_direction():
+    """Recent balls softer than season → mult < 1.0."""
+    season = _make_bip_events(100, "2025-04-01", 95.0)   # season avg ~95 mph (hard)
+    recent = _make_bip_events(55, "2025-06-01", 75.0)    # last 55 soft
+    profile = batter_profile_from_events(season + recent, as_of="2025-06-17", player_id=1)
+    assert profile["recent_form_mult"] < 1.0
+
+def test_recent_form_shrinkage_thin_sample():
+    """Thin sample (8 balls) shrinks mult toward 1.0 vs full 55 at same rate."""
+    season_base = _make_bip_events(200, "2025-04-01", 85.0)
+    # Full window: 55 balls at 100 mph
+    full_recent = _make_bip_events(55, "2025-06-01", 100.0)
+    profile_full = batter_profile_from_events(season_base + full_recent, as_of="2025-06-17", player_id=1)
+    # Thin window: only 8 balls at 100 mph
+    thin_recent = _make_bip_events(8, "2025-06-01", 100.0)
+    profile_thin = batter_profile_from_events(season_base + thin_recent, as_of="2025-06-17", player_id=1)
+    # Thin sample must be closer to 1.0
+    assert abs(profile_thin["recent_form_mult"] - 1.0) < abs(profile_full["recent_form_mult"] - 1.0)
+
+def test_recent_form_neutral():
+    """Recent rate ≈ season rate → mult ≈ 1.0."""
+    events = _make_bip_events(100, "2025-05-01", 90.0)
+    profile = batter_profile_from_events(events, as_of="2025-06-17", player_id=1)
+    assert abs(profile["recent_form_mult"] - 1.0) < 0.05
+
+def test_recent_form_cap():
+    """Extreme inputs clamp to [0.8, 1.25]."""
+    season = _make_bip_events(200, "2025-04-01", 70.0)   # very soft season
+    hot = _make_bip_events(55, "2025-06-01", 115.0)      # extreme hard recent
+    profile = batter_profile_from_events(season + hot, as_of="2025-06-17", player_id=1)
+    assert profile["recent_form_mult"] <= 1.25
+    cold = _make_bip_events(200, "2025-04-01", 110.0)    # hard season
+    soft = _make_bip_events(55, "2025-06-01", 60.0)      # extreme soft recent
+    profile2 = batter_profile_from_events(cold + soft, as_of="2025-06-17", player_id=1)
+    assert profile2["recent_form_mult"] >= 0.8
+
+def test_recent_form_empty_bip():
+    """No batted balls → recent_form_mult == 1.0, no crash."""
+    # Events with no launch_speed (not BIP)
+    events = [{"game_date": "2025-06-01", "launch_speed": None, "events": "strikeout", "woba_value": 0.0}]
+    profile = batter_profile_from_events(events, as_of="2025-06-17", player_id=1)
+    assert profile["recent_form_mult"] == 1.0

@@ -14,6 +14,9 @@ from model.matchup import LEAGUE_K, LEAGUE_HIT
 
 _HR_R, _K_R, _HIT_R = 300.0, 200.0, 200.0
 
+_RECENT_BIP = 55          # recent-form window size in batted balls; tunable
+_RECENT_SHRINK_R = 25.0   # shrinkage weight toward season hard-hit rate; tunable
+
 _K_EVENTS = ("strikeout", "strikeout_double_play")
 _HIT_EVENTS = ("single", "double", "triple", "home_run")
 
@@ -41,10 +44,11 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
 
     bip = [e for e in past if e["launch_speed"] is not None]
     season_hard = _hard_hit_rate(bip)
-    cutoff = (dt.date.fromisoformat(as_of) - dt.timedelta(days=15)).isoformat()
-    recent = [e for e in bip if e["game_date"] >= cutoff]
-    recent_hard = _hard_hit_rate(recent) if recent else season_hard
-    recent_form_mult = max(0.8, min(1.25, 1.0 + (recent_hard - season_hard) * 1.5))
+    recent = sorted(bip, key=lambda e: e["game_date"])[-_RECENT_BIP:]
+    n = len(recent)
+    recent_hard_raw = _hard_hit_rate(recent) if n else season_hard
+    shrunk = (recent_hard_raw * n + season_hard * _RECENT_SHRINK_R) / (n + _RECENT_SHRINK_R)
+    recent_form_mult = max(0.8, min(1.25, 1.0 + (shrunk - season_hard) * 1.5))
 
     return {
         "player_id": player_id,
