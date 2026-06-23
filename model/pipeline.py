@@ -27,7 +27,7 @@ from model.blend import regress
 
 _LG_1B, _LG_2B, _LG_3B = 0.138, 0.045, 0.005
 _COMP_R = 200.0
-_XBH_PARK_DAMPEN = 0.5  # doubles/triples respond ~half as much as HRs to park/weather (tunable v1)
+_XBH_WEATHER_DAMPEN = 0.5  # weather-only dampen for fly-ball XBH (doubles/triples); real per-park factors are applied separately (tunable v1)
 
 
 def _history_adjusted(m: dict, bvp: dict | None) -> dict:
@@ -223,7 +223,7 @@ def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_x
     # Per-component park factors + dampened weather for TB rows.
     # When apply_xbh_park is False (Hits path), all factors stay 1.0 → park-neutral.
     if apply_xbh_park:
-        wx = 1.0 + _XBH_PARK_DAMPEN * (weather_mult - 1.0)
+        wx = 1.0 + _XBH_WEATHER_DAMPEN * (weather_mult - 1.0)
     else:
         wx = 1.0
         park_1b = park_2b = park_3b = 1.0
