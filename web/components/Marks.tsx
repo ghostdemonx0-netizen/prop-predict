@@ -185,7 +185,7 @@ export function PPSport({ size = 56, font = "var(--font-cp)" }: { size?: number;
     <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
       <defs>{_GRAD("sportg")}<filter id="sportglow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
       <g transform="skewX(-9)" filter="url(#sportglow)">
-        <text x="33" y="45" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="29" letterSpacing="-0.5">
+        <text x="33" y="45" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="29" letterSpacing="1.5">
           <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#sportg)">P</tspan>
         </text>
       </g>
@@ -199,12 +199,13 @@ export function PPSportBolt({ size = 56, font = "var(--font-cp)" }: { size?: num
     <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
       <defs>{_GRAD("sportbg")}<filter id="sportbglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
       <g transform="skewX(-9)">
-        <text x="33" y="45" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="29" letterSpacing="-0.5">
+        <text x="33" y="45" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="29" letterSpacing="1.5">
           <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#sportbg)">P</tspan>
         </text>
       </g>
       {/* lightning bolt through the center */}
-      <path d="M38 16 L30 33 L35 33 L28 50 L42 31 L36 31 Z" fill="url(#sportbg)" stroke="#0a120e" strokeWidth="1.1" strokeLinejoin="round" filter="url(#sportbglow)" />
+      {/* bolt centered in the gap between the two P's, touching both */}
+      <path d="M38 14 L29 32 L34 32 L28 52 L39 31 L33 31 Z" fill="url(#sportbg)" stroke="#0a120e" strokeWidth="1.1" strokeLinejoin="round" filter="url(#sportbglow)" />
     </svg>
   );
 }
