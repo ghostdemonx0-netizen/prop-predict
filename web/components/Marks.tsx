@@ -202,16 +202,14 @@ export function PPHex({ size = 56, font = "var(--font-cp)", bolt = true }: { siz
       <g stroke="#3ee07f" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round"><path d="M3 24 H9 M3 40 H9 M55 24 H61 M55 40 H61" /></g>
       {/* flat-top hexagon */}
       <path d="M20 7 H44 L59 32 L44 57 H20 L5 32 Z" fill="#0a120e" stroke="url(#hexg)" strokeWidth="2.2" filter="url(#hexglow)" />
-      {/* PP — first P white (Prop), second P green→cyan (Predict) */}
-      <g transform="skewX(-7)">
-        <text x="33" y="41" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="23" letterSpacing="1.5">
-          <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#hexg)">P</tspan>
-        </text>
-        {bolt && (
-          /* contrasting cyan bolt, centered between the P's, touching both */
-          <path d="M35 16 L29 31 L33 31 L29 48 L35 32 L31 32 Z" fill="#34dfe8" stroke="#0a120e" strokeWidth="1" strokeLinejoin="round" filter="url(#hexglow)" />
-        )}
-      </g>
+      {/* PP centered upright in the hex — first P white (Prop), second P green→cyan (Predict) */}
+      <text x="32" y="41" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="23" letterSpacing="2.5">
+        <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#hexg)">P</tspan>
+      </text>
+      {bolt && (
+        /* bigger, clear cyan bolt — centered in the gap, struck through, touching both P's */
+        <path d="M37 13 L28 33 L34 33 L27 51 L38 30 L31 30 Z" fill="#34dfe8" stroke="#0a120e" strokeWidth="1.3" strokeLinejoin="round" filter="url(#hexglow)" />
+      )}
     </svg>
   );
 }
