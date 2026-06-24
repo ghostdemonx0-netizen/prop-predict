@@ -137,6 +137,7 @@ export function ParksBoard({
                 </summary>
                 <GameBreakdown
                   matchup={g.matchup}
+                  gameId={g.game_id != null ? String(g.game_id) : undefined}
                   hrRows={hrRows}
                   kRows={kRows}
                   hitsRows={hitsRows}

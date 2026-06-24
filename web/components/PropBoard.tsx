@@ -14,7 +14,8 @@ export type BoardRow = {
   prob: number; // probability or over_prob
   detail: string; // e.g. "@ COL" or "5.5 Ks"
   href: string;
-  matchup?: string; // "AWAY @ HOME" — game grouping for the List view
+  matchup?: string; // "AWAY @ HOME" — display label (NOT a unique game key: doubleheaders share it)
+  gameId?: string; // unique game key — use this to group/filter so doubleheaders stay separate
   projection?: string; // K board: projected strikeouts, e.g. "6.8"
   line?: string; // K board: our book-style line, e.g. "4.5"
   time?: string; // local game start time, e.g. "7:10 PM EDT"
@@ -271,28 +272,29 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
   const Row = (r: BoardRow) => <BoardRowLine key={r.id} r={r} kind={kind} />;
 
   const List = () => {
-    // Group rows by matchup (rows within a game keep high->low probability
-    // order), then order the games by first pitch.
-    const groups: { key: string; rows: BoardRow[] }[] = [];
+    // Group rows by GAME (rows within a game keep high->low probability order),
+    // then order the games by first pitch. Keyed by game id so a doubleheader
+    // splits into two groups even though both share one matchup name.
+    const groups: { key: string; label: string; rows: BoardRow[] }[] = [];
     const seen = new Map<string, number>();
     for (const r of rows) {
-      const key = r.matchup ?? "Other";
+      const key = r.gameId ?? r.matchup ?? "Other";
       if (!seen.has(key)) {
         seen.set(key, groups.length);
-        groups.push({ key, rows: [] });
+        groups.push({ key, label: r.matchup ?? "Other", rows: [] });
       }
       groups[seen.get(key)!].rows.push(r);
     }
     groups.sort((a, b) => (a.rows[0].timeSort ?? "9999").localeCompare(b.rows[0].timeSort ?? "9999"));
 
-    const Head = (g: { key: string; rows: BoardRow[] }) => (
+    const Head = (g: { key: string; label: string; rows: BoardRow[] }) => (
       <>
         {g.rows[0].time && (
           <span className="num" style={{ float: "right", color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem" }}>
             🕐 {g.rows[0].time}
           </span>
         )}
-        {g.key}
+        {g.label}
       </>
     );
 
@@ -335,7 +337,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
                   {g.rows.length} hitters
                 </span>
               </summary>
-              <TeamSplit matchup={g.key} rows={g.rows} kind={kind} />
+              <TeamSplit matchup={g.label} rows={g.rows} kind={kind} />
             </details>
           );
         })}
@@ -643,6 +645,7 @@ function ColSplit({
 /** Full game drilldown: both starting pitchers, then the hitters split by side. */
 export function GameBreakdown({
   matchup,
+  gameId,
   hrRows,
   kRows,
   hitsRows = [],
@@ -651,6 +654,7 @@ export function GameBreakdown({
   tbKind = "tb2",
 }: {
   matchup: string;
+  gameId?: string; // when set, filter by this exact game so doubleheaders don't merge
   hrRows: BoardRow[];
   kRows: BoardRow[];
   hitsRows?: BoardRow[];
@@ -658,10 +662,13 @@ export function GameBreakdown({
   hitsKind?: PropKind;
   tbKind?: PropKind;
 }) {
-  const hr = hrRows.filter((r) => r.matchup === matchup);
-  const ks = kRows.filter((r) => r.matchup === matchup);
-  const hits = hitsRows.filter((r) => r.matchup === matchup);
-  const tb = tbRows.filter((r) => r.matchup === matchup);
+  // Match by game id when we have it (doubleheaders share a matchup name but not
+  // a game id); fall back to the name only for older data without ids.
+  const inGame = (r: BoardRow) => (gameId != null ? r.gameId === gameId : r.matchup === matchup);
+  const hr = hrRows.filter(inGame);
+  const ks = kRows.filter(inGame);
+  const hits = hitsRows.filter(inGame);
+  const tb = tbRows.filter(inGame);
   if (hr.length === 0 && ks.length === 0 && hits.length === 0 && tb.length === 0) {
     return <p className="factor-note" style={{ marginBottom: 0 }}>No player projections yet — lineups may not be posted.</p>;
   }
