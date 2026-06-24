@@ -176,3 +176,35 @@ export function PPEdge({ size = 44 }: { size?: number }) {
     </svg>
   );
 }
+
+/* ---- round 3: bold italic sporty "PP" (mix of the user's 3 refs) ---- */
+
+/** Bold italic esports PP — first P white, second P green→cyan gradient. No lightning. */
+export function PPSport({ size = 56, font = "var(--font-cp)" }: { size?: number; font?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
+      <defs>{_GRAD("sportg")}<filter id="sportglow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <g transform="skewX(-9)" filter="url(#sportglow)">
+        <text x="34" y="45" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="34" letterSpacing="-5">
+          <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#sportg)">P</tspan>
+        </text>
+      </g>
+    </svg>
+  );
+}
+
+/** Same sporty PP with a lightning bolt struck through the middle (gradient + glow). */
+export function PPSportBolt({ size = 56, font = "var(--font-cp)" }: { size?: number; font?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
+      <defs>{_GRAD("sportbg")}<filter id="sportbglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <g transform="skewX(-9)">
+        <text x="34" y="45" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="34" letterSpacing="-5">
+          <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#sportbg)">P</tspan>
+        </text>
+      </g>
+      {/* lightning bolt through the center */}
+      <path d="M40 4 L26 32 L34 32 L23 60 L47 28 L38 28 Z" fill="url(#sportbg)" stroke="#0a120e" strokeWidth="1.4" strokeLinejoin="round" filter="url(#sportbglow)" />
+    </svg>
+  );
+}
