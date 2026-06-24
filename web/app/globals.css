@@ -176,6 +176,7 @@ body::after {
   justify-content: center;
   width: 38px;
   height: 38px;
+  flex: 0 0 auto; /* hold a perfect circle even when the row text is wide (phone) */
   border-radius: 50%;
   background:
     radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.2), rgba(62, 224, 127, 0.12) 46%, rgba(10, 16, 13, 0.25) 100%);
