@@ -202,13 +202,13 @@ export function PPHex({ size = 56, font = "var(--font-cp)", bolt = true }: { siz
       <g stroke="#3ee07f" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round"><path d="M3 24 H9 M3 40 H9 M55 24 H61 M55 40 H61" /></g>
       {/* flat-top hexagon */}
       <path d="M20 7 H44 L59 32 L44 57 H20 L5 32 Z" fill="#0a120e" stroke="url(#hexg)" strokeWidth="2.2" filter="url(#hexglow)" />
-      {/* Two anchored P's so the gap is DETERMINISTICALLY centered at x=32 (no font-metric guessing):
-          first P's right edge ends at x=28, second P's left edge starts at x=36 → gap center = 32. */}
-      <text x="28" y="41" textAnchor="end" fontFamily={font} fontWeight="700" fontSize="23" fill="#e9f1ec">P</text>
-      <text x="36" y="41" textAnchor="start" fontFamily={font} fontWeight="700" fontSize="23" fill="url(#hexg)">P</text>
+      {/* Two anchored P's MERGED at the center (slight overlap): first P's right edge at x=33,
+          second P's left edge at x=31 → they interlock, seam centered at x=32. */}
+      <text x="33" y="41" textAnchor="end" fontFamily={font} fontWeight="700" fontSize="23" fill="#e9f1ec">P</text>
+      <text x="31" y="41" textAnchor="start" fontFamily={font} fontWeight="700" fontSize="23" fill="url(#hexg)">P</text>
       {bolt && (
-        /* medium cyan bolt, dead-centered in the gap (x=32), touching both P's */
-        <path d="M35 16 L29 33 L34 33 L29 48 L36 31 L31 31 Z" fill="#5cf0ff" filter="url(#hexglow)" />
+        /* cyan bolt on the seam (x=32), struck through, touching both P's */
+        <path d="M35 16 L30 33 L34 33 L29 48 L35 31 L31 31 Z" fill="#5cf0ff" filter="url(#hexglow)" />
       )}
     </svg>
   );
