@@ -8,7 +8,7 @@ import { PropBoard, type BoardRow } from "../components/PropBoard";
 import { TopPlays } from "../components/TopPlays";
 import { gameTimeLabel } from "../lib/format";
 import { ParksBoard } from "../components/ParksBoard";
-import { FlamingBall, ElectricBat } from "../components/Marks";
+import { PPHex } from "../components/Marks";
 import { UserButton } from "@clerk/nextjs";
 
 function batHand(b?: string) {
@@ -236,12 +236,11 @@ export default function Home() {
     <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">
       <header className="mb-9 rise">
         <p className="eyebrow mb-2">MLB player props · model-driven</p>
-        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-          <ElectricBat />
-          <h1 className="wordmark">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <PPHex size={46} />
+          <h1 className="wordmark" style={{ fontFamily: "var(--font-orb), sans-serif", fontStyle: "italic" }}>
             <span className="lo">Prop </span><span className="hi">Predict</span>
           </h1>
-          <FlamingBall />
           <span style={{ marginLeft: "auto" }}>
             <UserButton />
           </span>
