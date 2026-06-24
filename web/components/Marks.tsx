@@ -207,8 +207,8 @@ export function PPHex({ size = 56, font = "var(--font-cp)", bolt = true }: { siz
       <text x="33" y="41" textAnchor="end" fontFamily={font} fontWeight="700" fontSize="23" fill="#e9f1ec">P</text>
       <text x="31" y="41" textAnchor="start" fontFamily={font} fontWeight="700" fontSize="23" fill="url(#hexg)">P</text>
       {bolt && (
-        /* cyan bolt on the seam (x=32), struck through, touching both P's */
-        <path d="M35 16 L30 33 L34 33 L29 48 L35 31 L31 31 Z" fill="#5cf0ff" filter="url(#hexglow)" />
+        /* smaller bolt on the seam (x=32); thin dark outline so it stays visible over the white P; bright + glow */
+        <path d="M34 19 L30 32 L33 32 L30 45 L34 31 L31 31 Z" fill="#5cf0ff" stroke="#06100c" strokeWidth="0.7" strokeLinejoin="round" filter="url(#hexglow)" />
       )}
     </svg>
   );
