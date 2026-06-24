@@ -115,3 +115,61 @@ export function PPCircle({ size = 44 }: { size?: number }) {
     </svg>
   );
 }
+
+/* ---- edgier / techy PP concepts (round 2) ---- */
+
+const _GRAD = (id: string) => (
+  <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stopColor="#5cff9d" />
+    <stop offset="55%" stopColor="#3ee07f" />
+    <stop offset="100%" stopColor="#34dfe8" />
+  </linearGradient>
+);
+
+/** Hex "chip" — PP in a beveled hexagon w/ gradient, glow + chip pins. Advanced/data vibe. */
+export function PPChip({ size = 44 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
+      <defs>{_GRAD("chipg")}<filter id="chipglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      {/* chip pins */}
+      <g stroke="#3ee07f" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round">
+        <path d="M4 24 H10 M4 40 H10 M54 24 H60 M54 40 H60" />
+      </g>
+      {/* flat-top hexagon */}
+      <path d="M20 8 H44 L58 32 L44 56 H20 L6 32 Z" fill="#0a120e" stroke="url(#chipg)" strokeWidth="2.2" filter="url(#chipglow)" />
+      <text x="32" y="41" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontWeight="800" fontSize="24" letterSpacing="-2.5" fill="url(#chipg)">PP</text>
+    </svg>
+  );
+}
+
+/** Terminal — monospace PP on a "screen" with a blinking cursor. Hacker/edgy. */
+export function PPTerminal({ size = 44 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
+      <defs><filter id="termglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <rect x="3" y="6" width="58" height="52" rx="11" fill="#0a120e" stroke="#3ee07f" strokeOpacity="0.5" strokeWidth="1.6" />
+      <path d="M11 18 H53" stroke="#3ee07f" strokeOpacity="0.25" strokeWidth="1.4" strokeLinecap="round" />
+      <g filter="url(#termglow)">
+        <text x="13" y="46" fontFamily="ui-monospace, 'SF Mono', Menlo, monospace" fontWeight="700" fontSize="26" letterSpacing="-1" fill="#3ee07f">PP</text>
+        <rect className="bolt" x="45" y="30" width="9" height="16" fill="#34dfe8" />
+      </g>
+    </svg>
+  );
+}
+
+/** Edge — bold italic gradient PP with a speed-slash. Aggressive/cool. */
+export function PPEdge({ size = 44 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
+      <defs>{_GRAD("edgeg")}<filter id="edgeglow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <rect x="2" y="2" width="60" height="60" rx="16" fill="#0a120e" stroke="#34dfe8" strokeOpacity="0.25" strokeWidth="1.4" />
+      {/* speed slashes */}
+      <g stroke="url(#edgeg)" strokeWidth="2.4" strokeLinecap="round" opacity="0.55">
+        <path d="M8 50 L20 38 M14 54 L24 44" />
+      </g>
+      <g filter="url(#edgeglow)" transform="skewX(-10)">
+        <text x="20" y="44" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontStyle="italic" fontWeight="900" fontSize="34" letterSpacing="-4" fill="url(#edgeg)">PP</text>
+      </g>
+    </svg>
+  );
+}
