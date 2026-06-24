@@ -3,8 +3,9 @@
 import { useState } from "react";
 import type React from "react";
 import Link from "next/link";
-import { BoardRowLine, MatchupSphere, ADV_CHIP, type BoardRow } from "./PropBoard";
+import { HeatSphere, MatchupSphere, ADV_CHIP, type BoardRow } from "./PropBoard";
 import { platoonAdvantage, type PropKind } from "../lib/format";
+import { ClockIcon } from "./Icons";
 
 const COUNTS = [10, 25, 50, "All"] as const;
 type Count = (typeof COUNTS)[number];
@@ -19,28 +20,35 @@ const rowlinkStyle = {
   textDecoration: "none",
 } as const;
 
-/** Batter-matchup leaderboard row: name + hand + opposing pitcher + a K/C matchup sphere. */
-function MatchupRow({ r, lean, prob }: { r: BoardRow; lean: "K" | "H"; prob: number }) {
+/** A Top-Plays row: name + hand + (opposing pitcher) + game matchup + start time + a sphere on the right.
+    showPitcher=false for the pitcher's own K prop (a pitcher doesn't face one pitcher). */
+function TopPlayRow({ r, sphere, showPitcher = true }: { r: BoardRow; sphere: React.ReactNode; showPitcher?: boolean }) {
+  const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
   return (
     <Link href={r.href} className="rowlink" style={rowlinkStyle}>
-      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap" }}>
+      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap", minWidth: 0 }}>
         <span className="rl-name">{r.player}</span>
-        {r.playerHand && (() => {
-          const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
-          return (
-            <span className="hand" style={adv ? ADV_CHIP : undefined} title={adv ? "platoon advantage vs this pitcher" : undefined}>
-              {r.playerHand}
-            </span>
-          );
-        })()}
-        {r.opponent && (
-          <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-            vs {r.opponent.name}
-            {r.opponent.hand && <span className="hand">{r.opponent.hand}</span>}
+        {r.playerHand && (
+          <span className="hand" style={adv ? ADV_CHIP : undefined} title={adv ? "platoon advantage vs this pitcher" : undefined}>
+            {r.playerHand}
           </span>
         )}
+        <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.76rem", display: "inline-flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+          {showPitcher && r.opponent && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+              vs {r.opponent.name}
+              {r.opponent.hand && <span className="hand">{r.opponent.hand}</span>}
+            </span>
+          )}
+          {r.matchup && <span style={{ opacity: 0.85 }}>{r.matchup}</span>}
+          {r.time && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", opacity: 0.8 }}>
+              <ClockIcon size={11} /> {r.time}
+            </span>
+          )}
+        </span>
       </span>
-      <MatchupSphere lean={lean} prob={prob} />
+      {sphere}
     </Link>
   );
 }
@@ -132,7 +140,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, th
         tip="The batter's chance to hit at least one home run in this game."
         rows={hrRows}
         count={count}
-        render={(r) => <BoardRowLine key={r.id} r={r} kind="hr" />}
+        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind="hr" />} />}
       />
       <LeaderSection
         title="Top Pitcher Strikeouts"
@@ -140,7 +148,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, th
         tip="The starting pitcher's chance to finish above the model's strikeout line for the game."
         rows={kRows}
         count={count}
-        render={(r) => <BoardRowLine key={r.id} r={r} kind="k" />}
+        render={(r) => <TopPlayRow key={r.id} r={r} showPitcher={false} sphere={<HeatSphere prob={r.prob} kind="k" />} />}
       />
       <LeaderSection
         title="Top Contact"
@@ -148,7 +156,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, th
         tip="The model's hit chance for a single at-bat vs this pitcher (matchup + handedness, history-nudged). NOT the upcoming '1+ hit' game prop."
         rows={topContact}
         count={count}
-        render={(r) => <MatchupRow key={r.id} r={r} lean="H" prob={r.hitProb ?? 0} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<MatchupSphere lean="H" prob={r.hitProb ?? 0} />} />}
       />
       <LeaderSection
         title="Top Batter Strikeouts"
@@ -156,7 +164,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, th
         tip="The model's strikeout chance for a single at-bat vs this pitcher — the hitters most likely to strike out. Separate from the pitcher's strikeout prop above."
         rows={topBatterK}
         count={count}
-        render={(r) => <MatchupRow key={r.id} r={r} lean="K" prob={r.kProb ?? 0} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<MatchupSphere lean="K" prob={r.kProb ?? 0} />} />}
       />
       <LeaderSection
         title="Top Hits"
@@ -164,7 +172,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, th
         tip="Batters most likely to reach the selected hits threshold (1+, 2+, or 3+). Ranked by the threshold probability shown on the board."
         rows={hitsRows}
         count={count}
-        render={(r) => <BoardRowLine key={r.id} r={r} kind={hitsKind} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind={hitsKind} />} />}
         controls={
           <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
             {([1, 2, 3] as const).map((n) => (
@@ -191,7 +199,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, th
         tip="Batters most likely to reach the selected total bases threshold (2+, 3+, or 4+). Ranked by the threshold probability shown on the board."
         rows={tbRows}
         count={count}
-        render={(r) => <BoardRowLine key={r.id} r={r} kind={tbKind} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind={tbKind} />} />}
         controls={
           <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
             {([2, 3, 4] as const).map((n) => (

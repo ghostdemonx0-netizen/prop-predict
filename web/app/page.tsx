@@ -237,8 +237,8 @@ export default function Home() {
       <header className="mb-9 rise">
         <p className="eyebrow mb-2">MLB player props · model-driven</p>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <PPHex size={46} />
-          <h1 className="wordmark" style={{ fontFamily: "var(--font-orb), sans-serif", fontStyle: "italic" }}>
+          <PPHex size={52} />
+          <h1 className="wordmark" style={{ fontFamily: "var(--font-orb), sans-serif", fontStyle: "italic", fontSize: "clamp(1.6rem, 4.5vw, 2.3rem)", letterSpacing: "-0.02em" }}>
             <span className="lo">Prop </span><span className="hi">Predict</span>
           </h1>
           <span style={{ marginLeft: "auto" }}>

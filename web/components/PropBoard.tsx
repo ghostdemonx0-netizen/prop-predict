@@ -5,6 +5,7 @@ import type React from "react";
 import type { ViewMode } from "./ViewSwitcher";
 import { pct, strengthLabel, strengthTier, heatColor, arrowColor, platoonAdvantage, type PropKind } from "../lib/format";
 import { StatusChip } from "./StatusChip";
+import { ClockIcon, WindIcon, TempIcon, RainIcon } from "./Icons";
 
 export type BoardRow = {
   id: string; // stable key: player_id when available, else name
@@ -76,22 +77,12 @@ function WeatherChips({ r }: { r: BoardRow }) {
     <div className="mt-1.5 flex items-center gap-3" style={{ fontSize: "0.74rem", color: "var(--muted)" }}>
       {hasWind && (
         <span className="inline-flex items-center gap-1" title="wind direction relative to the field (up = out to center)">
-          <span
-            style={{
-              display: "inline-block",
-              lineHeight: 1,
-              fontWeight: 800,
-              transform: `rotate(${dir}deg)`,
-              color: windColor,
-            }}
-          >
-            ↑
-          </span>
+          <WindIcon deg={dir as number} size={13} style={{ color: windColor }} />
           {Math.round(mph as number)}<span style={{ opacity: 0.6 }}>mph</span>
         </span>
       )}
-      {hasTemp && <span>🌡️ {Math.round(r.tempF as number)}°</span>}
-      {showRain && <span style={{ color: "#7cc7ff" }}>💧 {r.precipPct}%</span>}
+      {hasTemp && <span className="inline-flex items-center gap-1"><TempIcon size={13} /> {Math.round(r.tempF as number)}°</span>}
+      {showRain && <span className="inline-flex items-center gap-1" style={{ color: "#7cc7ff" }}><RainIcon size={13} /> {r.precipPct}%</span>}
     </div>
   );
 }
@@ -112,7 +103,7 @@ export const ADV_CHIP = {
   boxShadow: "0 0 8px rgba(52, 223, 232, 0.45)",
 };
 
-function HeatSphere({ prob, kind, size }: { prob: number; kind: PropKind; size?: number }) {
+export function HeatSphere({ prob, kind, size }: { prob: number; kind: PropKind; size?: number }) {
   const c = heatColor(prob, kind);
   return (
     <span
@@ -158,7 +149,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
       <div className="mt-1.5 flex items-center gap-2" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
         <span className={`badge ${strengthTier(r.prob, kind)}`}>{strengthLabel(r.prob, kind)}</span>
         <span>{r.detail}</span>
-        {r.time && <span style={{ opacity: 0.75 }}>🕐 {r.time}</span>}
+        {r.time && <span className="inline-flex items-center gap-1" style={{ opacity: 0.75 }}><ClockIcon size={12} /> {r.time}</span>}
         <StatusChip status={r.status} />
       </div>
       {(r.playerHand || r.opponent || r.matchup) && (
