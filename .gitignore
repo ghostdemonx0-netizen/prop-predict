@@ -30,6 +30,9 @@ build/
 .DS_Store
 *.log
 
+# Claude Code working dir (agent state, worktrees) — never commit
+.claude/
+
 # CLI projection output
 projections-*.json
 .cache/
