@@ -193,6 +193,29 @@ export function PPSport({ size = 56, font = "var(--font-cp)" }: { size?: number;
   );
 }
 
+/** PP in a hex "chip" with a contrasting-cyan bolt centered between the P's. bolt toggles the lightning. */
+export function PPHex({ size = 56, font = "var(--font-cp)", bolt = true }: { size?: number; font?: string; bolt?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
+      <defs>{_GRAD("hexg")}<filter id="hexglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      {/* chip pins */}
+      <g stroke="#3ee07f" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round"><path d="M3 24 H9 M3 40 H9 M55 24 H61 M55 40 H61" /></g>
+      {/* flat-top hexagon */}
+      <path d="M20 7 H44 L59 32 L44 57 H20 L5 32 Z" fill="#0a120e" stroke="url(#hexg)" strokeWidth="2.2" filter="url(#hexglow)" />
+      {/* PP — first P white (Prop), second P green→cyan (Predict) */}
+      <g transform="skewX(-7)">
+        <text x="33" y="41" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="23" letterSpacing="1.5">
+          <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#hexg)">P</tspan>
+        </text>
+        {bolt && (
+          /* contrasting cyan bolt, centered between the P's, touching both */
+          <path d="M35 16 L29 31 L33 31 L29 48 L35 32 L31 32 Z" fill="#34dfe8" stroke="#0a120e" strokeWidth="1" strokeLinejoin="round" filter="url(#hexglow)" />
+        )}
+      </g>
+    </svg>
+  );
+}
+
 /** Same sporty PP with a lightning bolt struck through the middle (gradient + glow). */
 export function PPSportBolt({ size = 56, font = "var(--font-cp)" }: { size?: number; font?: string }) {
   return (
