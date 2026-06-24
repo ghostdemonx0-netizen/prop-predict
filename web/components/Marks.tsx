@@ -137,7 +137,10 @@ export function PPChip({ size = 44 }: { size?: number }) {
       </g>
       {/* flat-top hexagon */}
       <path d="M20 8 H44 L58 32 L44 56 H20 L6 32 Z" fill="#0a120e" stroke="url(#chipg)" strokeWidth="2.2" filter="url(#chipglow)" />
-      <text x="32" y="41" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontWeight="800" fontSize="24" letterSpacing="-2.5" fill="url(#chipg)">PP</text>
+      {/* first P white (Prop), second P green/gradient (Predict) — matches the wordmark */}
+      <text x="32" y="41" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontWeight="800" fontSize="24" letterSpacing="-2.5">
+        <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#chipg)">P</tspan>
+      </text>
     </svg>
   );
 }
