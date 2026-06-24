@@ -202,10 +202,9 @@ export function PPSportBolt({ size = 56, font = "var(--font-cp)" }: { size?: num
         <text x="33" y="45" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="29" letterSpacing="1.5">
           <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#sportbg)">P</tspan>
         </text>
+        {/* bolt INSIDE the skew (tracks the slant) + centered at the gap (x≈33), touching both P's */}
+        <path d="M36 12 L30 31 L34 31 L30 53 L36 32 L32 32 Z" fill="url(#sportbg)" stroke="#0a120e" strokeWidth="1.2" strokeLinejoin="round" filter="url(#sportbglow)" />
       </g>
-      {/* lightning bolt through the center */}
-      {/* bolt centered in the gap between the two P's, touching both */}
-      <path d="M38 14 L29 32 L34 32 L28 52 L39 31 L33 31 Z" fill="url(#sportbg)" stroke="#0a120e" strokeWidth="1.1" strokeLinejoin="round" filter="url(#sportbglow)" />
     </svg>
   );
 }
