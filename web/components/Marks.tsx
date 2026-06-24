@@ -127,7 +127,7 @@ const _GRAD = (id: string) => (
 );
 
 /** Hex "chip" — PP in a beveled hexagon w/ gradient, glow + chip pins. Advanced/data vibe. */
-export function PPChip({ size = 44 }: { size?: number }) {
+export function PPChip({ size = 44, font = "var(--font-display)" }: { size?: number; font?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" className="mark" aria-hidden="true">
       <defs>{_GRAD("chipg")}<filter id="chipglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
@@ -138,7 +138,7 @@ export function PPChip({ size = 44 }: { size?: number }) {
       {/* flat-top hexagon */}
       <path d="M20 8 H44 L58 32 L44 56 H20 L6 32 Z" fill="#0a120e" stroke="url(#chipg)" strokeWidth="2.2" filter="url(#chipglow)" />
       {/* first P white (Prop), second P green/gradient (Predict) — matches the wordmark */}
-      <text x="32" y="41" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontWeight="800" fontSize="24" letterSpacing="-2.5">
+      <text x="32" y="42" textAnchor="middle" fontFamily={font} fontWeight="700" fontSize="25" letterSpacing="-2">
         <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#chipg)">P</tspan>
       </text>
     </svg>
