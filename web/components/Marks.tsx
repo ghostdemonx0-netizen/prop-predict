@@ -207,8 +207,8 @@ export function PPHex({ size = 56, font = "var(--font-cp)", bolt = true }: { siz
         <tspan fill="#e9f1ec">P</tspan><tspan fill="url(#hexg)">P</tspan>
       </text>
       {bolt && (
-        /* bigger, clear cyan bolt — centered in the gap, struck through, touching both P's */
-        <path d="M37 13 L28 33 L34 33 L27 51 L38 30 L31 30 Z" fill="#34dfe8" stroke="#0a120e" strokeWidth="1.3" strokeLinejoin="round" filter="url(#hexglow)" />
+        /* big bright cyan bolt struck through the center — no dark outline (was muddying it), strong glow */
+        <path d="M40 9 L26 33 L34 33 L25 55 L41 28 L32 28 Z" fill="#5cf0ff" filter="url(#hexglow)" />
       )}
     </svg>
   );
