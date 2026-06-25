@@ -15,7 +15,7 @@ def test_board_includes_hits_tb_with_hist():
     cur_l = lambda g: {"home":[_bat(1,400,20)],"away":[_bat(2,400,20)]}
     hist_l = lambda g: {"home":[_bat(1,400,35)],"away":[_bat(2,400,35)]}  # different HR base
     w = lambda g: {"wind_speed_mph":0,"wind_from_deg":0,"temp_f":70,"precip_pct":0}
-    hr, ks, hits, tb = build_board_with_history(slate, cur_l, lambda p:_pit(p), hist_l, lambda p:_pit(p), w, None)
+    hr, ks, hits, tb, *_ = build_board_with_history(slate, cur_l, lambda p:_pit(p), hist_l, lambda p:_pit(p), w, None)
     assert hits and "p_ge1_hist" in hits[0] and tb and "p_ge2_hist" in tb[0]
     # all hits twins present
     assert all(f"p_ge{n}_hist" in hits[0] for n in (1, 2, 3))
@@ -37,5 +37,5 @@ def test_threshold_missing_twin_graceful():
     cur_l = lambda g: {"home":[_bat(1,400,20)],"away":[_bat(2,400,20)]}
     hist_l = lambda g: {"home":[],"away":[]}
     w = lambda g: {"wind_speed_mph":0,"wind_from_deg":0,"temp_f":70,"precip_pct":0}
-    hr, ks, hits, tb = build_board_with_history(slate, cur_l, lambda p:_pit(p), hist_l, lambda p:_pit(p), w, None)
+    hr, ks, hits, tb, *_ = build_board_with_history(slate, cur_l, lambda p:_pit(p), hist_l, lambda p:_pit(p), w, None)
     assert hits and "p_ge1_hist" not in hits[0]   # no twin, but no crash

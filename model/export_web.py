@@ -14,7 +14,7 @@ from pathlib import Path
 
 from model import fetch, profiles
 from model.cache import get_or_compute
-from model.pipeline import build_hr_rows, build_strikeout_rows, build_games, build_hits_rows, build_total_bases_rows
+from model.pipeline import build_hr_rows, build_strikeout_rows, build_games, build_hits_rows, build_total_bases_rows, build_runs_rows, build_rbi_rows, build_hrr_rows
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
 _DATE_FILE = re.compile(r"^\d{4}-\d{2}-\d{2}\.json$")
@@ -91,11 +91,20 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
                 pitcher_status[g[pid_key]] = g[f"{side}_pitcher_status"]
     meta = fetch.get_player_meta(list(pids))
 
+    def _gamelog_fetch(pid: int) -> dict:
+        """Fetch 3 seasons of game logs for a batter; coerce non-list returns to []."""
+        result = {}
+        for s in (season, season - 1, season - 2):
+            raw = get_or_compute(f"bat-gamelog-{pid}-{s}", lambda s=s: fetch.batter_gamelog(pid, s))
+            result[s] = raw if isinstance(raw, list) else []
+        return result
+
     def batter_fn(pid: int, status: str) -> dict:
         m = meta.get(pid, {})
         events = get_or_compute(f"bat-events-{pid}-{season}", lambda: fetch.batter_events(pid, season))
         prof = profiles.batter_profile_from_events(
             events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)), bats=m.get("bats", "R"))
+        prof = profiles.with_gamelog(prof, _gamelog_fetch(pid), current_season=season)
         prof["lineup_status"] = status
         return prof
 
@@ -125,6 +134,12 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
         prof = profiles.blended_batter_profile(_events_by_season(pid, "bat"), as_of=as_of,
                                                current_season=season, player_id=pid,
                                                name=m.get("name", str(pid)), bats=m.get("bats", "R"))
+        prof = profiles.with_gamelog(prof, _gamelog_fetch(pid), current_season=season)
+        # Remap blended twins into base field names so the history run uses blended values
+        prof["games"] = prof["games_hist"]
+        prof["total_r"] = prof["total_r_hist"]
+        prof["total_rbi"] = prof["total_rbi_hist"]
+        prof["total_hrr"] = prof["total_hrr_hist"]
         prof["lineup_status"] = status
         return prof
 
@@ -219,7 +234,37 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
         if r.get("vs") and h.get("vs"):
             _copy_vs(r["vs"], h["vs"])
 
-    return hr, ks, hits, tb
+    # Runs / RBI / HRR
+    runs = build_runs_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
+    rbi  = build_rbi_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
+    hrr  = build_hrr_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=bvp_fn)
+    runs_h = {_key(r): r for r in build_runs_rows(slate, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
+    rbi_h  = {_key(r): r for r in build_rbi_rows(slate, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
+    hrr_h  = {_key(r): r for r in build_hrr_rows(slate, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn=bvp_fn) if r.get("player_id") is not None}
+
+    _runs_thresholds = ("p_ge1", "p_ge2")
+    _hrr_thresholds = ("p_ge2", "p_ge3", "p_ge4")
+    _run_factor_fields = ("recent_form_mult", "pitcher_factor", "park_weather_factor")
+
+    def _attach(rows, hist_map, thresholds):
+        for r in rows:
+            h = hist_map.get(_key(r))
+            if not h:
+                continue
+            for field in thresholds:
+                if field in h:
+                    r[f"{field}_hist"] = h[field]
+            for field in _run_factor_fields:
+                if field in h:
+                    r[f"{field}_hist"] = h[field]
+            if r.get("vs") and h.get("vs"):
+                _copy_vs(r["vs"], h["vs"])
+
+    _attach(runs, runs_h, _runs_thresholds)
+    _attach(rbi, rbi_h, _runs_thresholds)
+    _attach(hrr, hrr_h, _hrr_thresholds)
+
+    return hr, ks, hits, tb, runs, rbi, hrr
 
 
 def make_bvp_fn():
@@ -253,7 +298,7 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
     lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn = make_profile_fns(slate, season, date_str)
     weather_fn = fetch.make_weather_fn()
     bvp_fn = make_bvp_fn()
-    hr_rows, k_rows, hits_rows, tb_rows = build_board_with_history(
+    hr_rows, k_rows, hits_rows, tb_rows, runs_rows, rbi_rows, hrr_rows = build_board_with_history(
         slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn)
 
     payload = {
@@ -263,6 +308,9 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
         "strikeouts": k_rows,
         "hits": hits_rows,
         "total_bases": tb_rows,
+        "runs": runs_rows,
+        "rbi": rbi_rows,
+        "hrr": hrr_rows,
         "games": build_games(slate, weather_fn),
     }
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -270,7 +318,7 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
     # latest.json mirrors the date just written (fallback default for the site)
     (DATA_DIR / "latest.json").write_text(json.dumps(payload, indent=2))
     _update_index(date_str)
-    print(f"Wrote {date_str}.json ({len(hr_rows)} HR rows, {len(k_rows)} K rows, {len(hits_rows)} hits rows, {len(tb_rows)} TB rows, {len(payload['games'])} games)")
+    print(f"Wrote {date_str}.json ({len(hr_rows)} HR rows, {len(k_rows)} K rows, {len(hits_rows)} hits rows, {len(tb_rows)} TB rows, {len(runs_rows)} runs rows, {len(rbi_rows)} RBI rows, {len(hrr_rows)} HRR rows, {len(payload['games'])} games)")
 
 
 if __name__ == "__main__":

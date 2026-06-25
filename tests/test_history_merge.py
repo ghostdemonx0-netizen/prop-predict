@@ -27,7 +27,7 @@ def test_history_twins_attached():
     cur_p = lambda pid: _pit(pid)
     hist_p = lambda pid: {**_pit(pid), "k_per_bf": 0.30}
     w = lambda g: {"wind_speed_mph": 0, "wind_from_deg": 0, "temp_f": 70, "precip_pct": 0}
-    hr, ks, hits, tb = build_board_with_history(slate, cur_l, cur_p, hist_l, hist_p, w, None)
+    hr, ks, hits, tb, *_ = build_board_with_history(slate, cur_l, cur_p, hist_l, hist_p, w, None)
     assert all("probability_hist" in r for r in hr)
     assert hr[0]["probability_hist"] != hr[0]["probability"]  # history base differs
     assert all("over_prob_hist" in r and "expected_ks_hist" in r for r in ks)
@@ -70,7 +70,7 @@ def test_key_based_matching_not_index():
     cur_p = lambda pid: _pit(pid)
     hist_p = lambda pid: _pit(pid)
 
-    hr, _, _hits, _tb = build_board_with_history(slate, cur_l, cur_p, hist_l, hist_p, _w, None)
+    hr, _, _hits, _tb, *_ = build_board_with_history(slate, cur_l, cur_p, hist_l, hist_p, _w, None)
 
     # Verify current probabilities are unchanged (equal to standalone build)
     standalone = build_hr_rows(slate, cur_l, cur_p, _w, bvp_fn=None)
@@ -105,7 +105,7 @@ def test_vs_twins_contain_hist_fields():
     cur_p = lambda pid: _pit(pid)
     hist_p = lambda pid: _pit(pid)
 
-    hr, _, _hits, _tb = build_board_with_history(slate, cur_l, cur_p, hist_l, hist_p, _w, None)
+    hr, _, _hits, _tb, *_ = build_board_with_history(slate, cur_l, cur_p, hist_l, hist_p, _w, None)
 
     # Find the row for player 1 (home, facing away pitcher 200)
     rows_with_vs = [r for r in hr if r.get("vs") is not None]
@@ -127,7 +127,7 @@ def test_missing_history_twin_is_graceful():
     cur_p = lambda pid: _pit(pid)
     hist_p = lambda pid: _pit(pid)
 
-    hr, _, _hits, _tb = build_board_with_history(slate, cur_l, cur_p, hist_l, hist_p, _w, None)
+    hr, _, _hits, _tb, *_ = build_board_with_history(slate, cur_l, cur_p, hist_l, hist_p, _w, None)
 
     assert len(hr) == 1
     assert "probability_hist" not in hr[0], (
