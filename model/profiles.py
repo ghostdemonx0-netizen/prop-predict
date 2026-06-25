@@ -191,3 +191,29 @@ def blended_pitcher_profile(events_by_season: dict, *, as_of: str, current_seaso
     prof["hit_allowed_rate"] = regress(hits_made, eff_pa, LEAGUE_HIT, _HIT_R)
     prof["hr_allowed_rate"] = regress(hr_made, eff_pa, LEAGUE_HR_RATE, _HR_R)
     return prof
+
+
+def _gamelog_totals(logs: list[dict]) -> tuple[int, int, int, int]:
+    """(games, total_r, total_rbi, total_hrr) for one season of game logs."""
+    g = len(logs)
+    tr = sum(int(x.get("r", 0)) for x in logs)
+    trbi = sum(int(x.get("rbi", 0)) for x in logs)
+    thrr = sum(int(x.get("h", 0)) + int(x.get("r", 0)) + int(x.get("rbi", 0)) for x in logs)
+    return g, tr, trbi, thrr
+
+
+def with_gamelog(profile: dict, gamelogs_by_season: dict, *, current_season: int) -> dict:
+    """Merge per-game R/RBI/HRR season totals (+ Marcel-blended hist twins) into a profile."""
+    p = dict(profile)
+    cur = gamelogs_by_season.get(current_season, [])
+    g, tr, trbi, thrr = _gamelog_totals(cur)
+    p["games"], p["total_r"], p["total_rbi"], p["total_hrr"] = g, tr, trbi, thrr
+    seasons = [current_season, current_season - 1, current_season - 2]
+    per = [_gamelog_totals(gamelogs_by_season.get(s, [])) for s in seasons]
+    # marcel_blend((made, games)) -> (eff_made, eff_games) on a single-season scale
+    eff_g = marcel_blend([(g_, g_) for (g_, _, _, _) in per])[0]
+    eff_r = marcel_blend([(tr_, g_) for (g_, tr_, _, _) in per])[0]
+    eff_rbi = marcel_blend([(trbi_, g_) for (g_, _, trbi_, _) in per])[0]
+    eff_hrr = marcel_blend([(thrr_, g_) for (g_, _, _, thrr_) in per])[0]
+    p["games_hist"], p["total_r_hist"], p["total_rbi_hist"], p["total_hrr_hist"] = eff_g, eff_r, eff_rbi, eff_hrr
+    return p
