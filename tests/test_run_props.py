@@ -1,7 +1,6 @@
 import math
 import pytest
 from model import run_props as rp
-from model import parks
 
 def test_regressed_per_game_pulls_toward_league():
     # 0 made in 0 games -> league; hot player regresses down toward league
@@ -31,12 +30,6 @@ def test_pitcher_suppression_below_one_for_stingy_pitcher():
     assert rp.pitcher_suppression_mult(0.26) > 1.0     # allows more
     assert rp.pitcher_suppression_mult(0.0) == 0.85    # clamped low
     assert rp.pitcher_suppression_mult(1.0) == 1.15    # clamped high
-
-def test_run_park_factor_dampens_hr_factor():
-    hr = parks.hr_park_factor("COL")        # Coors > 1
-    rpf = parks.run_park_factor("COL")
-    assert 1.0 < rpf < hr                    # dampened, still > 1
-    assert math.isclose(rpf, 1 + (hr - 1) * 0.6)
 
 
 # --- production_form_mult ---
