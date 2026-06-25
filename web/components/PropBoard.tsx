@@ -605,7 +605,6 @@ function ColSplit({
 
   return (
     <div>
-      <ColHeaders hitsKind={hitsKind} tbKind={tbKind} />
       {sections.map(({ team, side, rs }) => {
         const opp = rs.find((r) => r.opponent)?.opponent;
         return (
@@ -625,6 +624,9 @@ function ColSplit({
                 )}
               </div>
             )}
+            {/* headers repeat per team so the K/C/N · HR · Hits · TB columns stay
+                labeled when you scroll past the away team to the home team */}
+            <ColHeaders hitsKind={hitsKind} tbKind={tbKind} />
             {rs.map((r) => (
               <ColBatterRow
                 key={r.id}
