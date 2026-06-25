@@ -120,6 +120,28 @@ export type TbRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | "
   park_weather_factor_hist?: number;
 };
 
+export type RunsRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | "p_ge2_hist" | "p_ge3_hist"> & {
+  p_ge1: number;
+  p_ge2: number;
+  p_ge1_hist?: number;
+  p_ge2_hist?: number;
+  park_weather_factor?: number;
+  park_weather_factor_hist?: number;
+};
+
+export type RbiRow = RunsRow;
+
+export type HrrRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | "p_ge2_hist" | "p_ge3_hist"> & {
+  p_ge2: number;
+  p_ge3: number;
+  p_ge4: number;
+  p_ge2_hist?: number;
+  p_ge3_hist?: number;
+  p_ge4_hist?: number;
+  park_weather_factor?: number;
+  park_weather_factor_hist?: number;
+};
+
 export type Projections = {
   date: string;
   updated: string;
@@ -128,4 +150,7 @@ export type Projections = {
   games?: Game[];
   hits?: HitsRow[];
   total_bases?: TbRow[];
+  runs?: RunsRow[];
+  rbi?: RbiRow[];
+  hrr?: HrrRow[];
 };
