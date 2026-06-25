@@ -37,9 +37,12 @@ function Back({ prop, date, source, threshold }: { prop?: string; date?: string;
   if (prop === "k") q.set("prop", "k"); // return to the strikeout board, not the default HR view
   if (prop === "hits") q.set("prop", "hits");
   if (prop === "tb") q.set("prop", "tb");
+  if (prop === "runs") q.set("prop", "runs");
+  if (prop === "rbi") q.set("prop", "rbi");
+  if (prop === "hrr") q.set("prop", "hrr");
   if (date) q.set("date", date);
   if (source && source !== "current") q.set("source", source);
-  if (threshold && (prop === "hits" || prop === "tb")) q.set("threshold", threshold);
+  if (threshold && (prop === "hits" || prop === "tb" || prop === "runs" || prop === "rbi" || prop === "hrr")) q.set("threshold", threshold);
   const qs = q.toString();
   return (
     <Link href={qs ? `/?${qs}` : "/"} className="eyebrow" style={{ textDecoration: "none" }}>
@@ -139,9 +142,12 @@ export default function PlayerPage({
     (blend && typeof cur === "number" && typeof h === "number" ? (((cur + h) / 2) as T) : (hist && h != null ? h : cur));
   const navQ = `${date ? `?date=${date}` : ""}${source && source !== "current" ? `${date ? "&" : "?"}source=${source}` : ""}`;
 
-  // Parse threshold from query param (for hits: 1|2|3, for tb: 2|3|4)
+  // Parse threshold from query param (for hits: 1|2|3, for tb: 2|3|4, for runs/rbi: 1|2, for hrr: 2|3|4)
   const hitsThreshold: 1 | 2 | 3 = (thresholdParam === "2" ? 2 : thresholdParam === "3" ? 3 : 1);
   const tbThreshold: 2 | 3 | 4 = (thresholdParam === "3" ? 3 : thresholdParam === "4" ? 4 : 2);
+  const runsThreshold: 1 | 2 = (thresholdParam === "2" ? 2 : 1);
+  const rbiThreshold: 1 | 2 = (thresholdParam === "2" ? 2 : 1);
+  const hrrThreshold: 2 | 3 | 4 = (thresholdParam === "3" ? 3 : thresholdParam === "4" ? 4 : 2);
 
   useEffect(() => {
     loadProjections(date).then(setData).catch(console.error);
@@ -449,6 +455,193 @@ export default function PlayerPage({
             ) : (
               <p className="factor-note" style={{ marginBottom: 0 }}>No career history against him yet.</p>
             )}
+          </div>
+        )}
+      </main>
+    );
+  }
+
+  if (prop === "runs" || prop === "rbi") {
+    const arr = prop === "runs" ? (data.runs ?? []) : (data.rbi ?? []);
+    const r = arr.find((x) => String(x.player_id) === id) ?? arr.find((x) => x.player === name);
+    if (!r) return notFound;
+    const n = prop === "runs" ? runsThreshold : rbiThreshold;
+    const kind = (`${prop}${n}`) as PropKind;
+    const p1 = pick(r.p_ge1, r.p_ge1_hist);
+    const p2 = pick(r.p_ge2, r.p_ge2_hist);
+    const activeProb = n === 1 ? p1 : p2;
+    const eyebrow = prop === "runs" ? "Run" : "RBI";
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
+        <Back prop={prop} date={date} source={source} threshold={thresholdParam} />
+        <div className="rise">
+          <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · {eyebrow}{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
+          <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
+            <span className="lo">{r.player}</span>
+          </h1>
+        </div>
+
+        <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
+          <Stat value={pct(p1)} label={`1+ ${eyebrow.toLowerCase()}`} glow={n === 1} />
+          <Stat value={pct(p2)} label={`2+ ${eyebrow.toLowerCase()}s`} glow={n === 2} />
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "120ms" }}>
+          <div className="eyebrow mb-1">Our read</div>
+          <p className="factor-note" style={{ marginTop: 0 }}>
+            At the selected threshold ({n}+), we give him a{" "}
+            <strong style={{ color: "var(--text)" }}>{pct(activeProb)}</strong> chance.{" "}
+            {strengthLabel(activeProb, kind)}
+          </p>
+          <p className="factor-note" style={{ marginTop: "0.4rem", color: "var(--muted)", fontSize: "0.72rem" }}>
+            Note: {eyebrow} props are inherently noisier estimates than HR or K — treat with a wider margin.
+          </p>
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "180ms" }}>
+          <div className="eyebrow mb-1">What&apos;s driving it</div>
+          <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
+            How much each factor raises (green) or lowers (red) his normal probability.
+          </p>
+          <Factor
+            icon="🔥"
+            label="Recent form"
+            mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)}
+            note={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) > 1 ? `Hot lately — scoring ${eyebrow.toLowerCase()}s at a higher rate than his season norm.` : pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
+          />
+          {r.vs && (
+            <Factor
+              icon="⚾"
+              label={`Pitcher · ${r.vs.name}`}
+              mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
+              note="How hittable this pitcher is, factoring in on-base opportunity and the L/R platoon."
+            />
+          )}
+          <Factor
+            icon="🏟️"
+            label={`Park · ${r.team}`}
+            mult={pick(r.park_weather_factor ?? 1, r.park_weather_factor_hist)}
+            note={`The ballpark's net effect on ${eyebrow.toLowerCase()} scoring. Weather is not modeled for this prop in v1.`}
+          />
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "240ms" }}>
+          <div className="eyebrow mb-3">Conditions</div>
+          <WeatherStrip tempF={r.temp_f} windMph={r.wind_mph} windDir={r.wind_dir} precipPct={r.precip_pct} />
+        </div>
+
+        {r.vs && (
+          <div className="panel rise" style={{ animationDelay: "300ms" }}>
+            <div className="eyebrow mb-1">Pitcher matchup</div>
+            <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
+              Both sides, per at-bat vs this pitcher — <strong style={{ color: "#ffd9d6" }}>K</strong> = strikeout chance ·{" "}
+              <strong style={{ color: "#bff3d2" }}>C</strong> = hit (contact) chance.
+            </p>
+            <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
+              <span className="bname">
+                <Link
+                  href={`/player/k/${r.vs.player_id ?? encodeURIComponent(r.vs.name)}${navQ}`}
+                  className="linklike"
+                >
+                  {r.vs.name}
+                </Link>{" "}
+                <span className="hand">{pitLabel(r.vs.throws)}</span>
+              </span>
+              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={blend ? undefined : pick(r.vs.lean, r.vs.lean_hist)} />
+            </div>
+          </div>
+        )}
+      </main>
+    );
+  }
+
+  if (prop === "hrr") {
+    const r = (data.hrr ?? []).find((x) => String(x.player_id) === id) ?? (data.hrr ?? []).find((x) => x.player === name);
+    if (!r) return notFound;
+    const kind = (`hrr${hrrThreshold}`) as PropKind;
+    const p2 = pick(r.p_ge2, r.p_ge2_hist);
+    const p3 = pick(r.p_ge3, r.p_ge3_hist);
+    const p4 = pick(r.p_ge4, r.p_ge4_hist);
+    const activeProb = hrrThreshold === 2 ? p2 : hrrThreshold === 3 ? p3 : p4;
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
+        <Back prop={prop} date={date} source={source} threshold={thresholdParam} />
+        <div className="rise">
+          <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Hits+Runs+RBI{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
+          <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
+            <span className="lo">{r.player}</span>
+          </h1>
+        </div>
+
+        <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
+          <Stat value={pct(p2)} label="2+ combined" glow={hrrThreshold === 2} />
+          <Stat value={pct(p3)} label="3+ combined" glow={hrrThreshold === 3} />
+          <Stat value={pct(p4)} label="4+ combined" glow={hrrThreshold === 4} />
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "120ms" }}>
+          <div className="eyebrow mb-1">Our read</div>
+          <p className="factor-note" style={{ marginTop: 0 }}>
+            At the selected threshold ({hrrThreshold}+), we give him a{" "}
+            <strong style={{ color: "var(--text)" }}>{pct(activeProb)}</strong> chance.{" "}
+            {strengthLabel(activeProb, kind)}
+          </p>
+          <p className="factor-note" style={{ marginTop: "0.4rem", color: "var(--muted)", fontSize: "0.72rem" }}>
+            Note: Hits+Runs+RBI is an inherently noisier estimate than HR or K — treat with a wider margin.
+          </p>
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "180ms" }}>
+          <div className="eyebrow mb-1">What&apos;s driving it</div>
+          <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
+            How much each factor raises (green) or lowers (red) his normal probability.
+          </p>
+          <Factor
+            icon="🔥"
+            label="Recent form"
+            mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)}
+            note={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) > 1 ? "Hot lately — producing at a higher rate than his season norm." : pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
+          />
+          {r.vs && (
+            <Factor
+              icon="⚾"
+              label={`Pitcher · ${r.vs.name}`}
+              mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
+              note="Combines how hittable this pitcher is with the L/R platoon — affects both contact and scoring opportunity."
+            />
+          )}
+          <Factor
+            icon="🏟️"
+            label={`Park · ${r.team}`}
+            mult={pick(r.park_weather_factor ?? 1, r.park_weather_factor_hist)}
+            note="The ballpark's net effect on combined hits, runs, and RBI production. Weather is not modeled for this prop in v1."
+          />
+        </div>
+
+        <div className="panel rise" style={{ animationDelay: "240ms" }}>
+          <div className="eyebrow mb-3">Conditions</div>
+          <WeatherStrip tempF={r.temp_f} windMph={r.wind_mph} windDir={r.wind_dir} precipPct={r.precip_pct} />
+        </div>
+
+        {r.vs && (
+          <div className="panel rise" style={{ animationDelay: "300ms" }}>
+            <div className="eyebrow mb-1">Pitcher matchup</div>
+            <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
+              Both sides, per at-bat vs this pitcher — <strong style={{ color: "#ffd9d6" }}>K</strong> = strikeout chance ·{" "}
+              <strong style={{ color: "#bff3d2" }}>C</strong> = hit (contact) chance.
+            </p>
+            <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
+              <span className="bname">
+                <Link
+                  href={`/player/k/${r.vs.player_id ?? encodeURIComponent(r.vs.name)}${navQ}`}
+                  className="linklike"
+                >
+                  {r.vs.name}
+                </Link>{" "}
+                <span className="hand">{pitLabel(r.vs.throws)}</span>
+              </span>
+              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={blend ? undefined : pick(r.vs.lean, r.vs.lean_hist)} />
+            </div>
           </div>
         )}
       </main>
