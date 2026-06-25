@@ -1,3 +1,5 @@
+import math
+
 from model import profiles
 
 def _logs(n, r, rbi, h):
@@ -15,4 +17,4 @@ def test_with_gamelog_blended_history_weights_recent():
     prof = profiles.with_gamelog({"player_id": 1}, logs, current_season=2026)
     # current season higher rate; blended hist twin sits between current and 0
     assert prof["total_r"] / prof["games"] == 2.0
-    assert 0.0 < prof["total_r_hist"] / prof["games_hist"] < 2.0
+    assert math.isclose(prof["total_r_hist"] / prof["games_hist"], 20 / 24)
