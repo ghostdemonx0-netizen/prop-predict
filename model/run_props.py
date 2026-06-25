@@ -29,3 +29,10 @@ def expected_count(rate: float, *, pitcher_mult: float = 1.0, platoon_mult: floa
 def ge_probs(lam: float, thresholds: list[tuple[str, int]]) -> dict[str, float]:
     """{label: P(count >= n)} for a Poisson(lam) count. Monotonic by construction."""
     return {label: poisson_over_prob(lam, n - 0.5) for (label, n) in thresholds}
+
+
+def pitcher_suppression_mult(hit_allowed_rate: float, *, league_hit: float = 0.22, lo: float = 0.85, hi: float = 1.15) -> float:
+    """How many baserunners this pitcher allows vs league, clamped. <1 = stingy."""
+    if league_hit <= 0:
+        return 1.0
+    return max(lo, min(hit_allowed_rate / league_hit, hi))

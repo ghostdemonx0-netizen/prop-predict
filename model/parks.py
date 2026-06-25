@@ -107,3 +107,9 @@ def hit_factors_stale(today_iso: str, max_days: int = 400) -> bool:
     pulled = date.fromisoformat(HIT_FACTORS_LAST_PULLED)
     today = date.fromisoformat(today_iso)
     return (today - pulled).days > max_days
+
+
+def run_park_factor(team_abbr: str) -> float:
+    """v1 run-environment proxy: a dampened HR park factor. Real per-park run
+    factors are a roadmap upgrade (see props-expansion-roadmap)."""
+    return 1 + (hr_park_factor(team_abbr) - 1) * 0.6
