@@ -281,13 +281,13 @@ def get_player_meta(player_ids: list[int]) -> dict[int, dict]:
 
 def batter_gamelog(player_id: int, season: int) -> list[dict]:
     """Per-game hitting log for one batter-season: [{game_date, r, rbi, h}]."""
-    data = _with_retries(lambda: statsapi.get("people", {
-        "personIds": str(player_id),
-        "hydrate": f"stats(group=[hitting],type=[gameLog],season={season},sportId=1)",
-    }))
     try:
+        data = _with_retries(lambda: statsapi.get("people", {
+            "personIds": str(player_id),
+            "hydrate": f"stats(group=[hitting],type=[gameLog],season={season},sportId=1)",
+        }))
         splits = data["people"][0].get("stats", [{}])[0].get("splits", [])
-    except (KeyError, IndexError, TypeError):
+    except Exception:
         return []
     out = []
     for sp in splits:

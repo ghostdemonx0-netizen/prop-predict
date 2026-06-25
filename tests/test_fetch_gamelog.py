@@ -19,3 +19,7 @@ def test_batter_gamelog_empty_on_missing_splits():
     with patch.object(fetch, "statsapi") as m:
         m.get.return_value = {"people": [{}]}
         assert fetch.batter_gamelog(1, 2026) == []
+
+def test_batter_gamelog_empty_on_fetch_error():
+    with patch.object(fetch, "_with_retries", side_effect=RuntimeError("boom")):
+        assert fetch.batter_gamelog(1, 2026) == []
