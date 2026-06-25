@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type React from "react";
+import { useState } from "react";
 import type { ViewMode } from "./ViewSwitcher";
 import { pct, strengthLabel, strengthTier, heatColor, arrowColor, platoonAdvantage, type PropKind } from "../lib/format";
 import { StatusChip } from "./StatusChip";
@@ -486,15 +487,27 @@ const COL_GRID = `minmax(0, 1fr) repeat(4, ${COL_SLOT}px)`;
 const COL_GAP = "0.3rem";
 const COL_PAD = "0 0.25rem";
 
-/** Column headers for the 4-column layout: K/C/N · HR · Hits · TB */
-function ColHeaders({ hitsKind, tbKind }: { hitsKind: PropKind; tbKind: PropKind }) {
+type SortCol = "lean" | "hr" | "hits" | "tb";
+type SortState = { col: SortCol; dir: 1 | -1 };
+
+/** Column headers for the 4-column layout: K/C/N · HR · Hits · TB. Click to sort. */
+function ColHeaders({ hitsKind, tbKind, sort, onSort }: { hitsKind: PropKind; tbKind: PropKind; sort: SortState; onSort: (col: SortCol) => void }) {
   const hitsLabel = hitsKind === "hits1" ? "1H+" : hitsKind === "hits2" ? "2H+" : "3H+";
   const tbLabel = tbKind === "tb2" ? "2TB+" : tbKind === "tb3" ? "3TB+" : "4TB+";
-  const cell = (label: React.ReactNode, key: string) => (
-    <div key={key} style={{ textAlign: "center" }}>
-      <div style={{ fontSize: "0.55rem", letterSpacing: "0.07em", fontWeight: 700, color: "var(--muted)" }}>{label}</div>
+  const arrow = (col: SortCol) => (sort.col === col ? (sort.dir < 0 ? " ▾" : " ▴") : "");
+  const cell = (label: React.ReactNode, col: SortCol) => (
+    <button
+      key={col}
+      type="button"
+      onClick={() => onSort(col)}
+      title="sort by this column"
+      style={{ background: "none", border: 0, padding: 0, cursor: "pointer", textAlign: "center", font: "inherit" }}
+    >
+      <div style={{ fontSize: "0.55rem", letterSpacing: "0.07em", fontWeight: 700, color: sort.col === col ? "var(--text)" : "var(--muted)" }}>
+        {label}<span style={{ color: "var(--green)" }}>{arrow(col)}</span>
+      </div>
       <div style={{ width: 1, height: 4, background: "var(--line-strong)", margin: "2px auto 0" }} />
-    </div>
+    </button>
   );
   return (
     <div style={{ display: "grid", gridTemplateColumns: COL_GRID, gap: COL_GAP, padding: COL_PAD, alignItems: "end", borderBottom: "1px solid var(--line-strong)" }}>
@@ -507,7 +520,7 @@ function ColHeaders({ hitsKind, tbKind }: { hitsKind: PropKind; tbKind: PropKind
           <span style={{ opacity: 0.5 }}>/</span>
           <span style={{ color: "#c5d6e8" }}>N</span>
         </>,
-        "kcn"
+        "lean"
       )}
       {cell("HR", "hr")}
       {cell(hitsLabel, "hits")}
@@ -573,6 +586,60 @@ function ColBatterRow({
   );
 }
 
+/** One team's sortable column table inside the Game Hub breakdown. Each team holds
+    its own sort state, so away and home sort independently. */
+function ColTeam({ team, side, rs, hitsByPlayer, tbByPlayer, hitsKind, tbKind }: {
+  team: string;
+  side: string;
+  rs: BoardRow[];
+  hitsByPlayer: Map<string, BoardRow>;
+  tbByPlayer: Map<string, BoardRow>;
+  hitsKind: PropKind;
+  tbKind: PropKind;
+}) {
+  const [sort, setSort] = useState<SortState>({ col: "hr", dir: -1 });
+  const onSort = (col: SortCol) => setSort((s) => (s.col === col ? { col, dir: s.dir === -1 ? 1 : -1 } : { col, dir: -1 }));
+  const metric = (r: BoardRow) => {
+    if (sort.col === "lean") return r.lean?.prob ?? 0;
+    if (sort.col === "hits") return hitsByPlayer.get(r.player)?.prob ?? 0;
+    if (sort.col === "tb") return tbByPlayer.get(r.player)?.prob ?? 0;
+    return r.prob; // hr
+  };
+  const sorted = [...rs].sort((a, b) => (metric(a) - metric(b)) * sort.dir);
+  const opp = rs.find((r) => r.opponent)?.opponent;
+  return (
+    <div>
+      {team && (
+        <div
+          className="eyebrow"
+          style={{ margin: "0.6rem 0 0.15rem", padding: "0 0.25rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem", flexWrap: "wrap" }}
+        >
+          <span style={{ flexShrink: 0 }}>{team} · {side}</span>
+          {opp && (
+            <span style={{ letterSpacing: "normal", textTransform: "none", fontSize: "0.82rem" }}>
+              vs{" "}
+              <span style={{ color: "var(--text)", textShadow: "0 0 8px rgba(62, 224, 127, 0.45)" }}>{opp.name}</span>
+              {opp.hand && <> <span className="hand">{opp.hand}</span></>}
+            </span>
+          )}
+        </div>
+      )}
+      {/* headers repeat per team and are click-to-sort (high<->low) */}
+      <ColHeaders hitsKind={hitsKind} tbKind={tbKind} sort={sort} onSort={onSort} />
+      {sorted.map((r) => (
+        <ColBatterRow
+          key={r.id}
+          hrRow={r}
+          hitsRow={hitsByPlayer.get(r.player)}
+          tbRow={tbByPlayer.get(r.player)}
+          hitsKind={hitsKind}
+          tbKind={tbKind}
+        />
+      ))}
+    </div>
+  );
+}
+
 /** Columns layout: one row per batter with 4 sphere columns (K/C/N, HR, Hits, TB). */
 function ColSplit({
   matchup,
@@ -605,41 +672,18 @@ function ColSplit({
 
   return (
     <div>
-      {sections.map(({ team, side, rs }) => {
-        const opp = rs.find((r) => r.opponent)?.opponent;
-        return (
-          <div key={`${team}-${side}`}>
-            {team && (
-              <div
-                className="eyebrow"
-                style={{ margin: "0.6rem 0 0.15rem", padding: "0 0.25rem", display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem", flexWrap: "wrap" }}
-              >
-                <span style={{ flexShrink: 0 }}>{team} · {side}</span>
-                {opp && (
-                  <span style={{ letterSpacing: "normal", textTransform: "none", fontSize: "0.82rem" }}>
-                    vs{" "}
-                    <span style={{ color: "var(--text)", textShadow: "0 0 8px rgba(62, 224, 127, 0.45)" }}>{opp.name}</span>
-                    {opp.hand && <> <span className="hand">{opp.hand}</span></>}
-                  </span>
-                )}
-              </div>
-            )}
-            {/* headers repeat per team so the K/C/N · HR · Hits · TB columns stay
-                labeled when you scroll past the away team to the home team */}
-            <ColHeaders hitsKind={hitsKind} tbKind={tbKind} />
-            {rs.map((r) => (
-              <ColBatterRow
-                key={r.id}
-                hrRow={r}
-                hitsRow={hitsByPlayer.get(r.player)}
-                tbRow={tbByPlayer.get(r.player)}
-                hitsKind={hitsKind}
-                tbKind={tbKind}
-              />
-            ))}
-          </div>
-        );
-      })}
+      {sections.map(({ team, side, rs }) => (
+        <ColTeam
+          key={`${team}-${side}`}
+          team={team}
+          side={side}
+          rs={rs}
+          hitsByPlayer={hitsByPlayer}
+          tbByPlayer={tbByPlayer}
+          hitsKind={hitsKind}
+          tbKind={tbKind}
+        />
+      ))}
     </div>
   );
 }

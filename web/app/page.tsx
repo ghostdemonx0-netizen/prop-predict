@@ -350,6 +350,43 @@ export default function Home() {
               <ViewSwitcher mode={view} onChange={setView} />
             </>
           )}
+          {/* Game Hub: choose which Hits / Total Bases threshold the breakdown columns show */}
+          {section === "hub" && (
+            <div style={{ display: "flex", gap: "1.4rem", flexWrap: "wrap", justifyContent: "center" }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
+                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Hits column</span>
+                <div className="pillbar">
+                  {([1, 2, 3] as const).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setThreshold((t) => ({ ...t, hits: n }))}
+                      data-active={threshold.hits === n}
+                      className="pill"
+                      style={{ padding: "0.16rem 0.5rem", fontSize: "0.62rem" }}
+                    >
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
+                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Bases column</span>
+                <div className="pillbar">
+                  {([2, 3, 4] as const).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setThreshold((t) => ({ ...t, tb: n }))}
+                      data-active={threshold.tb === n}
+                      className="pill"
+                      style={{ padding: "0.16rem 0.5rem", fontSize: "0.62rem" }}
+                    >
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
