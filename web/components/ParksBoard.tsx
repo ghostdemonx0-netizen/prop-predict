@@ -78,8 +78,14 @@ export function ParksBoard({
   kRows = [],
   hitsRows = [],
   tbRows = [],
+  runsRows = [],
+  rbiRows = [],
+  hrrRows = [],
   hitsKind = "hits1",
   tbKind = "tb2",
+  runsKind = "runs1",
+  rbiKind = "rbi1",
+  hrrKind = "hrr2",
   expandable = false,
 }: {
   games: Game[];
@@ -87,8 +93,14 @@ export function ParksBoard({
   kRows?: BoardRow[];
   hitsRows?: BoardRow[];
   tbRows?: BoardRow[];
+  runsRows?: BoardRow[];
+  rbiRows?: BoardRow[];
+  hrrRows?: BoardRow[];
   hitsKind?: PropKind;
   tbKind?: PropKind;
+  runsKind?: PropKind;
+  rbiKind?: PropKind;
+  hrrKind?: PropKind;
   expandable?: boolean;
 }) {
   if (!games || games.length === 0) {
@@ -142,8 +154,14 @@ export function ParksBoard({
                   kRows={kRows}
                   hitsRows={hitsRows}
                   tbRows={tbRows}
+                  runsRows={runsRows}
+                  rbiRows={rbiRows}
+                  hrrRows={hrrRows}
                   hitsKind={hitsKind}
                   tbKind={tbKind}
+                  runsKind={runsKind}
+                  rbiKind={rbiKind}
+                  hrrKind={hrrKind}
                 />
               </details>
             );
