@@ -480,20 +480,23 @@ export function TeamSplit({ matchup, rows, kind, withLean = false }: { matchup: 
   );
 }
 
-// Shared grid track for the Columns layout: a flexible name column + 4 fixed
+// Shared grid track for the Columns layout: a flexible name column + 7 fixed
 // sphere columns. Header and every batter row use this SAME template + gap +
 // horizontal padding, so the columns line up exactly regardless of name length.
-const COL_GRID = `minmax(0, 1fr) repeat(4, ${COL_SLOT}px)`;
+const COL_GRID = `minmax(0, 1fr) repeat(7, ${COL_SLOT}px)`;
 const COL_GAP = "0.3rem";
 const COL_PAD = "0 0.25rem";
 
-type SortCol = "lean" | "hr" | "hits" | "tb";
+type SortCol = "lean" | "hr" | "hits" | "tb" | "runs" | "rbi" | "hrr";
 type SortState = { col: SortCol; dir: 1 | -1 };
 
-/** Column headers for the 4-column layout: K/C/N · HR · Hits · TB. Click to sort. */
-function ColHeaders({ hitsKind, tbKind, sort, onSort }: { hitsKind: PropKind; tbKind: PropKind; sort: SortState; onSort: (col: SortCol) => void }) {
+/** Column headers for the 7-column layout: K/C/N · HR · Hits · TB · Runs · RBI · HRR. Click to sort. */
+function ColHeaders({ hitsKind, tbKind, runsKind, rbiKind, hrrKind, sort, onSort }: { hitsKind: PropKind; tbKind: PropKind; runsKind: PropKind; rbiKind: PropKind; hrrKind: PropKind; sort: SortState; onSort: (col: SortCol) => void }) {
   const hitsLabel = hitsKind === "hits1" ? "1H+" : hitsKind === "hits2" ? "2H+" : "3H+";
   const tbLabel = tbKind === "tb2" ? "2TB+" : tbKind === "tb3" ? "3TB+" : "4TB+";
+  const runsLabel = runsKind === "runs1" ? "1R+" : "2R+";
+  const rbiLabel = rbiKind === "rbi1" ? "1RBI+" : "2RBI+";
+  const hrrLabel = hrrKind === "hrr2" ? "2HRR+" : hrrKind === "hrr3" ? "3HRR+" : "4HRR+";
   const arrow = (col: SortCol) => (sort.col === col ? (sort.dir < 0 ? " ▾" : " ▴") : "");
   const cell = (label: React.ReactNode, col: SortCol) => (
     <button
@@ -525,23 +528,38 @@ function ColHeaders({ hitsKind, tbKind, sort, onSort }: { hitsKind: PropKind; tb
       {cell("HR", "hr")}
       {cell(hitsLabel, "hits")}
       {cell(tbLabel, "tb")}
+      {cell(runsLabel, "runs")}
+      {cell(rbiLabel, "rbi")}
+      {cell(hrrLabel, "hrr")}
     </div>
   );
 }
 
-/** One batter row in the Columns layout: name + hand chip + 4 spheres (K/C/N, HR, Hits, TB). */
+/** One batter row in the Columns layout: name + hand chip + 7 spheres (K/C/N, HR, Hits, TB, Runs, RBI, HRR). */
 function ColBatterRow({
   hrRow,
   hitsRow,
   tbRow,
+  runsRow,
+  rbiRow,
+  hrrRow,
   hitsKind,
   tbKind,
+  runsKind,
+  rbiKind,
+  hrrKind,
 }: {
   hrRow: BoardRow;
   hitsRow: BoardRow | undefined;
   tbRow: BoardRow | undefined;
+  runsRow: BoardRow | undefined;
+  rbiRow: BoardRow | undefined;
+  hrrRow: BoardRow | undefined;
   hitsKind: PropKind;
   tbKind: PropKind;
+  runsKind: PropKind;
+  rbiKind: PropKind;
+  hrrKind: PropKind;
 }) {
   const adv = platoonAdvantage(hrRow.playerHand, hrRow.opponent?.hand);
   // the matchup read can sit on any of the prop rows — use whichever has it so
@@ -612,20 +630,29 @@ function ColBatterRow({
       {sphereCell(<HeatSphere prob={hrRow.prob} kind="hr" size={COL_SPHERE} />, "hr")}
       {sphereCell(hitsRow ? <HeatSphere prob={hitsRow.prob} kind={hitsKind} size={COL_SPHERE} /> : null, "hits")}
       {sphereCell(tbRow ? <HeatSphere prob={tbRow.prob} kind={tbKind} size={COL_SPHERE} /> : null, "tb")}
+      {sphereCell(runsRow ? <HeatSphere prob={runsRow.prob} kind={runsKind} size={COL_SPHERE} /> : null, "runs")}
+      {sphereCell(rbiRow ? <HeatSphere prob={rbiRow.prob} kind={rbiKind} size={COL_SPHERE} /> : null, "rbi")}
+      {sphereCell(hrrRow ? <HeatSphere prob={hrrRow.prob} kind={hrrKind} size={COL_SPHERE} /> : null, "hrr")}
     </Link>
   );
 }
 
 /** One team's sortable column table inside the Game Hub breakdown. Each team holds
     its own sort state, so away and home sort independently. */
-function ColTeam({ team, side, rs, hitsByPlayer, tbByPlayer, hitsKind, tbKind }: {
+function ColTeam({ team, side, rs, hitsByPlayer, tbByPlayer, runsByPlayer, rbiByPlayer, hrrByPlayer, hitsKind, tbKind, runsKind, rbiKind, hrrKind }: {
   team: string;
   side: string;
   rs: BoardRow[];
   hitsByPlayer: Map<string, BoardRow>;
   tbByPlayer: Map<string, BoardRow>;
+  runsByPlayer: Map<string, BoardRow>;
+  rbiByPlayer: Map<string, BoardRow>;
+  hrrByPlayer: Map<string, BoardRow>;
   hitsKind: PropKind;
   tbKind: PropKind;
+  runsKind: PropKind;
+  rbiKind: PropKind;
+  hrrKind: PropKind;
 }) {
   const [sort, setSort] = useState<SortState>({ col: "hr", dir: -1 });
   const onSort = (col: SortCol) => setSort((s) => (s.col === col ? { col, dir: s.dir === -1 ? 1 : -1 } : { col, dir: -1 }));
@@ -633,6 +660,9 @@ function ColTeam({ team, side, rs, hitsByPlayer, tbByPlayer, hitsKind, tbKind }:
     if (sort.col === "lean") return r.lean?.prob ?? 0;
     if (sort.col === "hits") return hitsByPlayer.get(r.player)?.prob ?? 0;
     if (sort.col === "tb") return tbByPlayer.get(r.player)?.prob ?? 0;
+    if (sort.col === "runs") return runsByPlayer.get(r.player)?.prob ?? 0;
+    if (sort.col === "rbi") return rbiByPlayer.get(r.player)?.prob ?? 0;
+    if (sort.col === "hrr") return hrrByPlayer.get(r.player)?.prob ?? 0;
     return r.prob; // hr
   };
   const sorted = [...rs].sort((a, b) => (metric(a) - metric(b)) * sort.dir);
@@ -655,46 +685,67 @@ function ColTeam({ team, side, rs, hitsByPlayer, tbByPlayer, hitsKind, tbKind }:
         </div>
       )}
       {/* headers repeat per team and are click-to-sort (high<->low) */}
-      <ColHeaders hitsKind={hitsKind} tbKind={tbKind} sort={sort} onSort={onSort} />
+      <ColHeaders hitsKind={hitsKind} tbKind={tbKind} runsKind={runsKind} rbiKind={rbiKind} hrrKind={hrrKind} sort={sort} onSort={onSort} />
       {sorted.map((r) => (
         <ColBatterRow
           key={r.id}
           hrRow={r}
           hitsRow={hitsByPlayer.get(r.player)}
           tbRow={tbByPlayer.get(r.player)}
+          runsRow={runsByPlayer.get(r.player)}
+          rbiRow={rbiByPlayer.get(r.player)}
+          hrrRow={hrrByPlayer.get(r.player)}
           hitsKind={hitsKind}
           tbKind={tbKind}
+          runsKind={runsKind}
+          rbiKind={rbiKind}
+          hrrKind={hrrKind}
         />
       ))}
     </div>
   );
 }
 
-/** Columns layout: one row per batter with 4 sphere columns (K/C/N, HR, Hits, TB). */
+/** Columns layout: one row per batter with 7 sphere columns (K/C/N, HR, Hits, TB, Runs, RBI, HRR). */
 function ColSplit({
   matchup,
   hrRows,
-  hitsRows,
-  tbRows,
-  hitsKind,
-  tbKind,
+  hitsRows = [],
+  tbRows = [],
+  runsRows = [],
+  rbiRows = [],
+  hrrRows = [],
+  hitsKind = "hits1",
+  tbKind = "tb2",
+  runsKind = "runs1",
+  rbiKind = "rbi1",
+  hrrKind = "hrr2",
 }: {
   matchup: string;
   hrRows: BoardRow[];
-  hitsRows: BoardRow[];
-  tbRows: BoardRow[];
-  hitsKind: PropKind;
-  tbKind: PropKind;
+  hitsRows?: BoardRow[];
+  tbRows?: BoardRow[];
+  runsRows?: BoardRow[];
+  rbiRows?: BoardRow[];
+  hrrRows?: BoardRow[];
+  hitsKind?: PropKind;
+  tbKind?: PropKind;
+  runsKind?: PropKind;
+  rbiKind?: PropKind;
+  hrrKind?: PropKind;
 }) {
   const [away, home] = matchup.split(" @ ");
   const hitsByPlayer = new Map(hitsRows.map((r) => [r.player, r]));
   const tbByPlayer = new Map(tbRows.map((r) => [r.player, r]));
+  const runsByPlayer = new Map(runsRows.map((r) => [r.player, r]));
+  const rbiByPlayer = new Map(rbiRows.map((r) => [r.player, r]));
+  const hrrByPlayer = new Map(hrrRows.map((r) => [r.player, r]));
 
   const awayHr = hrRows.filter((r) => r.team === away);
   const homeHr = hrRows.filter((r) => r.team === home);
   const split = home !== undefined && awayHr.length + homeHr.length === hrRows.length;
   // ONE full-width list (not two narrow side-by-side columns) so the name has
-  // room and all 4 sphere columns fit + stay aligned. Away/home shown as
+  // room and all 7 sphere columns fit + stay aligned. Away/home shown as
   // labeled divider rows instead of side-by-side columns.
   const sections = split
     ? [{ team: away, side: "away", rs: awayHr }, { team: home, side: "home", rs: homeHr }]
@@ -710,8 +761,14 @@ function ColSplit({
           rs={rs}
           hitsByPlayer={hitsByPlayer}
           tbByPlayer={tbByPlayer}
+          runsByPlayer={runsByPlayer}
+          rbiByPlayer={rbiByPlayer}
+          hrrByPlayer={hrrByPlayer}
           hitsKind={hitsKind}
           tbKind={tbKind}
+          runsKind={runsKind}
+          rbiKind={rbiKind}
+          hrrKind={hrrKind}
         />
       ))}
     </div>
@@ -726,8 +783,14 @@ export function GameBreakdown({
   kRows,
   hitsRows = [],
   tbRows = [],
+  runsRows = [],
+  rbiRows = [],
+  hrrRows = [],
   hitsKind = "hits1",
   tbKind = "tb2",
+  runsKind = "runs1",
+  rbiKind = "rbi1",
+  hrrKind = "hrr2",
 }: {
   matchup: string;
   gameId?: string; // when set, filter by this exact game so doubleheaders don't merge
@@ -735,8 +798,14 @@ export function GameBreakdown({
   kRows: BoardRow[];
   hitsRows?: BoardRow[];
   tbRows?: BoardRow[];
+  runsRows?: BoardRow[];
+  rbiRows?: BoardRow[];
+  hrrRows?: BoardRow[];
   hitsKind?: PropKind;
   tbKind?: PropKind;
+  runsKind?: PropKind;
+  rbiKind?: PropKind;
+  hrrKind?: PropKind;
 }) {
   // Match by game id when we have it (doubleheaders share a matchup name but not
   // a game id); fall back to the name only for older data without ids.
@@ -745,7 +814,10 @@ export function GameBreakdown({
   const ks = kRows.filter(inGame);
   const hits = hitsRows.filter(inGame);
   const tb = tbRows.filter(inGame);
-  if (hr.length === 0 && ks.length === 0 && hits.length === 0 && tb.length === 0) {
+  const runs = runsRows.filter(inGame);
+  const rbi = rbiRows.filter(inGame);
+  const hrr = hrrRows.filter(inGame);
+  if (hr.length === 0 && ks.length === 0 && hits.length === 0 && tb.length === 0 && runs.length === 0 && rbi.length === 0 && hrr.length === 0) {
     return <p className="factor-note" style={{ marginBottom: 0 }}>No player projections yet — lineups may not be posted.</p>;
   }
   return (
@@ -779,14 +851,25 @@ export function GameBreakdown({
       {hr.length > 0 && (
         <>
           <div className="eyebrow" style={{ margin: "0.7rem 0 0.1rem" }}>Batter breakdown</div>
-          <ColSplit
-            matchup={matchup}
-            hrRows={hr}
-            hitsRows={hits}
-            tbRows={tb}
-            hitsKind={hitsKind}
-            tbKind={tbKind}
-          />
+          {/* overflowX allows the 7-column grid to scroll on narrow screens */}
+          <div style={{ overflowX: "auto" }}>
+            <div style={{ minWidth: `calc(9rem + 7 * ${COL_SLOT}px + 6 * 0.3rem)` }}>
+              <ColSplit
+                matchup={matchup}
+                hrRows={hr}
+                hitsRows={hits}
+                tbRows={tb}
+                runsRows={runs}
+                rbiRows={rbi}
+                hrrRows={hrr}
+                hitsKind={hitsKind}
+                tbKind={tbKind}
+                runsKind={runsKind}
+                rbiKind={rbiKind}
+                hrrKind={hrrKind}
+              />
+            </div>
+          </div>
         </>
       )}
     </div>
