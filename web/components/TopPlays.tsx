@@ -98,14 +98,20 @@ function LeaderSection({
 }
 
 /** A leaderboard tab: best plays grouped into collapsible categories. Pure display. */
-export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, threshold, setThreshold }: {
+export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, hrrRows, hitsKind, tbKind, runsKind, rbiKind, hrrKind, threshold, setThreshold }: {
   hrRows: BoardRow[];
   kRows: BoardRow[];
   hitsRows: BoardRow[];
   tbRows: BoardRow[];
+  runsRows: BoardRow[];
+  rbiRows: BoardRow[];
+  hrrRows: BoardRow[];
   hitsKind: PropKind;
   tbKind: PropKind;
-  threshold: { hits: 1 | 2 | 3; tb: 2 | 3 | 4; [key: string]: number };
+  runsKind: PropKind;
+  rbiKind: PropKind;
+  hrrKind: PropKind;
+  threshold: { hits: 1 | 2 | 3; tb: 2 | 3 | 4; runs: 1 | 2; rbi: 1 | 2; hrr: 2 | 3 | 4 };
   setThreshold: React.Dispatch<React.SetStateAction<{ hits: 1 | 2 | 3; tb: 2 | 3 | 4; runs: 1 | 2; rbi: 1 | 2; hrr: 2 | 3 | 4 }>>;
 }) {
   const [count, setCount] = useState<Count>(10);
@@ -120,6 +126,9 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, th
   // active thresholds, parsed from the prop kind (e.g. "hits2" -> 2, "tb3" -> 3)
   const hitsThresh = hitsKind.replace("hits", "");
   const tbThresh = tbKind.replace("tb", "");
+  const runsThresh = runsKind.replace("runs", "");
+  const rbiThresh = rbiKind.replace("rbi", "");
+  const hrrThresh = hrrKind.replace("hrr", "");
 
   return (
     <div>
@@ -212,6 +221,87 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, th
                   e.preventDefault();
                   e.stopPropagation();
                   setThreshold((t) => ({ ...t, tb: n }));
+                }}
+              >
+                {n}+
+              </button>
+            ))}
+          </div>
+        }
+      />
+      <LeaderSection
+        title="Top Runs"
+        sub={`chance to score ${runsThresh}+ runs`}
+        tip="Batters most likely to score the selected number of runs."
+        rows={runsRows}
+        count={count}
+        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind={runsKind} />} />}
+        controls={
+          <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
+            {([1, 2] as const).map((n) => (
+              <button
+                key={n}
+                className="pill"
+                data-active={threshold.runs === n}
+                style={{ padding: "0.16rem 0.45rem", fontSize: "0.62rem" }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setThreshold((t) => ({ ...t, runs: n }));
+                }}
+              >
+                {n}+
+              </button>
+            ))}
+          </div>
+        }
+      />
+      <LeaderSection
+        title="Top RBI"
+        sub={`reach ${rbiThresh}+ RBI`}
+        tip="Batters most likely to reach the selected RBI threshold."
+        rows={rbiRows}
+        count={count}
+        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind={rbiKind} />} />}
+        controls={
+          <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
+            {([1, 2] as const).map((n) => (
+              <button
+                key={n}
+                className="pill"
+                data-active={threshold.rbi === n}
+                style={{ padding: "0.16rem 0.45rem", fontSize: "0.62rem" }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setThreshold((t) => ({ ...t, rbi: n }));
+                }}
+              >
+                {n}+
+              </button>
+            ))}
+          </div>
+        }
+      />
+      <LeaderSection
+        title="Top HRR"
+        sub={`reach ${hrrThresh}+ hits+runs+RBI`}
+        tip="Batters most likely to reach the selected hits+runs+RBI combined threshold."
+        rows={hrrRows}
+        count={count}
+        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind={hrrKind} />} />}
+        controls={
+          <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
+            {([2, 3, 4] as const).map((n) => (
+              <button
+                key={n}
+                className="pill"
+                data-active={threshold.hrr === n}
+                style={{ padding: "0.16rem 0.45rem", fontSize: "0.62rem" }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setThreshold((t) => ({ ...t, hrr: n }));
                 }}
               >
                 {n}+

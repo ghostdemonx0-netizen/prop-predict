@@ -544,8 +544,14 @@ export default function Home() {
           kRows={kRows}
           hitsRows={hitsRows}
           tbRows={tbRows}
+          runsRows={runsRows}
+          rbiRows={rbiRows}
+          hrrRows={hrrRows}
           hitsKind={`hits${threshold.hits}` as "hits1" | "hits2" | "hits3"}
           tbKind={`tb${threshold.tb}` as "tb2" | "tb3" | "tb4"}
+          runsKind={`runs${threshold.runs}` as "runs1" | "runs2"}
+          rbiKind={`rbi${threshold.rbi}` as "rbi1" | "rbi2"}
+          hrrKind={`hrr${threshold.hrr}` as "hrr2" | "hrr3" | "hrr4"}
           threshold={threshold}
           setThreshold={setThreshold}
         />
