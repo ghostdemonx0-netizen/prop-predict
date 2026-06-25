@@ -483,7 +483,7 @@ export default function PlayerPage({
 
         <div className="panel rise flex flex-wrap gap-10" style={{ animationDelay: "60ms" }}>
           <Stat value={pct(p1)} label={`1+ ${eyebrow.toLowerCase()}`} glow={n === 1} />
-          <Stat value={pct(p2)} label={`2+ ${eyebrow.toLowerCase()}s`} glow={n === 2} />
+          <Stat value={pct(p2)} label={`2+ ${eyebrow === "RBI" ? "RBI" : eyebrow.toLowerCase() + "s"}`} glow={n === 2} />
         </div>
 
         <div className="panel rise" style={{ animationDelay: "120ms" }}>

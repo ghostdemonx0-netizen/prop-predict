@@ -853,7 +853,7 @@ export function GameBreakdown({
           <div className="eyebrow" style={{ margin: "0.7rem 0 0.1rem" }}>Batter breakdown</div>
           {/* overflowX allows the 7-column grid to scroll on narrow screens */}
           <div style={{ overflowX: "auto" }}>
-            <div style={{ minWidth: `calc(9rem + 7 * ${COL_SLOT}px + 6 * 0.3rem)` }}>
+            <div style={{ minWidth: `calc(9rem + 7 * ${COL_SLOT}px + 7 * 0.3rem)` }}>
               <ColSplit
                 matchup={matchup}
                 hrRows={hr}
