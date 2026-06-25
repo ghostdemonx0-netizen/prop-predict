@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { loadProjections, loadIndex } from "../lib/data";
-import type { Projections, HitsRow, TbRow, Matchup } from "../lib/types";
+import type { Projections, HitsRow, TbRow, RunsRow, RbiRow, HrrRow, Matchup } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
 import { TopPlays } from "../components/TopPlays";
@@ -45,8 +45,8 @@ export default function Home() {
   const [data, setData] = useState<Projections | null>(null);
   const [section, setSection] = useState<Section>("props");
   const [view, setView] = useState<ViewMode>("hybrid");
-  const [prop, setProp] = useState<"hr" | "k" | "hits" | "tb">("hr");
-  const [threshold, setThreshold] = useState<{ hits: 1 | 2 | 3; tb: 2 | 3 | 4 }>({ hits: 1, tb: 2 });
+  const [prop, setProp] = useState<"hr" | "k" | "hits" | "tb" | "runs" | "rbi" | "hrr">("hr");
+  const [threshold, setThreshold] = useState<{ hits: 1 | 2 | 3; tb: 2 | 3 | 4; runs: 1 | 2; rbi: 1 | 2; hrr: 2 | 3 | 4 }>({ hits: 1, tb: 2, runs: 1, rbi: 1, hrr: 2 });
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [source, setSource] = useState<"current" | "blend" | "hist">("current");
@@ -58,6 +58,9 @@ export default function Home() {
     if (propParam === "k") setProp("k");
     else if (propParam === "hits") setProp("hits");
     else if (propParam === "tb") setProp("tb");
+    else if (propParam === "runs") setProp("runs");
+    else if (propParam === "rbi") setProp("rbi");
+    else if (propParam === "hrr") setProp("hrr");
     // back-link from player pages: restore threshold
     const tp = params.get("threshold");
     if (propParam === "hits" && (tp === "1" || tp === "2" || tp === "3")) {
@@ -66,6 +69,9 @@ export default function Home() {
     if (propParam === "tb" && (tp === "2" || tp === "3" || tp === "4")) {
       setThreshold((t) => ({ ...t, tb: Number(tp) as 2 | 3 | 4 }));
     }
+    if (propParam === "runs" && (tp === "1" || tp === "2")) setThreshold((t) => ({ ...t, runs: Number(tp) as 1 | 2 }));
+    if (propParam === "rbi" && (tp === "1" || tp === "2")) setThreshold((t) => ({ ...t, rbi: Number(tp) as 1 | 2 }));
+    if (propParam === "hrr" && (tp === "2" || tp === "3" || tp === "4")) setThreshold((t) => ({ ...t, hrr: Number(tp) as 2 | 3 | 4 }));
     // back-link from player pages
     const src = params.get("source");
     if (src === "hist") setSource("hist");
@@ -182,6 +188,21 @@ export default function Home() {
   const hitsDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=hits&threshold=${threshold.hits}${srcParam ? `&${srcParam}` : ""}`;
   const tbDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=tb&threshold=${threshold.tb}${srcParam ? `&${srcParam}` : ""}`;
 
+  function runsProb(r: RunsRow, n: 1 | 2): number {
+    return pickN(n === 1 ? r.p_ge1 : r.p_ge2, n === 1 ? r.p_ge1_hist : r.p_ge2_hist);
+  }
+  function rbiProb(r: RbiRow, n: 1 | 2): number {
+    return pickN(n === 1 ? r.p_ge1 : r.p_ge2, n === 1 ? r.p_ge1_hist : r.p_ge2_hist);
+  }
+  function hrrProb(r: HrrRow, n: 2 | 3 | 4): number {
+    const base = n === 2 ? r.p_ge2 : n === 3 ? r.p_ge3 : r.p_ge4;
+    const hist = n === 2 ? r.p_ge2_hist : n === 3 ? r.p_ge3_hist : r.p_ge4_hist;
+    return pickN(base, hist);
+  }
+  const runsDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=runs&threshold=${threshold.runs}${srcParam ? `&${srcParam}` : ""}`;
+  const rbiDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=rbi&threshold=${threshold.rbi}${srcParam ? `&${srcParam}` : ""}`;
+  const hrrDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=hrr&threshold=${threshold.hrr}${srcParam ? `&${srcParam}` : ""}`;
+
   const hitsRows: BoardRow[] = (data.hits ?? []).map((r) => ({
     id: `hits-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
     player: r.player,
@@ -234,12 +255,93 @@ export default function Home() {
     precipPct: r.precip_pct,
   }));
 
+  const runsRows: BoardRow[] = (data.runs ?? []).map((r) => ({
+    id: `runs-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
+    player: r.player,
+    team: r.team,
+    prob: runsProb(r, threshold.runs),
+    detail: `${threshold.runs}+ runs`,
+    href: `/player/runs/${r.player_id ?? encodeURIComponent(r.player)}${runsDateQ}`,
+    time: gameTimeLabel(r.game_time),
+    timeSort: r.game_time,
+    matchup: r.matchup,
+    gameId: r.game_id != null ? String(r.game_id) : undefined,
+    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
+    playerHand: batHand(r.bats),
+    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
+    bvp: r.vs?.bvp,
+    lean: leanFor(r.vs),
+    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
+    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
+    status: r.lineup_status,
+    windOut: r.wind_out_mph,
+    windMph: r.wind_mph,
+    windDir: r.wind_dir,
+    tempF: r.temp_f,
+    precipPct: r.precip_pct,
+  }));
+
+  const rbiRows: BoardRow[] = (data.rbi ?? []).map((r) => ({
+    id: `rbi-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
+    player: r.player,
+    team: r.team,
+    prob: rbiProb(r, threshold.rbi),
+    detail: `${threshold.rbi}+ RBI`,
+    href: `/player/rbi/${r.player_id ?? encodeURIComponent(r.player)}${rbiDateQ}`,
+    time: gameTimeLabel(r.game_time),
+    timeSort: r.game_time,
+    matchup: r.matchup,
+    gameId: r.game_id != null ? String(r.game_id) : undefined,
+    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
+    playerHand: batHand(r.bats),
+    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
+    bvp: r.vs?.bvp,
+    lean: leanFor(r.vs),
+    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
+    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
+    status: r.lineup_status,
+    windOut: r.wind_out_mph,
+    windMph: r.wind_mph,
+    windDir: r.wind_dir,
+    tempF: r.temp_f,
+    precipPct: r.precip_pct,
+  }));
+
+  const hrrRows: BoardRow[] = (data.hrr ?? []).map((r) => ({
+    id: `hrr-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
+    player: r.player,
+    team: r.team,
+    prob: hrrProb(r, threshold.hrr),
+    detail: `${threshold.hrr}+ H+R+RBI`,
+    href: `/player/hrr/${r.player_id ?? encodeURIComponent(r.player)}${hrrDateQ}`,
+    time: gameTimeLabel(r.game_time),
+    timeSort: r.game_time,
+    matchup: r.matchup,
+    gameId: r.game_id != null ? String(r.game_id) : undefined,
+    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
+    playerHand: batHand(r.bats),
+    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
+    bvp: r.vs?.bvp,
+    lean: leanFor(r.vs),
+    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
+    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
+    status: r.lineup_status,
+    windOut: r.wind_out_mph,
+    windMph: r.wind_mph,
+    windDir: r.wind_dir,
+    tempF: r.temp_f,
+    precipPct: r.precip_pct,
+  }));
+
   // Re-sort by the displayed probability so History mode reorders the list to
   // match its numbers (current mode is already in this order, so it's unchanged).
   hrRows.sort((a, b) => b.prob - a.prob);
   kRows.sort((a, b) => b.prob - a.prob);
   hitsRows.sort((a, b) => b.prob - a.prob);
   tbRows.sort((a, b) => b.prob - a.prob);
+  runsRows.sort((a, b) => b.prob - a.prob);
+  rbiRows.sort((a, b) => b.prob - a.prob);
+  hrrRows.sort((a, b) => b.prob - a.prob);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">
@@ -318,6 +420,9 @@ export default function Home() {
                   ["k", "Strikeouts"],
                   ["hits", "Hits"],
                   ["tb", "Total Bases"],
+                  ["runs", "Runs"],
+                  ["rbi", "RBI"],
+                  ["hrr", "H+R+RBI"],
                 ] as const).map(([p, label]) => (
                   <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
                     {label}
@@ -347,6 +452,33 @@ export default function Home() {
                       data-active={threshold.tb === n}
                       className="pill"
                     >
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              )}
+              {prop === "runs" && (
+                <div className="pillbar">
+                  {([1, 2] as const).map((n) => (
+                    <button key={n} onClick={() => setThreshold((t) => ({ ...t, runs: n }))} data-active={threshold.runs === n} className="pill">
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              )}
+              {prop === "rbi" && (
+                <div className="pillbar">
+                  {([1, 2] as const).map((n) => (
+                    <button key={n} onClick={() => setThreshold((t) => ({ ...t, rbi: n }))} data-active={threshold.rbi === n} className="pill">
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              )}
+              {prop === "hrr" && (
+                <div className="pillbar">
+                  {([2, 3, 4] as const).map((n) => (
+                    <button key={n} onClick={() => setThreshold((t) => ({ ...t, hrr: n }))} data-active={threshold.hrr === n} className="pill">
                       {n}+
                     </button>
                   ))}
@@ -419,12 +551,16 @@ export default function Home() {
         />
       ) : (
         <PropBoard
-          rows={prop === "hr" ? hrRows : prop === "k" ? kRows : prop === "hits" ? hitsRows : tbRows}
+          rows={prop === "hr" ? hrRows : prop === "k" ? kRows : prop === "hits" ? hitsRows : prop === "tb" ? tbRows
+                : prop === "runs" ? runsRows : prop === "rbi" ? rbiRows : hrrRows}
           mode={view}
           kind={
             prop === "k" ? "k"
             : prop === "hits" ? (`hits${threshold.hits}` as "hits1" | "hits2" | "hits3")
             : prop === "tb"   ? (`tb${threshold.tb}`   as "tb2"   | "tb3"   | "tb4")
+            : prop === "runs" ? (`runs${threshold.runs}` as "runs1" | "runs2")
+            : prop === "rbi"  ? (`rbi${threshold.rbi}`  as "rbi1"  | "rbi2")
+            : prop === "hrr"  ? (`hrr${threshold.hrr}`  as "hrr2"  | "hrr3"  | "hrr4")
             : "hr"
           }
         />

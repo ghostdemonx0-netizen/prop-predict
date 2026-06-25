@@ -105,8 +105,8 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, hitsKind, tbKind, th
   tbRows: BoardRow[];
   hitsKind: PropKind;
   tbKind: PropKind;
-  threshold: { hits: 1 | 2 | 3; tb: 2 | 3 | 4 };
-  setThreshold: React.Dispatch<React.SetStateAction<{ hits: 1 | 2 | 3; tb: 2 | 3 | 4 }>>;
+  threshold: { hits: 1 | 2 | 3; tb: 2 | 3 | 4; [key: string]: number };
+  setThreshold: React.Dispatch<React.SetStateAction<{ hits: 1 | 2 | 3; tb: 2 | 3 | 4; runs: 1 | 2; rbi: 1 | 2; hrr: 2 | 3 | 4 }>>;
 }) {
   const [count, setCount] = useState<Count>(10);
   const topContact = hrRows
