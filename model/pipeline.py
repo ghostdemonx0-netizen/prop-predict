@@ -352,12 +352,12 @@ def build_total_bases_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=Non
 # ---------------------------------------------------------------------------
 
 from model import run_props as _run_props  # noqa: E402  (local import to keep top-level clean)
-from model.parks import run_park_factor  # noqa: E402
+from model.parks import run_park_factor, hrr_park_factor  # noqa: E402
 
 _RUN_PROP_CFG = {
-    "RUNS": {"thresholds": [("p_ge1", 1), ("p_ge2", 2)], "total_field": "total_r",   "league": _run_props.LEAGUE_R_PER_GAME},
-    "RBI":  {"thresholds": [("p_ge1", 1), ("p_ge2", 2)], "total_field": "total_rbi", "league": _run_props.LEAGUE_RBI_PER_GAME},
-    "HRR":  {"thresholds": [("p_ge2", 2), ("p_ge3", 3), ("p_ge4", 4)], "total_field": "total_hrr", "league": _run_props.LEAGUE_HRR_PER_GAME},
+    "RUNS": {"thresholds": [("p_ge1", 1), ("p_ge2", 2)], "total_field": "total_r",   "recent_field": "recent_r",   "league": _run_props.LEAGUE_R_PER_GAME},
+    "RBI":  {"thresholds": [("p_ge1", 1), ("p_ge2", 2)], "total_field": "total_rbi", "recent_field": "recent_rbi", "league": _run_props.LEAGUE_RBI_PER_GAME},
+    "HRR":  {"thresholds": [("p_ge2", 2), ("p_ge3", 3), ("p_ge4", 4)], "total_field": "total_hrr", "recent_field": "recent_hrr", "league": _run_props.LEAGUE_HRR_PER_GAME},
 }
 
 
@@ -380,14 +380,23 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
         # home batters face the away starter; away batters face the home starter
         for side, opp in (("home", away_p), ("away", home_p)):
             team = game.get(side, "?")
-            park = run_park_factor(team)
+            park = hrr_park_factor(team) if prop == "HRR" else run_park_factor(team)
             for b in lineups.get(side, []):
                 games = b.get("games", 0)
                 total = b.get(cfg["total_field"], 0)
                 rate = _run_props.regressed_per_game(total, games, cfg["league"], _run_props.REG_GAMES)
                 psupp = _run_props.pitcher_suppression_mult(opp.get("hit_allowed_rate", 0.22)) if opp else 1.0
                 platoon = hr_platoon_mult(b.get("bats", "R"), opp.get("throws", "R")) if opp else 1.0
-                lam = _run_props.expected_count(rate, pitcher_mult=psupp, platoon_mult=platoon, park_mult=park)
+                # Recent-form blending
+                hard_hit = b.get("recent_form_mult", 1.0)
+                season_rate = (total / games) if games > 0 else 0.0
+                production = _run_props.production_form_mult(
+                    b.get(cfg["recent_field"], 0),
+                    b.get("recent_games", 0),
+                    season_rate,
+                )
+                blended = _run_props.blend_forms(hard_hit, production)
+                lam = _run_props.expected_count(rate, pitcher_mult=psupp, platoon_mult=platoon, park_mult=park, form_mult=blended)
                 m = matchup(
                     b_k=b.get("k_rate", 0.22), b_hit=b.get("hit_rate", 0.22),
                     p_k=opp.get("k_per_bf", 0.22) if opp else 0.22,
@@ -404,7 +413,9 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
                     "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                     "bats": b.get("bats", "R"),
                     "lineup_status": b.get("lineup_status", "confirmed"),
-                    "recent_form_mult": 1.0,
+                    "recent_form_mult": blended,
+                    "hard_hit_form": hard_hit,
+                    "production_form": production,
                     "pitcher_factor": psupp,
                     "park_weather_factor": park,
                     "vs": vs,

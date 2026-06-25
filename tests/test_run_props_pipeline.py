@@ -2,11 +2,13 @@ import math
 from model.pipeline import build_runs_rows, build_rbi_rows, build_hrr_rows
 from model import run_props
 from model.matchup import hr_platoon_mult
-from model.parks import run_park_factor
+from model.parks import run_park_factor, hrr_park_factor
 
-def _bat(pid, games, r, rbi, hrr):
+def _bat(pid, games, r, rbi, hrr, *, recent_games=0, recent_r=0, recent_rbi=0, recent_hrr=0, recent_form_mult=1.0):
     return {"player_id": pid, "name": str(pid), "team": "AAA", "bats": "R",
             "games": games, "total_r": r, "total_rbi": rbi, "total_hrr": hrr,
+            "recent_games": recent_games, "recent_r": recent_r, "recent_rbi": recent_rbi,
+            "recent_hrr": recent_hrr, "recent_form_mult": recent_form_mult,
             "k_rate": 0.22, "hit_rate": 0.25, "lineup_status": "confirmed"}
 
 def _pit(pid):
@@ -42,3 +44,87 @@ def test_rbi_and_hrr_rows_thresholds():
     _hlam = run_props.expected_count(_hrate, pitcher_mult=run_props.pitcher_suppression_mult(0.22),
                                      platoon_mult=hr_platoon_mult("R", "R"), park_mult=run_park_factor("AAA"))
     assert math.isclose(hrr["p_ge2"], run_props.ge_probs(_hlam, [("p_ge2", 2)])["p_ge2"])
+
+
+# ---------------------------------------------------------------------------
+# R4 tests: production form wiring + HRR park factor
+# ---------------------------------------------------------------------------
+
+def _bat_col(pid, games, r, rbi, hrr, *, recent_games=0, recent_r=0, recent_rbi=0, recent_hrr=0, recent_form_mult=1.0):
+    """Batter playing for COL (Coors Field) to test park factor routing."""
+    return {"player_id": pid, "name": str(pid), "team": "COL", "bats": "R",
+            "games": games, "total_r": r, "total_rbi": rbi, "total_hrr": hrr,
+            "recent_games": recent_games, "recent_r": recent_r, "recent_rbi": recent_rbi,
+            "recent_hrr": recent_hrr, "recent_form_mult": recent_form_mult,
+            "k_rate": 0.22, "hit_rate": 0.25, "lineup_status": "confirmed"}
+
+
+_SLATE_COL = [{"game_id": 2, "home": "COL", "away": "SD", "park_team": "COL",
+               "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+
+_W_COL = lambda g: {"wind_speed_mph": 0, "wind_from_deg": 0, "temp_f": 70, "precip_pct": 0}
+
+
+def test_production_form_hot_batter_raises_p_ge1():
+    """Hot batter (elevated recent production) gets production_form > 1.0 and higher p_ge1."""
+    # Season: 60 R in 100 games → rate 0.60/game
+    # Recent: 12 R in 15 games → 0.80/game → hot vs season_rate ~0.60 → production_form > 1.0
+    hot_batter = _bat(10, 100, 60, 70, 200,
+                      recent_games=15, recent_r=12, recent_rbi=14, recent_hrr=35,
+                      recent_form_mult=1.0)
+    # Neutral batter: same season stats but no recent data → production_form = 1.0
+    neutral_batter = _bat(11, 100, 60, 70, 200,
+                          recent_games=0, recent_r=0, recent_rbi=0, recent_hrr=0,
+                          recent_form_mult=1.0)
+
+    slate = [{"game_id": 3, "home": "AAA", "away": "BBB", "park_team": "AAA",
+              "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+
+    # Home lineup: hot_batter; Away lineup: neutral_batter (faces same pitcher)
+    def lineups_fn(g):
+        return {"home": [hot_batter], "away": [neutral_batter]}
+
+    rows = build_runs_rows(slate, lineups_fn, lambda p: _pit(p), _W)
+
+    hot_row = next(r for r in rows if r["player_id"] == 10)
+    neutral_row = next(r for r in rows if r["player_id"] == 11)
+
+    # production_form should be > 1.0 for the hot batter
+    assert hot_row["production_form"] > 1.0, (
+        f"Expected production_form > 1.0 for hot batter, got {hot_row['production_form']}"
+    )
+    # hot batter gets higher p_ge1
+    assert hot_row["p_ge1"] > neutral_row["p_ge1"], (
+        f"Hot batter p_ge1={hot_row['p_ge1']} should exceed neutral p_ge1={neutral_row['p_ge1']}"
+    )
+    # hard_hit_form and recent_form_mult (blended) are present
+    assert "hard_hit_form" in hot_row
+    assert "recent_form_mult" in hot_row
+
+
+def test_hrr_uses_hrr_park_factor_runs_uses_run_park_factor_col():
+    """For COL games, HRR rows use hrr_park_factor(COL) and Runs rows use run_park_factor(COL), and they differ."""
+    batter = _bat_col(20, 100, 60, 70, 200)
+
+    def lineups_fn(g):
+        return {"home": [batter], "away": []}
+
+    hrr_rows = build_hrr_rows(_SLATE_COL, lineups_fn, lambda p: _pit(p), _W_COL)
+    runs_rows = build_runs_rows(_SLATE_COL, lineups_fn, lambda p: _pit(p), _W_COL)
+
+    hrr_row = next(r for r in hrr_rows if r["player_id"] == 20)
+    runs_row = next(r for r in runs_rows if r["player_id"] == 20)
+
+    expected_hrr_park = hrr_park_factor("COL")
+    expected_run_park = run_park_factor("COL")
+
+    assert math.isclose(hrr_row["park_weather_factor"], expected_hrr_park), (
+        f"HRR row park_weather_factor={hrr_row['park_weather_factor']} != hrr_park_factor('COL')={expected_hrr_park}"
+    )
+    assert math.isclose(runs_row["park_weather_factor"], expected_run_park), (
+        f"Runs row park_weather_factor={runs_row['park_weather_factor']} != run_park_factor('COL')={expected_run_park}"
+    )
+    assert expected_hrr_park != expected_run_park, "COL hrr_park_factor and run_park_factor should differ"
+    assert hrr_row["park_weather_factor"] != runs_row["park_weather_factor"], (
+        "HRR and Runs park_weather_factor should differ for COL"
+    )
