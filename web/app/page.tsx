@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { loadProjections, loadIndex } from "../lib/data";
-import type { Projections, HitsRow, TbRow } from "../lib/types";
+import type { Projections, HitsRow, TbRow, Matchup } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
 import { TopPlays } from "../components/TopPlays";
@@ -49,7 +49,7 @@ export default function Home() {
   const [threshold, setThreshold] = useState<{ hits: 1 | 2 | 3; tb: 2 | 3 | 4 }>({ hits: 1, tb: 2 });
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [source, setSource] = useState<"current" | "hist">("current");
+  const [source, setSource] = useState<"current" | "blend" | "hist">("current");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -67,7 +67,9 @@ export default function Home() {
       setThreshold((t) => ({ ...t, tb: Number(tp) as 2 | 3 | 4 }));
     }
     // back-link from player pages
-    if (params.get("source") === "hist") setSource("hist");
+    const src = params.get("source");
+    if (src === "hist") setSource("hist");
+    else if (src === "blend") setSource("blend");
     loadIndex().then((ds) => {
       setDates(ds);
       setSelectedDate(want && ds.includes(want) ? want : ds[0] ?? "");
@@ -97,13 +99,30 @@ export default function Home() {
           updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" }))
     : null;
 
-  const dateQ = `${selectedDate ? `?date=${selectedDate}` : ""}${source === "hist" ? `${selectedDate ? "&" : "?"}source=hist` : ""}`;
+  // weighting: current = this season · hist = 3yr Marcel blend · blend = equal 50/50
+  // average of the two (computed here from the numbers the board already ships).
+  const srcParam = source === "current" ? "" : `source=${source}`;
+  const pickN = (cur?: number, hist?: number): number =>
+    source === "current" ? (cur as number)
+    : source === "hist" ? (hist ?? (cur as number))
+    : (typeof cur === "number" && typeof hist === "number" ? (cur + hist) / 2 : (cur as number));
+  const leanFor = (vs: Matchup | undefined) => {
+    if (!vs) return null;
+    if (source === "current") return { lean: vs.lean, prob: vs.prob };
+    if (source === "hist") return vs.lean_hist != null && vs.prob_hist != null ? { lean: vs.lean_hist, prob: vs.prob_hist } : { lean: vs.lean, prob: vs.prob };
+    const kb = pickN(vs.k_prob, vs.k_prob_hist);
+    const hb = pickN(vs.hit_prob, vs.hit_prob_hist);
+    const lean = Math.abs(kb - hb) < 0.04 ? "NEU" : kb > hb ? "K" : "H";
+    return { lean, prob: Math.max(kb, hb) };
+  };
+
+  const dateQ = `${selectedDate ? `?date=${selectedDate}` : ""}${srcParam ? `${selectedDate ? "&" : "?"}${srcParam}` : ""}`;
 
   const hrRows: BoardRow[] = data.hr.map((r) => ({
     id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
     player: r.player,
     team: r.team,
-    prob: source === "hist" ? (r.probability_hist ?? r.probability) : r.probability,
+    prob: pickN(r.probability, r.probability_hist),
     detail: gameLabel(r.matchup, r.team) ?? `@ ${r.park}`,
     href: `/player/hr/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
     time: gameTimeLabel(r.game_time),
@@ -114,13 +133,9 @@ export default function Home() {
     playerHand: batHand(r.bats),
     opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
     bvp: r.vs?.bvp,
-    lean: r.vs
-      ? (source === "hist" && r.vs.lean_hist != null && r.vs.prob_hist != null
-          ? { lean: r.vs.lean_hist, prob: r.vs.prob_hist }
-          : { lean: r.vs.lean, prob: r.vs.prob })
-      : null,
-    hitProb: source === "hist" ? (r.vs?.hit_prob_hist ?? r.vs?.hit_prob) : r.vs?.hit_prob,
-    kProb: source === "hist" ? (r.vs?.k_prob_hist ?? r.vs?.k_prob) : r.vs?.k_prob,
+    lean: leanFor(r.vs),
+    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
+    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
     status: r.lineup_status,
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
@@ -132,9 +147,9 @@ export default function Home() {
     id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
     player: r.player,
     team: r.team,
-    prob: source === "hist" ? (r.over_prob_hist ?? r.over_prob) : r.over_prob,
+    prob: pickN(r.over_prob, r.over_prob_hist),
     detail: `line ${r.line.toFixed(1)}`,
-    projection: (source === "hist" ? (r.expected_ks_hist ?? r.expected_ks) : r.expected_ks).toFixed(1),
+    projection: pickN(r.expected_ks, r.expected_ks_hist).toFixed(1),
     line: r.line.toFixed(1),
     href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
     time: gameTimeLabel(r.game_time),
@@ -155,19 +170,17 @@ export default function Home() {
   // Helper: pick p_geN source-aware (hist fallback to current)
   function hitsProb(r: HitsRow, n: 1 | 2 | 3): number {
     const base = n === 1 ? r.p_ge1 : n === 2 ? r.p_ge2 : r.p_ge3;
-    if (source !== "hist") return base;
     const hist = n === 1 ? r.p_ge1_hist : n === 2 ? r.p_ge2_hist : r.p_ge3_hist;
-    return hist ?? base;
+    return pickN(base, hist);
   }
   function tbProb(r: TbRow, n: 2 | 3 | 4): number {
     const base = n === 2 ? r.p_ge2 : n === 3 ? r.p_ge3 : r.p_ge4;
-    if (source !== "hist") return base;
     const hist = n === 2 ? r.p_ge2_hist : n === 3 ? r.p_ge3_hist : r.p_ge4_hist;
-    return hist ?? base;
+    return pickN(base, hist);
   }
 
-  const hitsDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=hits&threshold=${threshold.hits}${source === "hist" ? "&source=hist" : ""}`;
-  const tbDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=tb&threshold=${threshold.tb}${source === "hist" ? "&source=hist" : ""}`;
+  const hitsDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=hits&threshold=${threshold.hits}${srcParam ? `&${srcParam}` : ""}`;
+  const tbDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=tb&threshold=${threshold.tb}${srcParam ? `&${srcParam}` : ""}`;
 
   const hitsRows: BoardRow[] = (data.hits ?? []).map((r) => ({
     id: `hits-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
@@ -184,13 +197,9 @@ export default function Home() {
     playerHand: batHand(r.bats),
     opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
     bvp: r.vs?.bvp,
-    lean: r.vs
-      ? (source === "hist" && r.vs.lean_hist != null && r.vs.prob_hist != null
-          ? { lean: r.vs.lean_hist, prob: r.vs.prob_hist }
-          : { lean: r.vs.lean, prob: r.vs.prob })
-      : null,
-    hitProb: source === "hist" ? (r.vs?.hit_prob_hist ?? r.vs?.hit_prob) : r.vs?.hit_prob,
-    kProb: source === "hist" ? (r.vs?.k_prob_hist ?? r.vs?.k_prob) : r.vs?.k_prob,
+    lean: leanFor(r.vs),
+    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
+    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
     status: r.lineup_status,
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
@@ -214,13 +223,9 @@ export default function Home() {
     playerHand: batHand(r.bats),
     opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
     bvp: r.vs?.bvp,
-    lean: r.vs
-      ? (source === "hist" && r.vs.lean_hist != null && r.vs.prob_hist != null
-          ? { lean: r.vs.lean_hist, prob: r.vs.prob_hist }
-          : { lean: r.vs.lean, prob: r.vs.prob })
-      : null,
-    hitProb: source === "hist" ? (r.vs?.hit_prob_hist ?? r.vs?.hit_prob) : r.vs?.hit_prob,
-    kProb: source === "hist" ? (r.vs?.k_prob_hist ?? r.vs?.k_prob) : r.vs?.k_prob,
+    lean: leanFor(r.vs),
+    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
+    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
     status: r.lineup_status,
     windOut: r.wind_out_mph,
     windMph: r.wind_mph,
@@ -278,11 +283,11 @@ export default function Home() {
           {/* compact weighting toggle: stacked+centered on phones, pinned far-left on wider screens */}
           <div
             className="weighting-toggle"
-            title="Current = this season only. History = the last 3 seasons blended 5/4/3 for a steadier baseline. Park, weather, matchup and recent form stay live either way."
+            title="Current = this season only. Blend = an equal 50/50 average of Current and History. History = the last 3 seasons blended 5/4/3 for a steadier baseline. Park, weather, matchup and recent form stay live either way."
           >
             <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Weighting</span>
             <div className="pillbar">
-              {([["current", "Current szn"], ["hist", "History 3yr"]] as const).map(([v, label]) => (
+              {([["current", "Current szn"], ["blend", "Blend"], ["hist", "History 3yr"]] as const).map(([v, label]) => (
                 <button
                   key={v}
                   onClick={() => setSource(v)}

@@ -32,13 +32,13 @@ function pitLabel(t?: string) {
   return t === "L" ? "LHP" : t ? "RHP" : "";
 }
 
-function Back({ prop, date, hist, threshold }: { prop?: string; date?: string; hist?: boolean; threshold?: string }) {
+function Back({ prop, date, source, threshold }: { prop?: string; date?: string; source?: string; threshold?: string }) {
   const q = new URLSearchParams();
   if (prop === "k") q.set("prop", "k"); // return to the strikeout board, not the default HR view
   if (prop === "hits") q.set("prop", "hits");
   if (prop === "tb") q.set("prop", "tb");
   if (date) q.set("date", date);
-  if (hist) q.set("source", "hist");
+  if (source && source !== "current") q.set("source", source);
   if (threshold && (prop === "hits" || prop === "tb")) q.set("threshold", threshold);
   const qs = q.toString();
   return (
@@ -133,8 +133,11 @@ export default function PlayerPage({
   const [data, setData] = useState<Projections | null>(null);
 
   const hist = source === "hist";
-  const pick = <T,>(cur: T, h: T | undefined | null): T => (hist && h != null ? h : cur);
-  const navQ = `${date ? `?date=${date}` : ""}${hist ? `${date ? "&" : "?"}source=hist` : ""}`;
+  const blend = source === "blend";
+  // numeric fields average on blend; non-numeric (lean) handled separately
+  const pick = <T,>(cur: T, h: T | undefined | null): T =>
+    (blend && typeof cur === "number" && typeof h === "number" ? (((cur + h) / 2) as T) : (hist && h != null ? h : cur));
+  const navQ = `${date ? `?date=${date}` : ""}${source && source !== "current" ? `${date ? "&" : "?"}source=${source}` : ""}`;
 
   // Parse threshold from query param (for hits: 1|2|3, for tb: 2|3|4)
   const hitsThreshold: 1 | 2 | 3 = (thresholdParam === "2" ? 2 : thresholdParam === "3" ? 3 : 1);
@@ -154,7 +157,7 @@ export default function PlayerPage({
 
   const notFound = (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-5">
-      <Back prop={prop} date={date} hist={hist} />
+      <Back prop={prop} date={date} source={source} />
       <p className="panel" style={{ color: "var(--muted)" }}>No data for {name}.</p>
     </main>
   );
@@ -165,7 +168,7 @@ export default function PlayerPage({
     const parkFriendly = r.park_mult >= 1;
     return (
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-        <Back prop={prop} date={date} hist={hist} />
+        <Back prop={prop} date={date} source={source} />
         <div className="rise">
           <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Home Run{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
           <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
@@ -243,7 +246,7 @@ export default function PlayerPage({
                 </Link>{" "}
                 <span className="hand">{pitLabel(r.vs.throws)}</span>
               </span>
-              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={pick(r.vs.lean, r.vs.lean_hist)} />
+              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={blend ? undefined : pick(r.vs.lean, r.vs.lean_hist)} />
             </div>
             {r.vs.bvp && r.vs.bvp.pa > 0 ? (
               <p className="factor-note" style={{ marginBottom: 0 }}>
@@ -270,7 +273,7 @@ export default function PlayerPage({
     const hitsKind = (`hits${hitsThreshold}`) as PropKind;
     return (
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-        <Back prop={prop} date={date} hist={hist} threshold={thresholdParam} />
+        <Back prop={prop} date={date} source={source} threshold={thresholdParam} />
         <div className="rise">
           <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Hits{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
           <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
@@ -336,7 +339,7 @@ export default function PlayerPage({
                 </Link>{" "}
                 <span className="hand">{pitLabel(r.vs.throws)}</span>
               </span>
-              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={pick(r.vs.lean, r.vs.lean_hist)} />
+              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={blend ? undefined : pick(r.vs.lean, r.vs.lean_hist)} />
             </div>
             {r.vs.bvp && r.vs.bvp.pa > 0 ? (
               <p className="factor-note" style={{ marginBottom: 0 }}>
@@ -363,7 +366,7 @@ export default function PlayerPage({
     const tbKind = (`tb${tbThreshold}`) as PropKind;
     return (
       <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-        <Back prop={prop} date={date} hist={hist} threshold={thresholdParam} />
+        <Back prop={prop} date={date} source={source} threshold={thresholdParam} />
         <div className="rise">
           <p className="eyebrow mb-1">{r.team}{r.bats ? ` · ${batLabel(r.bats)}` : ""} · Total Bases{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
           <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
@@ -435,7 +438,7 @@ export default function PlayerPage({
                 </Link>{" "}
                 <span className="hand">{pitLabel(r.vs.throws)}</span>
               </span>
-              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={pick(r.vs.lean, r.vs.lean_hist)} />
+              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={blend ? undefined : pick(r.vs.lean, r.vs.lean_hist)} />
             </div>
             {r.vs.bvp && r.vs.bvp.pa > 0 ? (
               <p className="factor-note" style={{ marginBottom: 0 }}>
@@ -460,7 +463,7 @@ export default function PlayerPage({
   const over = displayKs > r.line;
   return (
     <main className="mx-auto max-w-2xl px-5 py-14 space-y-6">
-      <Back prop={prop} date={date} hist={hist} />
+      <Back prop={prop} date={date} source={source} />
       <div className="rise">
         <p className="eyebrow mb-1">{r.team}{r.throws ? ` · ${pitLabel(r.throws)}` : ""} · Strikeouts{gameTimeLabel(r.game_time) ? ` · 🕐 ${gameTimeLabel(r.game_time)}` : ""}</p>
         <h1 className="wordmark" style={{ fontSize: "clamp(1.8rem,5vw,2.6rem)" }}>
@@ -515,7 +518,7 @@ export default function PlayerPage({
                     <span className="hand" title="career vs this pitcher">{m.bvp.hits}-{m.bvp.ab}{m.bvp.hr > 0 ? ` · ${m.bvp.hr} HR` : ""}</span>
                   )}
                 </span>
-                <LeanPair kProb={pick(m.k_prob, m.k_prob_hist) ?? 0} hitProb={pick(m.hit_prob, m.hit_prob_hist) ?? 0} lean={pick(m.lean, m.lean_hist)} size={40} />
+                <LeanPair kProb={pick(m.k_prob, m.k_prob_hist) ?? 0} hitProb={pick(m.hit_prob, m.hit_prob_hist) ?? 0} lean={blend ? undefined : pick(m.lean, m.lean_hist)} size={40} />
               </div>
             ))}
           </div>
