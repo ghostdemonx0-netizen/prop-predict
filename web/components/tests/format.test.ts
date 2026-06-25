@@ -32,6 +32,14 @@ describe("heatColor", () => {
   });
 });
 
+describe("new props have strength tiers and heat colors", () => {
+  it("new props have strength tiers and heat colors", () => {
+    expect(strengthLabel(0.6, "runs1")).toMatch(/STRONG|Lean|Pass/);
+    expect(heatColor(0.4, "hrr2")).toMatch(/^hsl\(/);
+    expect(strengthLabel(0.05, "rbi2")).toBe("Pass");
+  });
+});
+
 describe("wind helpers", () => {
   it("describes the wind direction relative to center field", () => {
     expect(windText(0)).toBe("out to center");

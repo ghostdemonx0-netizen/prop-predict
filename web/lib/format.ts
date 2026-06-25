@@ -1,4 +1,5 @@
-export type PropKind = "hr" | "k" | "hits1" | "hits2" | "hits3" | "tb2" | "tb3" | "tb4";
+export type PropKind = "hr" | "k" | "hits1" | "hits2" | "hits3" | "tb2" | "tb3" | "tb4"
+  | "runs1" | "runs2" | "rbi1" | "rbi2" | "hrr2" | "hrr3" | "hrr4";
 
 export function pct(p: number): string {
   return `${Math.round(p * 100)}%`;
@@ -15,6 +16,13 @@ const TIERS: Record<PropKind, { strong: number; lean: number }> = {
   tb2:   { strong: 0.50, lean: 0.45 },
   tb3:   { strong: 0.30, lean: 0.25 },
   tb4:   { strong: 0.20, lean: 0.10 },
+  runs1: { strong: 0.55, lean: 0.45 },
+  runs2: { strong: 0.18, lean: 0.10 },
+  rbi1:  { strong: 0.55, lean: 0.45 },
+  rbi2:  { strong: 0.20, lean: 0.12 },
+  hrr2:  { strong: 0.62, lean: 0.52 },
+  hrr3:  { strong: 0.38, lean: 0.28 },
+  hrr4:  { strong: 0.20, lean: 0.12 },
 };
 
 export function strengthTier(prob: number, kind: PropKind = "hr"): "strong" | "lean" | "pass" {
@@ -40,6 +48,13 @@ const HEAT: Record<PropKind, { lo: number; span: number }> = {
   tb2:   { lo: 0.38, span: 0.19 }, // lean=0.45 → lo=0.38; strong=0.50 → hi=0.57
   tb3:   { lo: 0.18, span: 0.19 }, // lean=0.25 → lo=0.18; strong=0.30 → hi=0.37
   tb4:   { lo: 0.03, span: 0.24 }, // lean=0.10 → lo=0.03; strong=0.20 → hi=0.27
+  runs1: { lo: 0.38, span: 0.24 },
+  runs2: { lo: 0.04, span: 0.20 },
+  rbi1:  { lo: 0.38, span: 0.24 },
+  rbi2:  { lo: 0.06, span: 0.20 },
+  hrr2:  { lo: 0.45, span: 0.24 },
+  hrr3:  { lo: 0.21, span: 0.24 },
+  hrr4:  { lo: 0.05, span: 0.20 },
 };
 
 export function heatColor(p: number, kind: PropKind = "hr"): string {
