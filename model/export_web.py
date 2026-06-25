@@ -96,7 +96,14 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
         result = {}
         for s in (season, season - 1, season - 2):
             raw = get_or_compute(f"bat-gamelog-{pid}-{s}", lambda s=s: fetch.batter_gamelog(pid, s))
-            result[s] = raw if isinstance(raw, list) else []
+            if isinstance(raw, list):
+                result[s] = raw
+            else:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "batter_gamelog(%s, %s) returned non-list %s — using []",
+                    pid, s, type(raw).__name__)
+                result[s] = []
         return result
 
     def batter_fn(pid: int, status: str) -> dict:

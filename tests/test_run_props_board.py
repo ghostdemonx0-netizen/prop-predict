@@ -22,3 +22,18 @@ def test_board_includes_runs_rbi_hrr_with_hist():
     hr, ks, hits, tb, runs, rbi, hrr = out
     assert "p_ge1_hist" in runs[0] and "p_ge1_hist" in rbi[0]
     assert "p_ge2_hist" in hrr[0]
+
+
+def test_runs_hist_twin_independent_of_current():
+    slate = [{"game_id": 1, "home": "AAA", "away": "BBB", "park_team": "AAA",
+              "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+    cur  = lambda g: {"home": [_bat(1, 100, 60, 70, 200)], "away": [_bat(2, 100, 50, 50, 180)]}
+    hist = lambda g: {"home": [_bat(1, 100, 20, 30, 90)],  "away": [_bat(2, 100, 50, 50, 180)]}  # player 1 much lower
+    w = lambda g: {"wind_speed_mph": 0, "wind_from_deg": 0, "temp_f": 70, "precip_pct": 0}
+    hr, ks, hits, tb, runs, rbi, hrr = build_board_with_history(slate, cur, lambda p: _pit(p), hist, lambda p: _pit(p), w, None)
+    r = next(x for x in runs if x["player_id"] == 1)
+    assert "p_ge1_hist" in r
+    assert r["p_ge1_hist"] < r["p_ge1"], (
+        f"Expected p_ge1_hist ({r['p_ge1_hist']}) < p_ge1 ({r['p_ge1']}) "
+        "but history twin is not lower — blend invariant broken"
+    )
