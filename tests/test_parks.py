@@ -1,5 +1,6 @@
 import pytest
 from model.parks import get_park, hr_park_factor, PARKS, hit_park_factor, hit_factors_stale
+from model.parks import run_park_factor, hrr_park_factor, run_factors_stale, RUN_FACTORS
 
 
 def test_known_park_has_required_fields():
@@ -76,3 +77,44 @@ def test_hit_factors_stale_over_400_days():
 
 def test_hit_factors_stale_exactly_365_days():
     assert hit_factors_stale("2027-06-22") is False
+
+
+# --- run_park_factor / hrr_park_factor / run_factors_stale tests ---
+
+def test_run_park_factor_col():
+    assert run_park_factor("COL") == pytest.approx(1.15)
+
+
+def test_run_park_factor_unknown_defaults_to_neutral():
+    assert run_park_factor("ZZZ") == pytest.approx(1.0)
+
+
+def test_hrr_park_factor_col():
+    # 1 + (1.15 - 1) * 0.55 = 1 + 0.15 * 0.55 = 1.0825
+    assert hrr_park_factor("COL") == pytest.approx(1 + (0.15 * 0.55))
+
+
+def test_hrr_park_factor_unknown_defaults_to_neutral():
+    assert hrr_park_factor("ZZZ") == pytest.approx(1.0)
+
+
+def test_run_factors_stale_next_day_is_false():
+    assert run_factors_stale("2026-06-26") is False
+
+
+def test_run_factors_stale_far_future_is_true():
+    assert run_factors_stale("2028-01-01") is True
+
+
+def test_run_factors_has_all_30_keys():
+    expected = {
+        "COL", "BOS", "CIN", "PHI", "KC", "ARI", "BAL", "TEX", "CWS", "NYY",
+        "CHC", "LAA", "MIN", "ATL", "HOU", "TOR", "WSH", "STL", "MIL", "CLE",
+        "LAD", "DET", "NYM", "PIT", "OAK", "TB", "SD", "MIA", "SEA", "SF",
+    }
+    assert set(RUN_FACTORS.keys()) == expected
+
+
+def test_run_factors_values_in_valid_range():
+    for abbr, val in RUN_FACTORS.items():
+        assert 0.85 <= val <= 1.20, f"{abbr}: {val} out of range [0.85, 1.20]"

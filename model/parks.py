@@ -109,7 +109,68 @@ def hit_factors_stale(today_iso: str, max_days: int = 400) -> bool:
     return (today - pulled).days > max_days
 
 
+RUN_FACTORS_LAST_PULLED = "2026-06-25"
+# source: FanGraphs/Statcast multi-year Runs park factors, normalized to multipliers, 1.00=neutral; refresh ~annually preseason.
+
+RUN_FACTORS: dict[str, float] = {
+    "COL": 1.15,
+    "BOS": 1.06,
+    "CIN": 1.05,
+    "PHI": 1.03,
+    "KC":  1.03,
+    "ARI": 1.02,
+    "BAL": 1.02,
+    "TEX": 1.02,
+    "CWS": 1.02,
+    "NYY": 1.01,
+    "CHC": 1.01,
+    "LAA": 1.01,
+    "MIN": 1.01,
+    "ATL": 1.01,
+    "HOU": 1.00,
+    "TOR": 1.00,
+    "WSH": 1.00,
+    "STL": 0.99,
+    "MIL": 0.99,
+    "CLE": 0.99,
+    "LAD": 0.99,
+    "DET": 0.98,
+    "NYM": 0.98,
+    "PIT": 0.98,
+    "OAK": 0.97,
+    "TB":  0.97,
+    "SD":  0.96,
+    "MIA": 0.96,
+    "SEA": 0.95,
+    "SF":  0.94,
+}
+
+HRR_RUN_SHARE = 0.55
+
+
 def run_park_factor(team_abbr: str) -> float:
-    """v1 run-environment proxy: a dampened HR park factor. Real per-park run
-    factors are a roadmap upgrade (see props-expansion-roadmap)."""
-    return 1 + (hr_park_factor(team_abbr) - 1) * 0.6
+    """Return the multiplicative run-environment park factor for a home-team abbreviation.
+
+    Returns 1.0 (neutral) for unknown parks.
+    """
+    return RUN_FACTORS.get(team_abbr, 1.0)
+
+
+def hrr_park_factor(team_abbr: str) -> float:
+    """Return the park factor for H+R+RBI (HRR) props.
+
+    HRR = H + R + RBI; hits are park-neutral in our model, so HRR gets a
+    dampened share (HRR_RUN_SHARE) of the run-environment factor.
+    """
+    return 1 + (run_park_factor(team_abbr) - 1) * HRR_RUN_SHARE
+
+
+def run_factors_stale(today_iso: str, max_days: int = 400) -> bool:
+    """Return True if RUN_FACTORS_LAST_PULLED is more than max_days before today_iso.
+
+    Pure function — caller passes today (no clock calls inside).
+    """
+    from datetime import date
+    pulled = date.fromisoformat(RUN_FACTORS_LAST_PULLED)
+    today = date.fromisoformat(today_iso)
+    return (today - pulled).days > max_days
