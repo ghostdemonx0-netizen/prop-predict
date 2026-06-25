@@ -279,6 +279,28 @@ def get_player_meta(player_ids: list[int]) -> dict[int, dict]:
     return out
 
 
+def batter_gamelog(player_id: int, season: int) -> list[dict]:
+    """Per-game hitting log for one batter-season: [{game_date, r, rbi, h}]."""
+    data = _with_retries(lambda: statsapi.get("people", {
+        "personIds": str(player_id),
+        "hydrate": f"stats(group=[hitting],type=[gameLog],season={season},sportId=1)",
+    }))
+    try:
+        splits = data["people"][0].get("stats", [{}])[0].get("splits", [])
+    except (KeyError, IndexError, TypeError):
+        return []
+    out = []
+    for sp in splits:
+        st = sp.get("stat", {}) or {}
+        out.append({
+            "game_date": sp.get("date"),
+            "r": int(st.get("runs", 0) or 0),
+            "rbi": int(st.get("rbi", 0) or 0),
+            "h": int(st.get("hits", 0) or 0),
+        })
+    return out
+
+
 def get_bvp(batter_id: int, pitcher_id: int) -> dict | None:
     """Career batter-vs-pitcher line from the MLB Stats API.
 
