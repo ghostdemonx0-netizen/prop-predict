@@ -8,6 +8,23 @@ import { pct, strengthLabel, windText, arrowColor, gameTimeLabel } from "../../.
 import type { PropKind } from "../../../../lib/format";
 import { MatchupSphere } from "../../../../components/PropBoard";
 
+/** Shows BOTH sides of a matchup, separated: the strikeout (K) and the hit/contact (C)
+    chance side by side, instead of only the dominant lean. */
+function LeanPair({ kProb, hitProb, lean, size }: { kProb: number; hitProb: number; lean?: string; size?: number }) {
+  const dir = lean ?? (Math.abs(kProb - hitProb) < 0.04 ? "NEU" : kProb > hitProb ? "K" : "H");
+  const tag =
+    dir === "K" ? { txt: "◀ leans K", color: "#ffd9d6" }
+    : dir === "H" ? { txt: "leans C ▶", color: "#bff3d2" }
+    : { txt: "● neutral", color: "#c5d6e8" };
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+      <MatchupSphere lean="K" prob={kProb} size={size} />
+      <MatchupSphere lean="H" prob={hitProb} size={size} />
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", fontWeight: 700, color: tag.color, whiteSpace: "nowrap" }}>{tag.txt}</span>
+    </span>
+  );
+}
+
 function batLabel(b?: string) {
   return b === "L" ? "LHB" : b === "S" ? "Switch" : b ? "RHB" : "";
 }
@@ -213,9 +230,8 @@ export default function PlayerPage({
           <div className="panel rise" style={{ animationDelay: "240ms" }}>
             <div className="eyebrow mb-1">Pitcher matchup</div>
             <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
-              <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
-              <strong style={{ color: "#bff3d2" }}>C</strong> = likely hit (contact) ·{" "}
-              <strong style={{ color: "#c5d6e8" }}>N</strong> = neutral
+              Both sides, per at-bat vs this pitcher — <strong style={{ color: "#ffd9d6" }}>K</strong> = strikeout chance ·{" "}
+              <strong style={{ color: "#bff3d2" }}>C</strong> = hit (contact) chance.
             </p>
             <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
               <span className="bname">
@@ -227,7 +243,7 @@ export default function PlayerPage({
                 </Link>{" "}
                 <span className="hand">{pitLabel(r.vs.throws)}</span>
               </span>
-              <MatchupSphere lean={pick(r.vs.lean, r.vs.lean_hist)} prob={pick(r.vs.prob, r.vs.prob_hist)} />
+              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={pick(r.vs.lean, r.vs.lean_hist)} />
             </div>
             {r.vs.bvp && r.vs.bvp.pa > 0 ? (
               <p className="factor-note" style={{ marginBottom: 0 }}>
@@ -307,9 +323,8 @@ export default function PlayerPage({
           <div className="panel rise" style={{ animationDelay: "300ms" }}>
             <div className="eyebrow mb-1">Pitcher matchup</div>
             <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
-              <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
-              <strong style={{ color: "#bff3d2" }}>C</strong> = likely hit (contact) ·{" "}
-              <strong style={{ color: "#c5d6e8" }}>N</strong> = neutral
+              Both sides, per at-bat vs this pitcher — <strong style={{ color: "#ffd9d6" }}>K</strong> = strikeout chance ·{" "}
+              <strong style={{ color: "#bff3d2" }}>C</strong> = hit (contact) chance.
             </p>
             <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
               <span className="bname">
@@ -321,7 +336,7 @@ export default function PlayerPage({
                 </Link>{" "}
                 <span className="hand">{pitLabel(r.vs.throws)}</span>
               </span>
-              <MatchupSphere lean={pick(r.vs.lean, r.vs.lean_hist)} prob={pick(r.vs.prob, r.vs.prob_hist)} />
+              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={pick(r.vs.lean, r.vs.lean_hist)} />
             </div>
             {r.vs.bvp && r.vs.bvp.pa > 0 ? (
               <p className="factor-note" style={{ marginBottom: 0 }}>
@@ -407,9 +422,8 @@ export default function PlayerPage({
           <div className="panel rise" style={{ animationDelay: "300ms" }}>
             <div className="eyebrow mb-1">Pitcher matchup</div>
             <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
-              <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
-              <strong style={{ color: "#bff3d2" }}>C</strong> = likely hit (contact) ·{" "}
-              <strong style={{ color: "#c5d6e8" }}>N</strong> = neutral
+              Both sides, per at-bat vs this pitcher — <strong style={{ color: "#ffd9d6" }}>K</strong> = strikeout chance ·{" "}
+              <strong style={{ color: "#bff3d2" }}>C</strong> = hit (contact) chance.
             </p>
             <div className="lineup-row" style={{ borderBottom: 0, padding: 0 }}>
               <span className="bname">
@@ -421,7 +435,7 @@ export default function PlayerPage({
                 </Link>{" "}
                 <span className="hand">{pitLabel(r.vs.throws)}</span>
               </span>
-              <MatchupSphere lean={pick(r.vs.lean, r.vs.lean_hist)} prob={pick(r.vs.prob, r.vs.prob_hist)} />
+              <LeanPair kProb={pick(r.vs.k_prob, r.vs.k_prob_hist) ?? 0} hitProb={pick(r.vs.hit_prob, r.vs.hit_prob_hist) ?? 0} lean={pick(r.vs.lean, r.vs.lean_hist)} />
             </div>
             {r.vs.bvp && r.vs.bvp.pa > 0 ? (
               <p className="factor-note" style={{ marginBottom: 0 }}>
@@ -482,9 +496,8 @@ export default function PlayerPage({
         <div className="panel rise" style={{ animationDelay: "240ms" }}>
           <div className="eyebrow mb-1">Opposing lineup — matchup read</div>
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.6rem" }}>
-            <strong style={{ color: "#ffd9d6" }}>K</strong> = likely strikeout ·{" "}
-            <strong style={{ color: "#bff3d2" }}>C</strong> = likely hit (contact) ·{" "}
-              <strong style={{ color: "#c5d6e8" }}>N</strong> = neutral
+            Both sides per batter, per at-bat — <strong style={{ color: "#ffd9d6" }}>K</strong> = strikeout chance ·{" "}
+            <strong style={{ color: "#bff3d2" }}>C</strong> = hit (contact) chance.
           </p>
           <div className="lineup">
             {r.matchups.map((m, i) => (
@@ -502,7 +515,7 @@ export default function PlayerPage({
                     <span className="hand" title="career vs this pitcher">{m.bvp.hits}-{m.bvp.ab}{m.bvp.hr > 0 ? ` · ${m.bvp.hr} HR` : ""}</span>
                   )}
                 </span>
-                <MatchupSphere lean={pick(m.lean, m.lean_hist)} prob={pick(m.prob, m.prob_hist)} />
+                <LeanPair kProb={pick(m.k_prob, m.k_prob_hist) ?? 0} hitProb={pick(m.hit_prob, m.hit_prob_hist) ?? 0} lean={pick(m.lean, m.lean_hist)} size={40} />
               </div>
             ))}
           </div>

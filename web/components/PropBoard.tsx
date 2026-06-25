@@ -547,6 +547,36 @@ function ColBatterRow({
   // the matchup read can sit on any of the prop rows — use whichever has it so
   // the K/C/N sphere never goes missing when one prop's row lacks `lean`.
   const lean = hrRow.lean ?? hitsRow?.lean ?? tbRow?.lean ?? null;
+  // K/C/N column (idea C): a clear lean shows the dominant side's sphere with the
+  // other side's % faint underneath. A NEUTRAL matchup just writes BOTH K and C.
+  const kp = hrRow.kProb ?? hitsRow?.kProb ?? tbRow?.kProb;
+  const hp = hrRow.hitProb ?? hitsRow?.hitProb ?? tbRow?.hitProb;
+  const isNeutral = lean ? lean.lean === "NEU" : (typeof kp === "number" && typeof hp === "number" && Math.abs(kp - hp) < 0.04);
+  let leanCell: React.ReactNode = lean ? <MatchupSphere lean={lean.lean} prob={lean.prob} size={COL_SPHERE} /> : null;
+  if (typeof kp === "number" && typeof hp === "number") {
+    if (isNeutral) {
+      // N sphere back, with BOTH K and C written on one line underneath it
+      leanCell = (
+        <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+          <MatchupSphere lean="NEU" prob={0} size={COL_SPHERE} />
+          <span style={{ display: "flex", gap: "0.25rem", fontFamily: "var(--font-mono)", fontSize: "0.46rem", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
+            <span style={{ color: "#ffd9d6" }}>K{pct(kp)}</span>
+            <span style={{ color: "#bff3d2" }}>C{pct(hp)}</span>
+          </span>
+        </span>
+      );
+    } else {
+      const kDom = kp >= hp;
+      leanCell = (
+        <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+          <MatchupSphere lean={kDom ? "K" : "H"} prob={kDom ? kp : hp} size={COL_SPHERE} />
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.5rem", fontWeight: 700, color: kDom ? "#bff3d2" : "#ffd9d6", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+            {kDom ? "C" : "K"} {pct(kDom ? hp : kp)}
+          </span>
+        </span>
+      );
+    }
+  }
   const sphereCell = (node: React.ReactNode, key: string) => (
     <span key={key} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>{node}</span>
   );
@@ -578,7 +608,7 @@ function ColBatterRow({
         )}
         {hrRow.status && <StatusChip status={hrRow.status} />}
       </span>
-      {sphereCell(lean ? <MatchupSphere lean={lean.lean} prob={lean.prob} size={COL_SPHERE} /> : null, "kcn")}
+      {sphereCell(leanCell, "kcn")}
       {sphereCell(<HeatSphere prob={hrRow.prob} kind="hr" size={COL_SPHERE} />, "hr")}
       {sphereCell(hitsRow ? <HeatSphere prob={hitsRow.prob} kind={hitsKind} size={COL_SPHERE} /> : null, "hits")}
       {sphereCell(tbRow ? <HeatSphere prob={tbRow.prob} kind={tbKind} size={COL_SPHERE} /> : null, "tb")}
