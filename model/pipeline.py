@@ -345,3 +345,85 @@ def build_hits_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=None):
 def build_total_bases_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=None):
     return _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn,
                            prop="TB", thresholds=[("p_ge2", 2), ("p_ge3", 3), ("p_ge4", 4)], units="bases")
+
+
+# ---------------------------------------------------------------------------
+# Runs / RBI / HRR builders (per-game Poisson rate model)
+# ---------------------------------------------------------------------------
+
+from model import run_props as _run_props  # noqa: E402  (local import to keep top-level clean)
+from model.parks import run_park_factor  # noqa: E402
+
+_RUN_PROP_CFG = {
+    "RUNS": {"thresholds": [("p_ge1", 1), ("p_ge2", 2)], "total_field": "total_r",   "league": _run_props.LEAGUE_R_PER_GAME},
+    "RBI":  {"thresholds": [("p_ge1", 1), ("p_ge2", 2)], "total_field": "total_rbi", "league": _run_props.LEAGUE_RBI_PER_GAME},
+    "HRR":  {"thresholds": [("p_ge2", 2), ("p_ge3", 3), ("p_ge4", 4)], "total_field": "total_hrr", "league": _run_props.LEAGUE_HRR_PER_GAME},
+}
+
+
+def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
+    """Shared loop for Runs / RBI / HRR rows.
+
+    Mirrors the structure of _threshold_rows but uses the Poisson per-game
+    rate model (run_props) instead of the per-PA outcome-vector model.
+    bvp_fn is accepted for signature parity but not used.
+    """
+    cfg = _RUN_PROP_CFG[prop]
+    rows = []
+    for game in slate:
+        if game.get("started"):
+            continue
+        w = _game_weather(game, weather_fn)
+        lineups = lineups_fn(game)
+        home_p = pitcher_fn(game["home_pitcher_id"]) if game.get("home_pitcher_id") else None
+        away_p = pitcher_fn(game["away_pitcher_id"]) if game.get("away_pitcher_id") else None
+        # home batters face the away starter; away batters face the home starter
+        for side, opp in (("home", away_p), ("away", home_p)):
+            team = game.get(side, "?")
+            park = run_park_factor(team)
+            for b in lineups.get(side, []):
+                games = b.get("games", 0)
+                total = b.get(cfg["total_field"], 0)
+                rate = _run_props.regressed_per_game(total, games, cfg["league"], _run_props.REG_GAMES)
+                psupp = _run_props.pitcher_suppression_mult(opp.get("hit_allowed_rate", 0.22)) if opp else 1.0
+                platoon = hr_platoon_mult(b.get("bats", "R"), opp.get("throws", "R")) if opp else 1.0
+                lam = _run_props.expected_count(rate, pitcher_mult=psupp, platoon_mult=platoon, park_mult=park)
+                m = matchup(
+                    b_k=b.get("k_rate", 0.22), b_hit=b.get("hit_rate", 0.22),
+                    p_k=opp.get("k_per_bf", 0.22) if opp else 0.22,
+                    p_hit=opp.get("hit_allowed_rate", 0.22) if opp else 0.22,
+                    bats=b.get("bats", "R"), throws=opp.get("throws", "R") if opp else "R",
+                )
+                vs = None
+                if opp:
+                    vs = {"name": opp["name"], "player_id": opp.get("player_id"), "throws": opp.get("throws", "R"),
+                          "bvp": None, "pitcher_status": opp.get("pitcher_status", "confirmed"), **m}
+                row = {
+                    "prop": prop, "game_id": game["game_id"], "game_time": game.get("game_time"),
+                    "player_id": b.get("player_id"), "player": b["name"], "team": team,
+                    "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
+                    "bats": b.get("bats", "R"),
+                    "lineup_status": b.get("lineup_status", "confirmed"),
+                    "recent_form_mult": 1.0,
+                    "pitcher_factor": psupp,
+                    "park_weather_factor": park,
+                    "vs": vs,
+                    "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"],
+                    "wind_dir": w["wind_dir"], "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
+                }
+                row.update(_run_props.ge_probs(lam, cfg["thresholds"]))
+                rows.append(row)
+    rows.sort(key=lambda r: r[cfg["thresholds"][0][0]], reverse=True)
+    return rows
+
+
+def build_runs_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=None):
+    return _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, prop="RUNS")
+
+
+def build_rbi_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=None):
+    return _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, prop="RBI")
+
+
+def build_hrr_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn=None):
+    return _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, prop="HRR")
