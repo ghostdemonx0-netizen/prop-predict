@@ -180,3 +180,73 @@ def test_recent_form_empty_bip():
     events = [{"game_date": "2025-06-01", "launch_speed": None, "events": "strikeout", "woba_value": 0.0}]
     profile = batter_profile_from_events(events, as_of="2025-06-17", player_id=1)
     assert profile["recent_form_mult"] == 1.0
+
+
+# ---------------------------------------------------------------------------
+# with_gamelog: recent-window totals
+# ---------------------------------------------------------------------------
+
+def _gl(date, r=0, rbi=0, h=0):
+    """Helper: single game-log row."""
+    return {"game_date": date, "r": r, "rbi": rbi, "h": h}
+
+
+def test_with_gamelog_recent_window_20_games():
+    """20 current-season games → recent_games==15, recent_r == sum of last 15 by date."""
+    from model.profiles import with_gamelog
+
+    # Build 20 game-log rows with distinct dates and predictable r values
+    # (dates are not in sorted order intentionally, to test the sort)
+    logs = []
+    for i in range(20):
+        date = f"2026-0{(i // 10) + 4}-{(i % 10) + 10}"  # e.g. 2026-04-10 .. 2026-05-19
+        logs.append(_gl(date, r=i + 1, rbi=i, h=i))
+
+    # Sort by date so we know which are the "last 15"
+    sorted_logs = sorted(logs, key=lambda x: x["game_date"])
+    last_15 = sorted_logs[-15:]
+    expected_recent_r = sum(x["r"] for x in last_15)
+    expected_recent_rbi = sum(x["rbi"] for x in last_15)
+    expected_recent_hrr = sum(x["h"] + x["r"] + x["rbi"] for x in last_15)
+
+    gamelogs_by_season = {2026: logs}
+    base_profile = {"player_id": 1}
+    result = with_gamelog(base_profile, gamelogs_by_season, current_season=2026)
+
+    assert result["recent_games"] == 15
+    assert result["recent_r"] == expected_recent_r
+    assert result["recent_rbi"] == expected_recent_rbi
+    assert result["recent_hrr"] == expected_recent_hrr
+
+    # Existing keys must be unchanged (additive-only guarantee)
+    assert result["games"] == 20
+    assert result["total_r"] == sum(x["r"] for x in logs)
+
+
+def test_with_gamelog_recent_window_8_games():
+    """Fewer than 15 games → recent_games == actual count (8)."""
+    from model.profiles import with_gamelog
+
+    logs = [_gl(f"2026-04-{10 + i}", r=i + 1, rbi=i, h=i) for i in range(8)]
+    gamelogs_by_season = {2026: logs}
+    base_profile = {"player_id": 2}
+    result = with_gamelog(base_profile, gamelogs_by_season, current_season=2026)
+
+    assert result["recent_games"] == 8
+    assert result["recent_r"] == sum(x["r"] for x in logs)
+    assert result["recent_rbi"] == sum(x["rbi"] for x in logs)
+    assert result["recent_hrr"] == sum(x["h"] + x["r"] + x["rbi"] for x in logs)
+
+
+def test_with_gamelog_recent_window_no_current_season():
+    """No current-season logs → all four recent keys are 0."""
+    from model.profiles import with_gamelog
+
+    gamelogs_by_season = {}
+    base_profile = {"player_id": 3}
+    result = with_gamelog(base_profile, gamelogs_by_season, current_season=2026)
+
+    assert result["recent_games"] == 0
+    assert result["recent_r"] == 0
+    assert result["recent_rbi"] == 0
+    assert result["recent_hrr"] == 0

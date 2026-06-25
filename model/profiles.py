@@ -9,6 +9,7 @@ lookahead bias in backfills or future backtests).
 from model.blend import marcel_blend, regress
 from model.projections import LEAGUE_HR_RATE
 from model.matchup import LEAGUE_K, LEAGUE_HIT
+from model.run_props import RECENT_GAMES_WINDOW
 
 _HR_R, _K_R, _HIT_R = 300.0, 200.0, 200.0
 
@@ -216,4 +217,8 @@ def with_gamelog(profile: dict, gamelogs_by_season: dict, *, current_season: int
     eff_rbi = marcel_blend([(trbi_, g_) for (g_, _, trbi_, _) in per])[0]
     eff_hrr = marcel_blend([(thrr_, g_) for (g_, _, _, thrr_) in per])[0]
     p["games_hist"], p["total_r_hist"], p["total_rbi_hist"], p["total_hrr_hist"] = eff_g, eff_r, eff_rbi, eff_hrr
+    # Recent-window totals: last RECENT_GAMES_WINDOW games of the current season only
+    recent = sorted(cur, key=lambda x: x["game_date"])[-RECENT_GAMES_WINDOW:] if cur else []
+    rg, rr, rrbi, rhrr = _gamelog_totals(recent)
+    p["recent_games"], p["recent_r"], p["recent_rbi"], p["recent_hrr"] = rg, rr, rrbi, rhrr
     return p
