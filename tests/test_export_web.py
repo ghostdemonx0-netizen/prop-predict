@@ -184,3 +184,48 @@ def test_run_prop_hist_recent_form_mult_is_neutral():
     assert r["recent_form_mult_hist"] == 1.0, (
         f"Expected recent_form_mult_hist == 1.0 (form-neutral), got {r['recent_form_mult_hist']}"
     )
+
+
+def test_batter_hist_fn_neutralizes_form_end_to_end(monkeypatch):
+    """E2E: the REAL batter_hist_fn must zero the recent-form fields even when the
+    blended profile is HOT (recent_form_mult>1) and the gamelogs have recent games.
+
+    The other run-prop tests feed pre-neutralized mocks into the history lambda;
+    this one drives batter_hist_fn itself (via make_profile_fns) so the 5
+    neutralization lines are actually exercised — it would catch a future refactor
+    that reorders the override before with_gamelog, or drops a field.
+    """
+    from model import export_web, fetch
+    slate = [{"game_id": 7, "home": "COL", "away": "LAD", "park_team": "COL",
+              "home_id": 115, "away_id": 119, "game_time": "2026-06-10T20:00:00Z",
+              "started": False, "home_pitcher_id": 201, "away_pitcher_id": 202}]
+    monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [101], "away": []})
+    monkeypatch.setattr(fetch, "get_recent_lineup", lambda tid, d, **k: [])
+    monkeypatch.setattr(fetch, "get_player_meta", lambda ids: {})
+
+    def fake_goc(key, prod):
+        # 10 current-season game logs → with_gamelog WILL populate recent_* (>0)
+        if "gamelog" in key:
+            return [{"game_date": f"2026-06-{d:02d}", "r": 1, "rbi": 1, "h": 1} for d in range(1, 11)]
+        return {"events_stub": True}
+    monkeypatch.setattr(export_web, "get_or_compute", fake_goc)
+    # current-path profile (hard-hit form present, real recent games)
+    monkeypatch.setattr(export_web.profiles, "batter_profile_from_events",
+                        lambda ev, **k: {"player_id": k["player_id"], "name": str(k["player_id"]),
+                                         "bats": "R", "recent_form_mult": 1.25, "k_rate": 0.2, "hit_rate": 0.2})
+    # history-path blended profile comes back HOT — batter_hist_fn must neutralize it
+    monkeypatch.setattr(export_web.profiles, "blended_batter_profile",
+                        lambda ev, **k: {"player_id": k["player_id"], "name": str(k["player_id"]),
+                                         "bats": "R", "recent_form_mult": 1.25})
+
+    lineups_fn, _pf, lineups_hist_fn, _phf = export_web.make_profile_fns(slate, 2026, "2026-06-10")
+
+    # the data IS present on the current path (proves the gamelogs produce recent games)
+    cur = lineups_fn(slate[0])["home"][0]
+    assert cur["recent_games"] == 10 and cur["recent_form_mult"] == 1.25
+
+    # ...and the history twin neutralizes ALL of it
+    hist = lineups_hist_fn(slate[0])["home"][0]
+    assert hist["recent_form_mult"] == 1.0, "hard-hit form not neutralized in history twin"
+    assert hist["recent_games"] == 0, "recent_games not zeroed in history twin"
+    assert hist["recent_r"] == 0 and hist["recent_rbi"] == 0 and hist["recent_hrr"] == 0
