@@ -84,6 +84,24 @@ def _parse_iso(ts: str) -> datetime:
 # Public API
 # ---------------------------------------------------------------------------
 
+def dedup_new(existing: list[dict], candidates: list[dict]) -> list[dict]:
+    """
+    Return only the candidates whose identity key (game_id, player_id, prop)
+    is NOT already present in `existing`.  Candidate order is preserved.
+
+    This is the cross-call dedup layer: a recorder reads today's already-
+    archived records, passes them as `existing`, and appends only what
+    dedup_new returns — so a re-run never double-records the same game.
+    """
+    seen: set[tuple[Any, Any, str]] = {
+        (r["game_id"], r["player_id"], r["prop"]) for r in existing
+    }
+    return [
+        c for c in candidates
+        if (c["game_id"], c["player_id"], c["prop"]) not in seen
+    ]
+
+
 def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:
     """
     Build one structured archive record from a board row.

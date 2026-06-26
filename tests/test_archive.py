@@ -5,7 +5,7 @@ Run: uv run pytest tests/test_archive.py -q
 
 import math
 import pytest
-from model.archive import THRESHOLDS, _blend, record_from_row, archive_records
+from model.archive import THRESHOLDS, _blend, record_from_row, archive_records, dedup_new
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -557,3 +557,52 @@ def test_hits_opp_pitcher():
     rec = record_from_row(HITS_ROW_SOON, "hits")
     assert rec["opp_pitcher_name"] == "Pitcher Pat"
     assert rec["opp_pitcher_id"] == 999
+
+
+# ===========================================================================
+# dedup_new — cross-call idempotent dedup
+# ===========================================================================
+
+# Shared records for dedup tests
+_EXISTING_RUNS_REC = {"game_id": 1, "player_id": 100, "prop": "runs", "probs": {}}
+_NEW_HR_REC        = {"game_id": 1, "player_id": 100, "prop": "hr",   "probs": {}}
+_SAME_RUNS_REC     = {"game_id": 1, "player_id": 100, "prop": "runs", "probs": {"1+": {}}}
+
+
+def test_dedup_new_filters_already_present_key():
+    """Candidate with same (game_id, player_id, prop) as existing is excluded."""
+    result = dedup_new([_EXISTING_RUNS_REC], [_SAME_RUNS_REC, _NEW_HR_REC])
+    assert len(result) == 1
+    assert result[0]["prop"] == "hr"
+
+
+def test_dedup_new_returns_all_when_existing_empty():
+    """When existing is empty every candidate is returned."""
+    result = dedup_new([], [_EXISTING_RUNS_REC, _NEW_HR_REC])
+    assert len(result) == 2
+
+
+def test_dedup_new_preserves_candidate_order():
+    """Returned list keeps the original candidate order."""
+    c1 = {"game_id": 1, "player_id": 1, "prop": "hits"}
+    c2 = {"game_id": 1, "player_id": 2, "prop": "hits"}
+    c3 = {"game_id": 1, "player_id": 3, "prop": "hits"}
+    result = dedup_new([], [c3, c1, c2])
+    assert [r["player_id"] for r in result] == [3, 1, 2]
+
+
+def test_dedup_new_no_mutation_of_inputs():
+    """Inputs must not be modified by dedup_new."""
+    existing   = [dict(_EXISTING_RUNS_REC)]
+    candidates = [dict(_SAME_RUNS_REC), dict(_NEW_HR_REC)]
+    existing_len   = len(existing)
+    candidates_len = len(candidates)
+    dedup_new(existing, candidates)
+    assert len(existing) == existing_len
+    assert len(candidates) == candidates_len
+
+
+def test_dedup_new_empty_candidates_returns_empty():
+    """When candidates is empty result is always empty."""
+    result = dedup_new([_EXISTING_RUNS_REC], [])
+    assert result == []
