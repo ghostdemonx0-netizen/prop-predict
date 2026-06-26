@@ -1,9 +1,9 @@
 """
-model/archive.py — Pure prediction archive record builder.
+model/archive.py — Pure prediction archive record builder + recorder CLI.
 
-No file I/O or network calls live here.  The two public functions transform
-board data into structured archive records; Task 3 (recorder CLI) handles
-all disk / branch writes.
+record_from_row / archive_records / dedup_new are pure transforms (no I/O).
+record_day handles JSONL file I/O: load board, load existing archive, append
+only new records, return the count appended.
 
 Record shape per (game, player, prop):
   - identity keys   : game_id, game_time, player_id, player, team, bats?,
@@ -16,6 +16,8 @@ Record shape per (game, player, prop):
 
 from __future__ import annotations
 
+import json
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -252,3 +254,80 @@ def archive_records(
                 records.append(rec)
 
     return records
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Recorder — file I/O lives here, not above
+# ---------------------------------------------------------------------------
+
+def record_day(
+    board_path: str,
+    archive_path: str,
+    now_iso: str,
+    *,
+    window_min: int = 40,
+) -> int:
+    """
+    Load the board JSON from `board_path`, load any existing records from
+    `archive_path` (JSONL; missing file → treated as empty), compute new
+    archive records, deduplicate against existing, **append** only new records
+    to `archive_path`, and return the count appended.
+
+    Idempotent: a second call with the same board + now_iso appends 0.
+    Privacy: writes ONLY to `archive_path`.
+    """
+    # 1. Load board
+    with open(board_path, "r", encoding="utf-8") as fh:
+        board: dict[str, Any] = json.load(fh)
+
+    # 2. Load existing JSONL (tolerate blank lines; missing file → [])
+    existing: list[dict[str, Any]] = []
+    if os.path.exists(archive_path):
+        with open(archive_path, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    existing.append(json.loads(line))
+
+    # 3. Compute candidates for this run
+    candidates = archive_records(board, now_iso, window_min=window_min)
+
+    # 4. Drop anything already in the archive
+    new_records = dedup_new(existing, candidates)
+
+    # 5. Append new records (create parent dirs if needed)
+    if new_records:
+        os.makedirs(os.path.dirname(os.path.abspath(archive_path)), exist_ok=True)
+        with open(archive_path, "a", encoding="utf-8") as fh:
+            for rec in new_records:
+                fh.write(json.dumps(rec, separators=(",", ":")) + "\n")
+
+    return len(new_records)
+
+
+# ---------------------------------------------------------------------------
+# __main__ entry point
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    import sys
+
+    def _main() -> None:
+        args = sys.argv[1:]
+        if len(args) < 2:
+            print(
+                "Usage: python -m model.archive <board_json_path> <archive_jsonl_path> [now_iso]",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        board_path_arg   = args[0]
+        archive_path_arg = args[1]
+        now_iso_arg = (
+            args[2]
+            if len(args) >= 3
+            else datetime.now(tz=timezone.utc).isoformat()
+        )
+        count = record_day(board_path_arg, archive_path_arg, now_iso_arg)
+        print(count)
+
+    _main()

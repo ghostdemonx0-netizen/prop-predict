@@ -3,9 +3,12 @@ TDD tests for model/archive.py — predictions archive record builder.
 Run: uv run pytest tests/test_archive.py -q
 """
 
+import json
 import math
+import subprocess
+import sys
 import pytest
-from model.archive import THRESHOLDS, _blend, record_from_row, archive_records, dedup_new
+from model.archive import THRESHOLDS, _blend, record_from_row, archive_records, dedup_new, record_day
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -665,3 +668,165 @@ def test_dedup_new_candidate_missing_key_does_not_crash():
     c_good = {"game_id": 2, "player_id": 200, "prop": "hr"}
     result = dedup_new([], [c_bad, c_good])
     assert len(result) == 2  # both pass through (neither collides)
+
+
+# ===========================================================================
+# Task 3 — record_day (file-append recorder)
+# ===========================================================================
+
+def _write_board(path, board):
+    """Helper: write a board dict as JSON to a file path."""
+    path.write_text(json.dumps(board))
+
+
+def test_record_day_returns_count_and_writes_lines(tmp_path):
+    """R1: record_day returns N written and the archive has N valid JSON lines."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    # FAKE_BOARD has 3 rows qualifying: HR_ROW_SOON, K_ROW_SOON, RUNS_ROW_SOON
+    n = record_day(str(board_path), str(archive_path), NOW_ISO)
+    assert n == 3
+
+    lines = [l for l in archive_path.read_text().splitlines() if l.strip()]
+    assert len(lines) == 3
+    for line in lines:
+        obj = json.loads(line)
+        assert isinstance(obj, dict)
+        assert "game_id" in obj
+        assert "prop" in obj
+
+
+def test_record_day_idempotent(tmp_path):
+    """R2: Running record_day twice with identical inputs appends 0 on second run."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    first  = record_day(str(board_path), str(archive_path), NOW_ISO)
+    second = record_day(str(board_path), str(archive_path), NOW_ISO)
+
+    assert second == 0
+    lines = [l for l in archive_path.read_text().splitlines() if l.strip()]
+    assert len(lines) == first  # file unchanged after second run
+
+
+def test_record_day_appends_to_existing_unrelated_records(tmp_path):
+    """R3: Pre-existing records with different keys are kept; only new keys appended."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    # Pre-populate archive with an unrelated record
+    unrelated = {"game_id": 9999, "player_id": 9999, "prop": "hr",
+                 "date": "2026-06-25", "captured_at": "2026-06-25T19:00:00Z",
+                 "probs": {}, "factors": {}}
+    archive_path.write_text(json.dumps(unrelated) + "\n")
+
+    n = record_day(str(board_path), str(archive_path), NOW_ISO)
+    assert n == 3  # three new records added
+
+    lines = [l for l in archive_path.read_text().splitlines() if l.strip()]
+    assert len(lines) == 4  # 1 pre-existing + 3 new
+
+
+def test_record_day_creates_archive_file_when_absent(tmp_path):
+    """R4: When archive_path does not exist it is created (no FileNotFoundError)."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "sub" / "dir" / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    n = record_day(str(board_path), str(archive_path), NOW_ISO)
+    assert n == 3
+    assert archive_path.exists()
+
+
+def test_record_day_tolerates_blank_lines_in_archive(tmp_path):
+    """R5: Blank lines in the existing JSONL file are tolerated (not parsed as JSON)."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    # Write archive with a blank line between records
+    existing = {"game_id": 9999, "player_id": 9999, "prop": "hr",
+                "date": "2026-06-25", "captured_at": "2026-06-25T00:00:00Z",
+                "probs": {}, "factors": {}}
+    archive_path.write_text(json.dumps(existing) + "\n\n")  # trailing blank line
+
+    # Should not crash
+    n = record_day(str(board_path), str(archive_path), NOW_ISO)
+    assert n == 3
+
+
+def test_record_day_empty_board_appends_zero(tmp_path):
+    """R6: A board with no qualifying games results in 0 records appended."""
+    empty_board = {
+        "date": "2026-06-26",
+        "updated": NOW_ISO,
+        "started_ids": [],
+        "games": [],
+        "hr": [], "strikeouts": [], "hits": [], "total_bases": [], "runs": [], "rbi": [], "hrr": [],
+    }
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, empty_board)
+
+    n = record_day(str(board_path), str(archive_path), NOW_ISO)
+    assert n == 0
+    # Archive file is created but empty (or does not exist — either is acceptable)
+    if archive_path.exists():
+        assert archive_path.read_text().strip() == ""
+
+
+def test_record_day_records_have_date_and_captured_at(tmp_path):
+    """R7: Every written record carries date and captured_at."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    record_day(str(board_path), str(archive_path), NOW_ISO)
+
+    lines = [l for l in archive_path.read_text().splitlines() if l.strip()]
+    for line in lines:
+        obj = json.loads(line)
+        assert obj.get("date") == DATE
+        assert obj.get("captured_at") == NOW_ISO
+
+
+# ===========================================================================
+# Task 3 — __main__ CLI
+# ===========================================================================
+
+def test_main_cli_prints_count(tmp_path):
+    """CLI: python -m model.archive <board> <archive> <now_iso> prints the count."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    result = subprocess.run(
+        [sys.executable, "-m", "model.archive",
+         str(board_path), str(archive_path), NOW_ISO],
+        capture_output=True, text=True, check=True,
+    )
+    # Output should be the integer count (3) on a line
+    assert result.stdout.strip() == "3"
+
+
+def test_main_cli_idempotent(tmp_path):
+    """CLI idempotent: second run prints 0."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    subprocess.run(
+        [sys.executable, "-m", "model.archive",
+         str(board_path), str(archive_path), NOW_ISO],
+        capture_output=True, text=True, check=True,
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "model.archive",
+         str(board_path), str(archive_path), NOW_ISO],
+        capture_output=True, text=True, check=True,
+    )
+    assert result.stdout.strip() == "0"
