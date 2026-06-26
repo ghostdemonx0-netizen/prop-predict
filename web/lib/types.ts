@@ -127,6 +127,10 @@ export type RunsRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" |
   p_ge2_hist?: number;
   park_weather_factor?: number;
   park_weather_factor_hist?: number;
+  hard_hit_form?: number;
+  hard_hit_form_hist?: number;
+  production_form?: number;
+  production_form_hist?: number;
 };
 
 export type RbiRow = RunsRow;
@@ -140,6 +144,10 @@ export type HrrRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | 
   p_ge4_hist?: number;
   park_weather_factor?: number;
   park_weather_factor_hist?: number;
+  hard_hit_form?: number;
+  hard_hit_form_hist?: number;
+  production_form?: number;
+  production_form_hist?: number;
 };
 
 export type Projections = {

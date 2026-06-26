@@ -504,10 +504,22 @@ export default function PlayerPage({
             How much each factor raises (green) or lowers (red) his normal probability.
           </p>
           <Factor
+            icon="💥"
+            label="Hard-hit form"
+            mult={pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist)}
+            note={pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist) > 1 ? "Squaring the ball up harder than his season norm lately." : pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist) < 1 ? "Softer contact than usual recently." : "Contact quality around his season norm."}
+          />
+          <Factor
+            icon="📈"
+            label="Production form"
+            mult={pick(r.production_form ?? 1, r.production_form_hist)}
+            note={pick(r.production_form ?? 1, r.production_form_hist) > 1 ? "Producing at a higher rate than his season pace lately." : pick(r.production_form ?? 1, r.production_form_hist) < 1 ? "Producing below his season pace recently." : "Producing around his season pace."}
+          />
+          <Factor
             icon="🔥"
             label="Recent form"
             mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)}
-            note={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) > 1 ? `Hot lately — scoring ${eyebrow.toLowerCase()}s at a higher rate than his season norm.` : pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
+            note="The blended net of hard-hit + production form."
           />
           {r.vs && (
             <Factor
@@ -597,10 +609,22 @@ export default function PlayerPage({
             How much each factor raises (green) or lowers (red) his normal probability.
           </p>
           <Factor
+            icon="💥"
+            label="Hard-hit form"
+            mult={pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist)}
+            note={pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist) > 1 ? "Squaring the ball up harder than his season norm lately." : pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist) < 1 ? "Softer contact than usual recently." : "Contact quality around his season norm."}
+          />
+          <Factor
+            icon="📈"
+            label="Production form"
+            mult={pick(r.production_form ?? 1, r.production_form_hist)}
+            note={pick(r.production_form ?? 1, r.production_form_hist) > 1 ? "Producing at a higher rate than his season pace lately." : pick(r.production_form ?? 1, r.production_form_hist) < 1 ? "Producing below his season pace recently." : "Producing around his season pace."}
+          />
+          <Factor
             icon="🔥"
             label="Recent form"
             mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)}
-            note={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) > 1 ? "Hot lately — producing at a higher rate than his season norm." : pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
+            note="The blended net of hard-hit + production form."
           />
           {r.vs && (
             <Factor
