@@ -997,3 +997,44 @@ def test_main_cli_bad_now_iso_exits_1(tmp_path):
     assert result.returncode == 1
     assert "Traceback" not in result.stderr
     assert "archive: error:" in result.stderr
+
+
+# ===========================================================================
+# Task 6 — Privacy guard: record_day writes only to archive_path
+# ===========================================================================
+
+def test_record_day_writes_only_to_archive_path(tmp_path):
+    """P1: record_day must write ONLY to archive_path — no stray files created elsewhere.
+
+    Approach: snapshot tmp_path before and after the call; diff the two sets.
+    The only new paths allowed are archive_path itself and its parent directory
+    (which record_day creates via os.makedirs when the subdir doesn't yet exist).
+    This pins the guarantee that the recorder never touches export_web.DATA_DIR
+    or any other location outside the explicitly supplied archive_path.
+    """
+    board_path   = tmp_path / "board.json"
+    # Put archive in a subdirectory so record_day must create the parent dir —
+    # that makes the allowed set explicit and the diff meaningful.
+    archive_path = tmp_path / "archive" / "archive.jsonl"
+
+    _write_board(board_path, FAKE_BOARD)
+
+    # Snapshot the tmp tree AFTER writing the board but BEFORE the call.
+    before = set(tmp_path.rglob("*"))
+
+    n = record_day(str(board_path), str(archive_path), NOW_ISO)
+
+    # Sanity: the recorder actually wrote records (FAKE_BOARD has 3 qualifying rows).
+    assert n > 0
+
+    # Diff: what paths appeared after the call?
+    after = set(tmp_path.rglob("*"))
+    new_paths = after - before
+
+    # Only archive_path and its immediate parent (created by os.makedirs) are allowed.
+    allowed = {archive_path, archive_path.parent}
+    unexpected = new_paths - allowed
+
+    assert unexpected == set(), (
+        f"record_day created unexpected paths outside archive_path: {unexpected}"
+    )
