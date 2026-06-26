@@ -19,6 +19,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+# Sentinels for missing identity keys.  Each is a unique object so a record
+# that has no 'game_id' (for example) cannot spuriously collide with a record
+# whose game_id is None or any other real value.
+_MISSING_GAME_ID   = object()
+_MISSING_PLAYER_ID = object()
+_MISSING_PROP      = object()
+
 # ---------------------------------------------------------------------------
 # Threshold definitions for the p_geN family
 # (HR and strikeouts are handled separately — their prob fields differ)
@@ -84,22 +91,40 @@ def _parse_iso(ts: str) -> datetime:
 # Public API
 # ---------------------------------------------------------------------------
 
+def _identity_key(r: dict) -> tuple:
+    """Return the (game_id, player_id, prop) identity key for a record.
+
+    Missing keys are replaced by their module-level sentinels so that
+    records with absent identity fields never cause a KeyError and never
+    spuriously collide with records that carry a real value for that field.
+    """
+    return (
+        r.get("game_id",   _MISSING_GAME_ID),
+        r.get("player_id", _MISSING_PLAYER_ID),
+        r.get("prop",      _MISSING_PROP),
+    )
+
+
 def dedup_new(existing: list[dict], candidates: list[dict]) -> list[dict]:
     """
     Return only the candidates whose identity key (game_id, player_id, prop)
     is NOT already present in `existing`.  Candidate order is preserved.
 
+    Duplicates within `candidates` are also suppressed: the first occurrence
+    wins and later duplicates are dropped.
+
     This is the cross-call dedup layer: a recorder reads today's already-
     archived records, passes them as `existing`, and appends only what
     dedup_new returns — so a re-run never double-records the same game.
     """
-    seen: set[tuple[Any, Any, str]] = {
-        (r["game_id"], r["player_id"], r["prop"]) for r in existing
-    }
-    return [
-        c for c in candidates
-        if (c["game_id"], c["player_id"], c["prop"]) not in seen
-    ]
+    seen: set[tuple] = {_identity_key(r) for r in existing}
+    result: list[dict] = []
+    for c in candidates:
+        key = _identity_key(c)
+        if key not in seen:
+            seen.add(key)
+            result.append(c)
+    return result
 
 
 def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:

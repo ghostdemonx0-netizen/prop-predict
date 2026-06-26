@@ -606,3 +606,62 @@ def test_dedup_new_empty_candidates_returns_empty():
     """When candidates is empty result is always empty."""
     result = dedup_new([_EXISTING_RUNS_REC], [])
     assert result == []
+
+
+# ===========================================================================
+# D1 — candidates deduped against each other (self-dedup)
+# ===========================================================================
+
+def test_dedup_new_duplicate_candidates_returns_one():
+    """D1: Two candidates with the same identity key → only the first is returned."""
+    c = {"game_id": 1, "player_id": 100, "prop": "runs"}
+    result = dedup_new([], [c, c])
+    assert len(result) == 1
+
+
+def test_dedup_new_duplicate_candidates_first_wins():
+    """D1: When two candidates share a key the first one is emitted, second dropped."""
+    c1 = {"game_id": 1, "player_id": 100, "prop": "runs", "marker": "first"}
+    c2 = {"game_id": 1, "player_id": 100, "prop": "runs", "marker": "second"}
+    result = dedup_new([], [c1, c2])
+    assert result[0]["marker"] == "first"
+
+
+def test_dedup_new_self_dedup_preserves_order_of_unique():
+    """D1: With mixed dups and unique candidates the unique ones come out in original order."""
+    c_a = {"game_id": 1, "player_id": 1, "prop": "hr"}
+    c_b = {"game_id": 1, "player_id": 2, "prop": "hr"}
+    c_a_dup = {"game_id": 1, "player_id": 1, "prop": "hr"}
+    result = dedup_new([], [c_a, c_b, c_a_dup])
+    assert len(result) == 2
+    assert result[0]["player_id"] == 1
+    assert result[1]["player_id"] == 2
+
+
+# ===========================================================================
+# D2 — missing identity keys don't KeyError
+# ===========================================================================
+
+def test_dedup_new_existing_missing_prop_does_not_crash():
+    """D2: Existing record with no 'prop' key must not raise KeyError."""
+    existing = [{"game_id": 1, "player_id": 100}]  # missing 'prop'
+    c = {"game_id": 1, "player_id": 100, "prop": "runs"}
+    # Missing 'prop' uses a sentinel → doesn't block the real candidate
+    result = dedup_new(existing, [c])
+    assert len(result) == 1
+
+
+def test_dedup_new_existing_missing_game_id_does_not_crash():
+    """D2: Existing record with no 'game_id' key must not raise KeyError."""
+    existing = [{"player_id": 100, "prop": "runs"}]  # missing 'game_id'
+    c = {"game_id": 1, "player_id": 100, "prop": "runs"}
+    result = dedup_new(existing, [c])
+    assert len(result) == 1  # sentinel key ≠ real key → candidate passes through
+
+
+def test_dedup_new_candidate_missing_key_does_not_crash():
+    """D2: A candidate with a missing identity key must not raise KeyError."""
+    c_bad = {"game_id": 1, "player_id": 100}  # missing 'prop'
+    c_good = {"game_id": 2, "player_id": 200, "prop": "hr"}
+    result = dedup_new([], [c_bad, c_good])
+    assert len(result) == 2  # both pass through (neither collides)
