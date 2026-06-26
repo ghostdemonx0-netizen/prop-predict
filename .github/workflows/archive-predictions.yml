@@ -54,6 +54,7 @@ jobs:
       - name: Fetch latest board from board-data
         id: fetch_board
         run: |
+          set -euo pipefail
           if ! git fetch origin board-data --depth=1 2>/dev/null; then
             echo "::notice::board-data branch not found — nothing to archive yet."
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -72,30 +73,45 @@ jobs:
         if: steps.fetch_board.outputs.skip != 'true'
         id: meta
         run: |
-          date=$(python -c "import json; print(json.load(open('/tmp/board.json'))['date'])")
-          echo "date=$date" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          slate_date=$(python -c "import json; print(json.load(open('/tmp/board.json'))['date'])")
+          if [[ ! "$slate_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "::error::malformed board date: '$slate_date'"
+            exit 1
+          fi
+          echo "slate_date=$slate_date" >> "$GITHUB_OUTPUT"
 
       # ── 3. Fetch the current archive file for this date (empty if first run) ──
       - name: Fetch existing archive file
         if: steps.fetch_board.outputs.skip != 'true'
+        id: fetch_archive
         run: |
-          date="${{ steps.meta.outputs.date }}"
-          archive_key="archive/${date}.jsonl"
-          if git fetch origin predictions-archive --depth=1 2>/dev/null && \
-             git show "origin/predictions-archive:${archive_key}" \
-               > /tmp/archive.jsonl 2>/dev/null; then
-            line_count=$(wc -l < /tmp/archive.jsonl)
-            echo "Resumed existing archive for ${date} (${line_count} records so far)."
+          set -euo pipefail
+          slate_date="${{ steps.meta.outputs.slate_date }}"
+          archive_key="archive/${slate_date}.jsonl"
+          base_sha=""
+          if git fetch origin predictions-archive --depth=1 2>/dev/null; then
+            base_sha=$(git rev-parse origin/predictions-archive)
+            if git show "origin/predictions-archive:${archive_key}" \
+                 > /tmp/archive.jsonl 2>/dev/null; then
+              line_count=$(wc -l < /tmp/archive.jsonl)
+              echo "Resumed existing archive for ${slate_date} (${line_count} records so far)."
+            else
+              echo "No archive for ${slate_date} yet — starting fresh."
+              touch /tmp/archive.jsonl
+            fi
           else
-            echo "No archive yet for ${date} — starting fresh."
+            echo "No archive for ${slate_date} yet (branch not seeded) — starting fresh."
             touch /tmp/archive.jsonl
           fi
+          echo "base_sha=${base_sha}" >> "$GITHUB_OUTPUT"
 
       # ── 4. Run the recorder ───────────────────────────────────────────────────
       - name: Run archive recorder
         if: steps.fetch_board.outputs.skip != 'true'
         id: recorder
         run: |
+          set -euo pipefail
           now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           before=$(wc -l < /tmp/archive.jsonl)
           python -m model.archive /tmp/board.json /tmp/archive.jsonl "${now}"
@@ -111,7 +127,7 @@ jobs:
       # ── 5. Commit + push ONLY the archive file to predictions-archive ─────────
       # Switches workspace to the predictions-archive branch, copies the updated
       # file, commits, and pushes normally (NEVER force — append-only history).
-      # PRIVACY: only archives/<date>.jsonl is touched — no web/public/data paths.
+      # PRIVACY: only archive/<date>.jsonl is touched — no web/public/data paths.
       - name: Commit to predictions-archive branch
         if: >-
           steps.fetch_board.outputs.skip != 'true' &&
@@ -119,29 +135,33 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          date="${{ steps.meta.outputs.date }}"
+          set -euo pipefail
+          slate_date="${{ steps.meta.outputs.slate_date }}"
+          base_sha="${{ steps.fetch_archive.outputs.base_sha }}"
           now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          # Guard: the archive branch must be seeded before we can push.
-          if ! git fetch origin predictions-archive --depth=1 2>/dev/null; then
+          # Check out the exact SHA captured in Step 3 — prevents silent data
+          # loss if the branch advanced between the read (Step 3) and this write.
+          if [[ -n "$base_sha" ]]; then
+            git checkout -b predictions-archive-push "$base_sha"
+          else
+            # Branch not seeded yet — cannot push.
             echo "::error::predictions-archive branch not found."
             echo "Run the seed command at the top of this file first, then re-run."
             exit 1
           fi
 
-          # Create a local tracking branch and switch to it.
-          git checkout -b predictions-archive-push origin/predictions-archive
-
           # Copy the recorder's output into the branch working tree.
           mkdir -p archive
-          cp /tmp/archive.jsonl "archive/${date}.jsonl"
+          cp /tmp/archive.jsonl "archive/${slate_date}.jsonl"
 
           git config user.email "archive-bot@users.noreply.github.com"
           git config user.name "archive-bot"
-          git add "archive/${date}.jsonl"
-          git commit -m "archive ${date} @ ${now}"
+          git add "archive/${slate_date}.jsonl"
+          git commit -m "archive ${slate_date} @ ${now}"
 
-          # Normal push — NEVER force (each commit appends to branch history).
+          # Normal push — NEVER force (append-only history).
+          # A non-fast-forward due to a concurrent push will fail loudly here.
           git push \
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
             predictions-archive-push:predictions-archive
