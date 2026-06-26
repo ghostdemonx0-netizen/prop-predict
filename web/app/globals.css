@@ -128,6 +128,25 @@ body::after {
 .pillbar-scroll::-webkit-scrollbar { display: none; }
 .pillbar-scroll .pillbar { flex: 0 0 auto; }
 .pillbar-scroll .pill { white-space: nowrap; }
+/* Scroll-hint bar under the prop row: only rendered when the row overflows
+   (narrow phones). Thumb width = visible fraction, slides with scroll position. */
+.scroll-hint {
+  position: relative;
+  width: 56px;
+  height: 3px;
+  margin: 6px auto 0;
+  background: var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.scroll-hint-thumb {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--green);
+  border-radius: 999px;
+  transition: left 0.05s linear;
+}
 .pill:hover { color: var(--text); }
 .pill[data-active="true"] {
   background: var(--green);

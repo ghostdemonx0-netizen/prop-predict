@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loadProjections, loadIndex } from "../lib/data";
 import type { Projections, HitsRow, TbRow, RunsRow, RbiRow, HrrRow, Matchup } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
@@ -50,6 +50,28 @@ export default function Home() {
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [source, setSource] = useState<"current" | "blend" | "hist">("current");
+
+  // Scroll-hint for the prop selector row: only shows when the row overflows
+  // (i.e. on narrow phones), with a thumb that tracks scroll position.
+  const propScrollRef = useRef<HTMLDivElement>(null);
+  const [propHint, setPropHint] = useState({ show: false, thumb: 1, pos: 0 });
+  const syncPropHint = () => {
+    const el = propScrollRef.current;
+    if (!el) return;
+    const overflow = el.scrollWidth - el.clientWidth;
+    setPropHint({
+      show: overflow > 4,
+      thumb: el.scrollWidth > 0 ? el.clientWidth / el.scrollWidth : 1,
+      pos: overflow > 0 ? el.scrollLeft / overflow : 0,
+    });
+  };
+  useEffect(() => {
+    syncPropHint();
+    window.addEventListener("resize", syncPropHint);
+    return () => window.removeEventListener("resize", syncPropHint);
+  }, []);
+  // re-measure when the row (re)mounts on returning to the Props tab or data loads
+  useEffect(() => { syncPropHint(); }, [section, data]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -414,7 +436,7 @@ export default function Home() {
           {/* under Props: which prop, then which view */}
           {section === "props" && (
             <>
-              <div className="pillbar-scroll">
+              <div className="pillbar-scroll" ref={propScrollRef} onScroll={syncPropHint}>
                 <div className="pillbar">
                   {([
                     ["hr", "Home Runs"],
@@ -431,6 +453,17 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+              {propHint.show && (
+                <div className="scroll-hint" aria-hidden="true">
+                  <div
+                    className="scroll-hint-thumb"
+                    style={{
+                      width: `${propHint.thumb * 100}%`,
+                      left: `${propHint.pos * (100 - propHint.thumb * 100)}%`,
+                    }}
+                  />
+                </div>
+              )}
               {prop === "hits" && (
                 <div className="pillbar">
                   {([1, 2, 3] as const).map((n) => (
