@@ -16,8 +16,10 @@ Record shape per (game, player, prop):
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from typing import Any
 
@@ -275,32 +277,51 @@ def record_day(
 
     Idempotent: a second call with the same board + now_iso appends 0.
     Privacy: writes ONLY to `archive_path`.
+
+    Durability guarantees:
+    - Corrupt/truncated JSONL lines are skipped with a stderr warning; they do
+      not block future appends or dedup of valid lines.
+    - An exclusive flock held across the read→append critical section prevents
+      TOCTOU duplicates from overlapping processes.
+    - Non-UTF-8 bytes in the archive are replaced (errors="replace") so that a
+      single stray byte cannot crash the whole run.
     """
-    # 1. Load board
+    # 1. Load board (caller's file, read-only)
     with open(board_path, "r", encoding="utf-8") as fh:
         board: dict[str, Any] = json.load(fh)
 
-    # 2. Load existing JSONL (tolerate blank lines; missing file → [])
-    existing: list[dict[str, Any]] = []
-    if os.path.exists(archive_path):
-        with open(archive_path, "r", encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if line:
-                    existing.append(json.loads(line))
-
-    # 3. Compute candidates for this run
+    # 2. Compute candidates (pure, no I/O)
     candidates = archive_records(board, now_iso, window_min=window_min)
 
-    # 4. Drop anything already in the archive
-    new_records = dedup_new(existing, candidates)
+    # 3. Create parent dirs before acquiring the lock so the open() below works
+    os.makedirs(os.path.dirname(os.path.abspath(archive_path)), exist_ok=True)
 
-    # 5. Append new records (create parent dirs if needed)
-    if new_records:
-        os.makedirs(os.path.dirname(os.path.abspath(archive_path)), exist_ok=True)
-        with open(archive_path, "a", encoding="utf-8") as fh:
-            for rec in new_records:
-                fh.write(json.dumps(rec, separators=(",", ":")) + "\n")
+    # 4. Open archive in append+read mode, hold exclusive lock across read→write.
+    #    "a+" creates the file if absent; seek(0) lets us read from the start.
+    with open(archive_path, "a+", encoding="utf-8", errors="replace") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+
+        # Read existing records (tolerate blank lines and corrupt/truncated lines)
+        fh.seek(0)
+        existing: list[dict[str, Any]] = []
+        for raw_line in fh:
+            line = raw_line.strip()
+            if not line:
+                continue
+            try:
+                existing.append(json.loads(line))
+            except json.JSONDecodeError:
+                print(
+                    f"[archive] skipping corrupt line: {line[:120]!r}",
+                    file=sys.stderr,
+                )
+
+        # Dedup and append only new records
+        new_records = dedup_new(existing, candidates)
+        for rec in new_records:
+            fh.write(json.dumps(rec, separators=(",", ":")) + "\n")
+
+        # flock released automatically when `with` block exits (file closed)
 
     return len(new_records)
 
@@ -310,8 +331,6 @@ def record_day(
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import sys
-
     def _main() -> None:
         args = sys.argv[1:]
         if len(args) < 2:
@@ -327,7 +346,17 @@ if __name__ == "__main__":
             if len(args) >= 3
             else datetime.now(tz=timezone.utc).isoformat()
         )
-        count = record_day(board_path_arg, archive_path_arg, now_iso_arg)
+        try:
+            count = record_day(board_path_arg, archive_path_arg, now_iso_arg)
+        except FileNotFoundError as exc:
+            print(f"archive: error: {exc}", file=sys.stderr)
+            sys.exit(1)
+        except json.JSONDecodeError as exc:
+            print(f"archive: error: board JSON is malformed — {exc}", file=sys.stderr)
+            sys.exit(1)
+        except ValueError as exc:
+            print(f"archive: error: {exc}", file=sys.stderr)
+            sys.exit(1)
         print(count)
 
     _main()

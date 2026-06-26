@@ -830,3 +830,170 @@ def test_main_cli_idempotent(tmp_path):
         capture_output=True, text=True, check=True,
     )
     assert result.stdout.strip() == "0"
+
+
+# ===========================================================================
+# Fix 1 — corrupt/partial JSONL line must not brick the archive
+# ===========================================================================
+
+def test_record_day_corrupt_last_line_does_not_crash(tmp_path):
+    """F1a: A truncated last line in the JSONL does not crash record_day."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    # Write a valid line for a different (game, player, prop) then a truncated line
+    good_rec = {"game_id": 9999, "player_id": 9999, "prop": "hr",
+                "date": "2026-06-25", "captured_at": "2026-06-25T19:00:00Z",
+                "probs": {}, "factors": {}}
+    archive_path.write_bytes(
+        (json.dumps(good_rec) + "\n" + '{"game_id":1,"player').encode("utf-8")
+    )
+
+    # Must not raise; should append the 3 qualifying rows
+    n = record_day(str(board_path), str(archive_path), NOW_ISO)
+    assert n == 3
+
+
+def test_record_day_corrupt_line_good_lines_honored_for_dedup(tmp_path):
+    """F1b: Good lines before a corrupt line are still used for dedup."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    # Pre-archive: the HR_ROW_SOON record (valid) then a corrupt line
+    hr_rec = {
+        "game_id": GAME_ID_SOON,
+        "player_id": 111,
+        "prop": "hr",
+        "date": DATE,
+        "captured_at": NOW_ISO,
+        "probs": {},
+        "factors": {},
+    }
+    archive_path.write_bytes(
+        (json.dumps(hr_rec) + "\n" + '{"truncated":true').encode("utf-8")
+    )
+
+    # HR is already archived → only K and runs should be new (2 records)
+    n = record_day(str(board_path), str(archive_path), NOW_ISO)
+    assert n == 2
+
+
+def test_record_day_corrupt_line_prints_warning_to_stderr(tmp_path):
+    """F1c: A corrupt line triggers a warning on stderr (not a traceback)."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    archive_path.write_bytes(b'{"bad json\n')
+
+    result = subprocess.run(
+        [sys.executable, "-m", "model.archive",
+         str(board_path), str(archive_path), NOW_ISO],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0
+    assert "[archive]" in result.stderr or "skipping" in result.stderr.lower()
+
+
+# ===========================================================================
+# Fix 2 — flock-based TOCTOU duplicate guard
+# ===========================================================================
+
+def test_record_day_flock_idempotent(tmp_path):
+    """F2a: Normal single-run still works correctly with flock in place."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    n = record_day(str(board_path), str(archive_path), NOW_ISO)
+    assert n == 3
+
+    n2 = record_day(str(board_path), str(archive_path), NOW_ISO)
+    assert n2 == 0
+
+    lines = [l for l in archive_path.read_text().splitlines() if l.strip()]
+    assert len(lines) == 3
+
+
+def test_record_day_concurrent_no_duplicates(tmp_path):
+    """F2b: Two simultaneous subprocess calls must not produce duplicate lines."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    cmd = [sys.executable, "-m", "model.archive",
+           str(board_path), str(archive_path), NOW_ISO]
+
+    p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p2 = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out1, _ = p1.communicate(timeout=15)
+    out2, _ = p2.communicate(timeout=15)
+
+    assert p1.returncode == 0
+    assert p2.returncode == 0
+
+    total_reported = int(out1.strip()) + int(out2.strip())
+
+    lines = [l for l in archive_path.read_text().splitlines() if l.strip()]
+    # No duplicates: exactly 3 unique records regardless of race outcome
+    assert len(lines) == 3
+    assert total_reported == 3  # one process wrote 3, the other wrote 0
+
+
+# ===========================================================================
+# Fix 3 — non-UTF8 bytes in archive file must not crash
+# ===========================================================================
+
+def test_record_day_non_utf8_bytes_in_archive(tmp_path):
+    """F3: Stray non-UTF8 bytes in archive are replaced; bad line skipped; no crash."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    # Write a valid record followed by a line with invalid UTF-8 bytes
+    good_rec = {"game_id": 9999, "player_id": 9999, "prop": "hr",
+                "date": "2026-06-25", "captured_at": "2026-06-25T00:00:00Z",
+                "probs": {}, "factors": {}}
+    archive_path.write_bytes(
+        json.dumps(good_rec).encode("utf-8") + b"\n" + b"\xff\xfe bad bytes\n"
+    )
+
+    # Must not raise UnicodeDecodeError; should append 3 new records
+    n = record_day(str(board_path), str(archive_path), NOW_ISO)
+    assert n == 3
+
+
+# ===========================================================================
+# Fix 4 — CLI error messages: clean exit-1 instead of traceback
+# ===========================================================================
+
+def test_main_cli_missing_board_exits_1(tmp_path):
+    """F4a: Missing board path → exit code 1 and clean error message (no traceback)."""
+    missing_board = str(tmp_path / "nonexistent_board.json")
+    archive_path  = str(tmp_path / "archive.jsonl")
+
+    result = subprocess.run(
+        [sys.executable, "-m", "model.archive", missing_board, archive_path, NOW_ISO],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+    assert "archive: error:" in result.stderr
+
+
+def test_main_cli_bad_now_iso_exits_1(tmp_path):
+    """F4b: Bad now_iso (unparseable datetime) → exit code 1 and clean error message."""
+    board_path   = tmp_path / "board.json"
+    archive_path = tmp_path / "archive.jsonl"
+    _write_board(board_path, FAKE_BOARD)
+
+    result = subprocess.run(
+        [sys.executable, "-m", "model.archive",
+         str(board_path), str(archive_path), "not-a-date"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+    assert "archive: error:" in result.stderr
