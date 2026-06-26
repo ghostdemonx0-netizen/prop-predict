@@ -46,3 +46,7 @@ web/public/data/*.json
 
 # live per-run manual buzz layer (written fresh each run; example is tracked)
 scripts/manual_today.json
+
+# local predictions archive — pulled from the `predictions-archive` branch via
+# scripts/pull_archive.sh; never committed to the main tree or the site bundle.
+web/archive/
