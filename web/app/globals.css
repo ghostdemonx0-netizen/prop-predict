@@ -113,6 +113,21 @@ body::after {
   transition: color 0.16s, background 0.16s, box-shadow 0.16s;
   letter-spacing: 0.01em;
 }
+/* Prop selector row: 7 props overflow narrow phones. Wrap the tight pill-track
+   in a scroller that stays centered when it fits but scrolls from the left when
+   it overflows (safe center → no clipped/unreachable first pill). Keep labels
+   on one line so "Total Bases"/"Home Runs" don't wrap. */
+.pillbar-scroll {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  justify-content: safe center;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.pillbar-scroll::-webkit-scrollbar { display: none; }
+.pillbar-scroll .pillbar { flex: 0 0 auto; }
+.pillbar-scroll .pill { white-space: nowrap; }
 .pill:hover { color: var(--text); }
 .pill[data-active="true"] {
   background: var(--green);

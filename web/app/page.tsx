@@ -414,20 +414,22 @@ export default function Home() {
           {/* under Props: which prop, then which view */}
           {section === "props" && (
             <>
-              <div className="pillbar">
-                {([
-                  ["hr", "Home Runs"],
-                  ["k", "Strikeouts"],
-                  ["hits", "Hits"],
-                  ["tb", "Total Bases"],
-                  ["runs", "Runs"],
-                  ["rbi", "RBI"],
-                  ["hrr", "H+R+RBI"],
-                ] as const).map(([p, label]) => (
-                  <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
-                    {label}
-                  </button>
-                ))}
+              <div className="pillbar-scroll">
+                <div className="pillbar">
+                  {([
+                    ["hr", "Home Runs"],
+                    ["k", "Strikeouts"],
+                    ["hits", "Hits"],
+                    ["tb", "Total Bases"],
+                    ["runs", "Runs"],
+                    ["rbi", "RBI"],
+                    ["hrr", "H+R+RBI"],
+                  ] as const).map(([p, label]) => (
+                    <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
               {prop === "hits" && (
                 <div className="pillbar">
