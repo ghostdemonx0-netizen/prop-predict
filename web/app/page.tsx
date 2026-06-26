@@ -522,6 +522,54 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
+                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Runs column</span>
+                <div className="pillbar">
+                  {([1, 2] as const).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setThreshold((t) => ({ ...t, runs: n }))}
+                      data-active={threshold.runs === n}
+                      className="pill"
+                      style={{ padding: "0.16rem 0.5rem", fontSize: "0.62rem" }}
+                    >
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
+                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>RBI column</span>
+                <div className="pillbar">
+                  {([1, 2] as const).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setThreshold((t) => ({ ...t, rbi: n }))}
+                      data-active={threshold.rbi === n}
+                      className="pill"
+                      style={{ padding: "0.16rem 0.5rem", fontSize: "0.62rem" }}
+                    >
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
+                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>HRR column</span>
+                <div className="pillbar">
+                  {([2, 3, 4] as const).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setThreshold((t) => ({ ...t, hrr: n }))}
+                      data-active={threshold.hrr === n}
+                      className="pill"
+                      style={{ padding: "0.16rem 0.5rem", fontSize: "0.62rem" }}
+                    >
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
