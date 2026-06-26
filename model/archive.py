@@ -16,7 +16,7 @@ Record shape per (game, player, prop):
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -40,6 +40,7 @@ _FACTOR_KEYS: tuple[str, ...] = (
     "matchup_mult",
     "pitcher_mult",
     "bvp_mult",
+    # cross-family (HR + threshold)
     "recent_form_mult",
     # threshold families (hits / tb / runs / rbi / hrr)
     "pitcher_factor",
@@ -62,16 +63,21 @@ _FACTOR_KEYS: tuple[str, ...] = (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _blend(cur: float, hist: float | None) -> float:
-    """Blend = midpoint of current and history.  Falls back to current alone."""
+def _blend(cur: float | None, hist: float | None) -> float | None:
+    """Blend = midpoint of current and history.  Falls back to whatever value exists."""
+    if cur is None:
+        return hist
     if hist is None:
         return cur
     return (cur + hist) / 2
 
 
 def _parse_iso(ts: str) -> datetime:
-    """Parse an ISO-8601 timestamp, handling a trailing Z."""
-    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    """Parse an ISO-8601 timestamp, handling a trailing Z.  Always returns aware-UTC."""
+    dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 # ---------------------------------------------------------------------------
@@ -114,8 +120,9 @@ def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:
         cur  = row.get("over_prob")
         hist = row.get("over_prob_hist")
         line = row.get("line")
-        label = f"over {line}"
-        probs[label] = {"current": cur, "blend": _blend(cur, hist), "history": hist}
+        if line is not None:
+            label = f"over {line}"
+            probs[label] = {"current": cur, "blend": _blend(cur, hist), "history": hist}
 
     elif prop_lower == "hr":
         cur  = row.get("probability")
@@ -170,10 +177,13 @@ def archive_records(
     # Determine qualifying game_ids from the games list
     qualifying: set[Any] = set()
     for game in board.get("games", []):
-        gid = game["game_id"]
-        if gid in started:
+        gid = game.get("game_id")
+        if gid is None or gid in started:          # I2: skip None game_ids
             continue
-        gt = _parse_iso(game["game_time"])
+        gt_str = game.get("game_time")
+        if not gt_str:                             # I1: skip games with no game_time
+            continue
+        gt = _parse_iso(gt_str)
         mins_until = (gt - now).total_seconds() / 60.0
         if 0.0 <= mins_until <= window_min:
             qualifying.add(gid)
@@ -184,10 +194,15 @@ def archive_records(
     # Prop list keys in the board (order doesn't matter for correctness)
     prop_list_keys = ("hr", "strikeouts", "hits", "total_bases", "runs", "rbi", "hrr")
 
+    seen: set[tuple[Any, Any, str]] = set()          # M3: intra-call dedup
     records: list[dict[str, Any]] = []
     for prop_name in prop_list_keys:
         for row in board.get(prop_name, []):
             if row.get("game_id") in qualifying:
+                key = (row.get("game_id"), row.get("player_id"), prop_name)
+                if key in seen:
+                    continue
+                seen.add(key)
                 rec = record_from_row(row, prop_name)
                 rec["date"]         = date
                 rec["captured_at"]  = now_iso
