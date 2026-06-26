@@ -1,0 +1,147 @@
+name: archive-predictions
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ONE-TIME SEED — run this ONCE on your local machine before this workflow
+# can write anything. Creates the empty orphan branch that holds the archive.
+#
+#   git checkout --orphan predictions-archive && \
+#   git rm -rf . && \
+#   mkdir -p archive && touch archive/.gitkeep && \
+#   git add -A && \
+#   git commit -m "seed predictions archive" && \
+#   git push -u origin predictions-archive && \
+#   git checkout -
+#
+# DORMANT UNTIL MERGED: GitHub only fires scheduled workflows from the default
+# branch (main). This file is safe to commit now — it won't trigger until you
+# deliberately merge it to main AND run the seed command above.
+#
+# PRIVACY GUARANTEE: this workflow NEVER writes to web/public/data or any path
+# the live site serves. It reads board-data (read-only) and appends ONLY to
+# archive/<date>.jsonl on the predictions-archive branch.
+# ──────────────────────────────────────────────────────────────────────────────
+
+on:
+  schedule:
+    # Every 30 min, offset a few minutes so board-refresh has had time to publish.
+    - cron: "8,38 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: archive-predictions
+  cancel-in-progress: false   # always let an in-progress run finish (append-only)
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # ── 1. Read the latest published board from board-data (READ-ONLY) ───────
+      # Uses the same pattern as scripts/pull_board.sh: git show, not git checkout,
+      # so it can NEVER land in the working tree or get committed.
+      - name: Fetch latest board from board-data
+        id: fetch_board
+        run: |
+          if ! git fetch origin board-data --depth=1 2>/dev/null; then
+            echo "::notice::board-data branch not found — nothing to archive yet."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git show origin/board-data:web/public/data/latest.json \
+               > /tmp/board.json 2>/dev/null; then
+            echo "::notice::latest.json missing on board-data — nothing to archive."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      # ── 2. Derive the slate date from the board JSON ─────────────────────────
+      - name: Derive slate date
+        if: steps.fetch_board.outputs.skip != 'true'
+        id: meta
+        run: |
+          date=$(python -c "import json; print(json.load(open('/tmp/board.json'))['date'])")
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      # ── 3. Fetch the current archive file for this date (empty if first run) ──
+      - name: Fetch existing archive file
+        if: steps.fetch_board.outputs.skip != 'true'
+        run: |
+          date="${{ steps.meta.outputs.date }}"
+          archive_key="archive/${date}.jsonl"
+          if git fetch origin predictions-archive --depth=1 2>/dev/null && \
+             git show "origin/predictions-archive:${archive_key}" \
+               > /tmp/archive.jsonl 2>/dev/null; then
+            line_count=$(wc -l < /tmp/archive.jsonl)
+            echo "Resumed existing archive for ${date} (${line_count} records so far)."
+          else
+            echo "No archive yet for ${date} — starting fresh."
+            touch /tmp/archive.jsonl
+          fi
+
+      # ── 4. Run the recorder ───────────────────────────────────────────────────
+      - name: Run archive recorder
+        if: steps.fetch_board.outputs.skip != 'true'
+        id: recorder
+        run: |
+          now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          before=$(wc -l < /tmp/archive.jsonl)
+          python -m model.archive /tmp/board.json /tmp/archive.jsonl "${now}"
+          after=$(wc -l < /tmp/archive.jsonl)
+          echo "Records: before=${before} after=${after}"
+          if [ "$after" -gt "$before" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No new records — board unchanged since last snapshot."
+          fi
+
+      # ── 5. Commit + push ONLY the archive file to predictions-archive ─────────
+      # Switches workspace to the predictions-archive branch, copies the updated
+      # file, commits, and pushes normally (NEVER force — append-only history).
+      # PRIVACY: only archives/<date>.jsonl is touched — no web/public/data paths.
+      - name: Commit to predictions-archive branch
+        if: >-
+          steps.fetch_board.outputs.skip != 'true' &&
+          steps.recorder.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          date="${{ steps.meta.outputs.date }}"
+          now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Guard: the archive branch must be seeded before we can push.
+          if ! git fetch origin predictions-archive --depth=1 2>/dev/null; then
+            echo "::error::predictions-archive branch not found."
+            echo "Run the seed command at the top of this file first, then re-run."
+            exit 1
+          fi
+
+          # Create a local tracking branch and switch to it.
+          git checkout -b predictions-archive-push origin/predictions-archive
+
+          # Copy the recorder's output into the branch working tree.
+          mkdir -p archive
+          cp /tmp/archive.jsonl "archive/${date}.jsonl"
+
+          git config user.email "archive-bot@users.noreply.github.com"
+          git config user.name "archive-bot"
+          git add "archive/${date}.jsonl"
+          git commit -m "archive ${date} @ ${now}"
+
+          # Normal push — NEVER force (each commit appends to branch history).
+          git push \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            predictions-archive-push:predictions-archive
