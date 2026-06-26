@@ -52,6 +52,12 @@ def test_refresh_today_freezes_started_games(tmp_path, monkeypatch):
     assert changed is True  # one write to persist started_ids
     assert after["started_ids"] == [1]
     assert after["hr"] == before["hr"] and after["strikeouts"] == before["strikeouts"]
+    # the 3 run props (Runs/RBI/HRR) must freeze too — regression guard for the
+    # freeze-list bug where they were dropped from started games' rows
+    assert before["runs"] and before["rbi"] and before["hrr"], "sample build should produce run-prop rows"
+    assert after["runs"] == before["runs"]
+    assert after["rbi"] == before["rbi"]
+    assert after["hrr"] == before["hrr"]
     # subsequent identical run: no churn
     assert daily.refresh_today("2026-06-10", schedule_fn=sched, **kw) is False
 

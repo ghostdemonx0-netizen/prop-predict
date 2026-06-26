@@ -149,6 +149,9 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
         "strikeouts": [r for r in existing.get("strikeouts", []) if r.get("game_id") in started_ids],
         "hits": [r for r in existing.get("hits", []) if r.get("game_id") in started_ids],
         "total_bases": [r for r in existing.get("total_bases", []) if r.get("game_id") in started_ids],
+        "runs": [r for r in existing.get("runs", []) if r.get("game_id") in started_ids],
+        "rbi": [r for r in existing.get("rbi", []) if r.get("game_id") in started_ids],
+        "hrr": [r for r in existing.get("hrr", []) if r.get("game_id") in started_ids],
         "games": [r for r in existing.get("games", []) if r.get("game_id") in started_ids],
     }
 
