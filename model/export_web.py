@@ -147,6 +147,12 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
         prof["total_r"] = prof["total_r_hist"]
         prof["total_rbi"] = prof["total_rbi_hist"]
         prof["total_hrr"] = prof["total_hrr_hist"]
+        # recent form is current-season only — the history twin is the form-neutral baseline
+        prof["recent_form_mult"] = 1.0
+        prof["recent_games"] = 0
+        prof["recent_r"] = 0
+        prof["recent_rbi"] = 0
+        prof["recent_hrr"] = 0
         prof["lineup_status"] = status
         return prof
 
@@ -251,7 +257,7 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
 
     _runs_thresholds = ("p_ge1", "p_ge2")
     _hrr_thresholds = ("p_ge2", "p_ge3", "p_ge4")
-    _run_factor_fields = ("recent_form_mult", "pitcher_factor", "park_weather_factor")
+    _run_factor_fields = ("recent_form_mult", "pitcher_factor", "park_weather_factor", "hard_hit_form", "production_form")
 
     def _attach(rows, hist_map, thresholds):
         for r in rows:

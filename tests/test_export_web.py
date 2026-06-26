@@ -85,3 +85,102 @@ def test_make_profile_fns_projects_and_tags_status(monkeypatch):
     assert all(b["lineup_status"] == "confirmed" for b in lns["away"])
     assert pitcher_fn(201)["pitcher_status"] == "probable"
     assert pitcher_fn(202)["pitcher_status"] == "confirmed"
+
+
+# ---------------------------------------------------------------------------
+# Run-prop board: form fields exposed; history twin is form-neutral
+# ---------------------------------------------------------------------------
+
+def _run_bat(pid, games, r, rbi, hrr, *, recent_form_mult=1.0, recent_games=0,
+             recent_r=0, recent_rbi=0, recent_hrr=0):
+    """Minimal batter profile for run-prop board tests."""
+    return {
+        "player_id": pid, "name": str(pid), "bats": "R",
+        "games": games, "total_r": r, "total_rbi": rbi, "total_hrr": hrr,
+        "games_hist": games, "total_r_hist": r, "total_rbi_hist": rbi, "total_hrr_hist": hrr,
+        "k_rate": 0.22, "hit_rate": 0.25, "lineup_status": "confirmed",
+        "season_pa": 400, "season_1b": 90, "season_2b": 25, "season_3b": 3, "season_hr": 20,
+        "recent_form_mult": recent_form_mult,
+        "recent_games": recent_games,
+        "recent_r": recent_r,
+        "recent_rbi": recent_rbi,
+        "recent_hrr": recent_hrr,
+    }
+
+
+def _run_pit(pid):
+    return {"player_id": pid, "name": str(pid), "throws": "R", "k_per_bf": 0.22,
+            "k_line": 5.5, "expected_bf": 24, "opponent_k_mult": 1.0,
+            "hit_allowed_rate": 0.22, "hr_allowed_rate": 0.033, "bf": 300}
+
+
+def _weather_fn(_g):
+    return {"wind_speed_mph": 0, "wind_from_deg": 0, "temp_f": 70, "precip_pct": 0}
+
+
+def _slate():
+    return [{"game_id": 1, "home": "AAA", "away": "BBB", "park_team": "AAA",
+             "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+
+
+def test_run_prop_rows_expose_hard_hit_form_and_production_form():
+    """Run-prop board rows must carry hard_hit_form and production_form fields
+    (and their _hist twins must be present after history wiring)."""
+    from model.export_web import build_board_with_history
+
+    cur  = lambda g: {"home": [_run_bat(1, 100, 60, 70, 200)], "away": [_run_bat(2, 100, 50, 50, 180)]}
+    hist = lambda g: {"home": [_run_bat(1, 100, 60, 70, 200)], "away": [_run_bat(2, 100, 50, 50, 180)]}
+    _, _, _, _, runs, rbi, hrr = build_board_with_history(
+        _slate(), cur, lambda p: _run_pit(p), hist, lambda p: _run_pit(p), _weather_fn, None)
+    row = runs[0]
+    assert "hard_hit_form" in row, "hard_hit_form missing from runs row"
+    assert "production_form" in row, "production_form missing from runs row"
+    assert "hard_hit_form_hist" in row, "hard_hit_form_hist missing — not wired in _run_factor_fields"
+    assert "production_form_hist" in row, "production_form_hist missing — not wired in _run_factor_fields"
+
+
+def test_run_prop_hot_current_lifts_p_ge1_above_hist():
+    """A batter hot in production (many recent R vs season avg) should have
+    p_ge1 (current) > p_ge1_hist (form-neutral history twin)."""
+    from model.export_web import build_board_with_history
+
+    # Hot batter: 20 R in 15 recent games → 1.33/g vs season_rate 60/100=0.60/g
+    hot = _run_bat(1, 100, 60, 70, 200,
+                   recent_form_mult=1.15, recent_games=15,
+                   recent_r=20, recent_rbi=22, recent_hrr=55)
+    cur  = lambda g: {"home": [hot], "away": [_run_bat(2, 100, 50, 50, 180)]}
+    # History fn must neutralize form — use same season totals but batter_hist_fn
+    # applies neutralization; simulate that here by using neutral batter for hist
+    hist_neutral = _run_bat(1, 100, 60, 70, 200,
+                            recent_form_mult=1.0, recent_games=0,
+                            recent_r=0, recent_rbi=0, recent_hrr=0)
+    hist = lambda g: {"home": [hist_neutral], "away": [_run_bat(2, 100, 50, 50, 180)]}
+    _, _, _, _, runs, rbi, hrr = build_board_with_history(
+        _slate(), cur, lambda p: _run_pit(p), hist, lambda p: _run_pit(p), _weather_fn, None)
+    r = next(x for x in runs if x["player_id"] == 1)
+    assert "p_ge1_hist" in r, "p_ge1_hist not attached"
+    assert r["p_ge1"] > r["p_ge1_hist"], (
+        f"Expected current p_ge1 ({r['p_ge1']:.4f}) > hist p_ge1_hist ({r['p_ge1_hist']:.4f}); "
+        "form should lift current above the form-neutral twin"
+    )
+
+
+def test_run_prop_hist_recent_form_mult_is_neutral():
+    """The history twin's recent_form_mult must be 1.0 (form-neutral).
+
+    This is guaranteed by batter_hist_fn setting recent_form_mult=1.0 and
+    recent_* counts to 0 before the pipeline runs.  The _hist field on the
+    board row should therefore equal 1.0.
+    """
+    from model.export_web import build_board_with_history
+
+    cur  = lambda g: {"home": [_run_bat(1, 100, 60, 70, 200, recent_form_mult=1.2, recent_games=15, recent_r=18, recent_rbi=20, recent_hrr=50)], "away": []}
+    hist = lambda g: {"home": [_run_bat(1, 100, 60, 70, 200)], "away": []}
+    _, _, _, _, runs, _, _ = build_board_with_history(
+        _slate(), cur, lambda p: _run_pit(p), hist, lambda p: _run_pit(p), _weather_fn, None)
+    r = next((x for x in runs if x["player_id"] == 1), None)
+    assert r is not None, "no runs row for player 1"
+    assert "recent_form_mult_hist" in r, "recent_form_mult_hist not wired"
+    assert r["recent_form_mult_hist"] == 1.0, (
+        f"Expected recent_form_mult_hist == 1.0 (form-neutral), got {r['recent_form_mult_hist']}"
+    )

@@ -57,6 +57,8 @@ def morning(date_str: str | None = None) -> bool:
     changed = daily.refresh_today(date_str)
     if parks.hit_factors_stale(date_str):
         print("[warn] park hit factors are >400 days old — refresh the FanGraphs anchor (model/parks.py HIT_FACTORS_LAST_PULLED). See spec.")
+    if parks.run_factors_stale(date_str):
+        print("[warn] park run factors are >400 days old — refresh the anchor (model/parks.py RUN_FACTORS_LAST_PULLED). See spec.")
     _record_current_signature(date_str, published=changed)
     return changed
 
@@ -86,6 +88,8 @@ def refresh(date_str: str | None = None) -> bool:
     changed = daily.refresh_today(date_str)
     if parks.hit_factors_stale(date_str):
         print("[warn] park hit factors are >400 days old — refresh the FanGraphs anchor (model/parks.py HIT_FACTORS_LAST_PULLED). See spec.")
+    if parks.run_factors_stale(date_str):
+        print("[warn] park run factors are >400 days old — refresh the anchor (model/parks.py RUN_FACTORS_LAST_PULLED). See spec.")
     # a compute VERIFIES the board is current even when unchanged - advance
     # the freshness window so quiet stretches skip cheaply instead of
     # recomputing every run after 90 minutes
