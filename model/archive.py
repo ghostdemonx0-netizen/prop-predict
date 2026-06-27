@@ -170,6 +170,17 @@ def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:
         if line is not None:
             label = f"over {line}"
             probs[label] = {"current": cur, "blend": _blend(cur, hist), "history": hist}
+        matchups = row.get("matchups") or []
+        if matchups:
+            rec["kcn"] = [
+                {
+                    "player_id": m.get("player_id"),
+                    "k_prob":    m.get("k_prob"),
+                    "c_prob":    m.get("hit_prob"),
+                    "lean":      m.get("lean"),
+                }
+                for m in matchups
+            ]
 
     elif prop_lower == "hr":
         cur  = row.get("probability")

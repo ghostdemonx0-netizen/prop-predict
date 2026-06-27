@@ -244,6 +244,32 @@ def test_k_no_opp_pitcher_when_no_vs():
 
 
 # ===========================================================================
+# record_from_row — Strikeouts KCN capture (Task 1 / Phase A)
+# ===========================================================================
+
+def test_record_strikeouts_captures_kcn():
+    from model.archive import record_from_row
+    row = {
+        "game_id": 1, "player_id": 99, "player": "Ace", "team": "NYY",
+        "over_prob": 0.55, "line": 6.5,
+        "matchups": [
+            {"player_id": 11, "name": "A", "k_prob": 0.30, "hit_prob": 0.22, "lean": "K"},
+            {"player_id": 12, "name": "B", "k_prob": 0.18, "hit_prob": 0.28, "lean": "H"},
+        ],
+    }
+    rec = record_from_row(row, "strikeouts")
+    assert rec["kcn"] == [
+        {"player_id": 11, "k_prob": 0.30, "c_prob": 0.22, "lean": "K"},
+        {"player_id": 12, "k_prob": 0.18, "c_prob": 0.28, "lean": "H"},
+    ]
+
+def test_record_strikeouts_no_matchups_omits_kcn():
+    from model.archive import record_from_row
+    rec = record_from_row({"game_id": 1, "player_id": 99, "over_prob": 0.5, "line": 6.5}, "strikeouts")
+    assert "kcn" not in rec
+
+
+# ===========================================================================
 # record_from_row — Runs (threshold prop, full hist twins)
 # ===========================================================================
 
