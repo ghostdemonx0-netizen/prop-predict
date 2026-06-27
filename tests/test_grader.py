@@ -215,3 +215,52 @@ def test_parse_pbp_classifies_k_hit_other():
         {"batter_id": 11, "pitcher_id": 99, "kind": "hit"},
         {"batter_id": 12, "pitcher_id": 99, "kind": "other"},
     ]
+
+
+# ---------------------------------------------------------------------------
+# KCN matchup grading (B2)
+# ---------------------------------------------------------------------------
+
+def test_tally_and_grade_kcn_matchup():
+    from model import grader
+    pbp = [
+        {"batter_id": 11, "pitcher_id": 99, "kind": "k"},
+        {"batter_id": 11, "pitcher_id": 99, "kind": "hit"},
+        {"batter_id": 11, "pitcher_id": 50, "kind": "hit"},   # vs reliever -> ignored
+    ]
+    assert grader.tally_vs_starter(pbp, 11, 99) == {"pa": 2, "k": 1, "hit": 1}
+    kcn = {"player_id": 11, "k_prob": 0.3, "c_prob": 0.25, "lean": "K"}
+    g = grader.grade_kcn_matchup(kcn, 99, 776, "2026-06-27", pbp,
+                                 final_retry=False, now_iso="x", game_final=True)
+    assert g["status"] == "graded"
+    assert g["batter_id"] == 11 and g["pitcher_id"] == 99
+    assert g["pa"] == 2 and g["k"] == 1 and g["hit"] == 1
+    assert g["pred"] == {"k_prob": 0.3, "c_prob": 0.25, "lean": "K"}
+    assert g["actual_lean"] == "K"   # k(1) == hit(1) and k>0 -> K wins ties
+
+def test_grade_kcn_void_no_pa_and_unsettled():
+    from model import grader
+    kcn = {"player_id": 11, "k_prob": 0.3, "c_prob": 0.25, "lean": "K"}
+    # final game, batter never faced the starter -> void no_pa
+    g = grader.grade_kcn_matchup(kcn, 99, 776, "2026-06-27", [],
+                                 final_retry=False, now_iso="x", game_final=True)
+    assert g["status"] == "void" and g["void_reason"] == "no_pa"
+    # not final, not last retry -> None (unsettled)
+    assert grader.grade_kcn_matchup(kcn, 99, 776, "2026-06-27", [],
+                                    final_retry=False, now_iso="x", game_final=False) is None
+    # not final, final_retry -> void postponed
+    g2 = grader.grade_kcn_matchup(kcn, 99, 776, "2026-06-27", [],
+                                  final_retry=True, now_iso="x", game_final=False)
+    assert g2["status"] == "void" and g2["void_reason"] == "postponed"
+
+def test_grade_kcn_day_iterates_strikeouts_preds():
+    from model import grader
+    preds = [
+        {"date": "2026-06-27", "game_id": 776, "player_id": 99, "prop": "strikeouts",
+         "kcn": [{"player_id": 11, "k_prob": 0.3, "c_prob": 0.2, "lean": "K"}]},
+        {"date": "2026-06-27", "game_id": 776, "player_id": 11, "prop": "hits"},  # ignored
+    ]
+    pbp_by_game = {776: [{"batter_id": 11, "pitcher_id": 99, "kind": "hit"}]}
+    grades = grader.grade_kcn_day(preds, pbp_by_game, {776}, final_retry=False, now_iso="x")
+    assert len(grades) == 1
+    assert grades[0]["actual_lean"] == "H" and grades[0]["hit"] == 1

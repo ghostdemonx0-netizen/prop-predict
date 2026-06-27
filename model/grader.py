@@ -162,6 +162,72 @@ def grade_file(predictions_path, grades_path, slate_date, now_iso, *,
     return len(grades)
 
 
+def tally_vs_starter(pbp: list[dict], batter_id, starter_id) -> dict:
+    """Count this batter's plate appearances vs ONLY the starter: pa/k/hit."""
+    pa = k = hit = 0
+    for ev in pbp:
+        if ev.get("batter_id") == batter_id and ev.get("pitcher_id") == starter_id:
+            pa += 1
+            if ev.get("kind") == "k":
+                k += 1
+            elif ev.get("kind") == "hit":
+                hit += 1
+    return {"pa": pa, "k": k, "hit": hit}
+
+
+def _actual_lean(k: int, hit: int) -> str:
+    if k > 0 and k >= hit:
+        return "K"
+    if hit > 0 and hit > k:
+        return "H"
+    return "NEU"
+
+
+def grade_kcn_matchup(kcn_entry, starter_id, game_id, date, pbp, *,
+                      final_retry, now_iso, game_final) -> dict | None:
+    """Grade one batter-vs-starter KCN read. None = unsettled (retry)."""
+    rec = {
+        "date": date, "game_id": game_id,
+        "batter_id": kcn_entry.get("player_id"), "pitcher_id": starter_id,
+        "pred": {"k_prob": kcn_entry.get("k_prob"),
+                 "c_prob": kcn_entry.get("c_prob"),
+                 "lean":   kcn_entry.get("lean")},
+        "graded_at": now_iso,
+    }
+    if not game_final:
+        if final_retry:
+            rec["status"] = "void"; rec["void_reason"] = "postponed"
+            return rec
+        return None
+    t = tally_vs_starter(pbp, kcn_entry.get("player_id"), starter_id)
+    if t["pa"] == 0:
+        rec["status"] = "void"; rec["void_reason"] = "no_pa"
+        return rec
+    rec["status"] = "graded"
+    rec["pa"] = t["pa"]; rec["k"] = t["k"]; rec["hit"] = t["hit"]
+    rec["actual_lean"] = _actual_lean(t["k"], t["hit"])
+    return rec
+
+
+def grade_kcn_day(predictions, pbp_by_game, final_games, *, final_retry, now_iso) -> list[dict]:
+    """Grade every KCN read across the date's strikeouts predictions."""
+    out: list[dict] = []
+    for pred in predictions:
+        if pred.get("prop") != "strikeouts" or not pred.get("kcn"):
+            continue
+        gid = pred.get("game_id")
+        starter_id = pred.get("player_id")
+        pbp = pbp_by_game.get(gid, [])
+        game_final = gid in final_games
+        for entry in pred["kcn"]:
+            g = grade_kcn_matchup(entry, starter_id, gid, pred.get("date"), pbp,
+                                  final_retry=final_retry, now_iso=now_iso,
+                                  game_final=game_final)
+            if g is not None:
+                out.append(g)
+    return out
+
+
 if __name__ == "__main__":
     def _main() -> None:
         args = sys.argv[1:]
