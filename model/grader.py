@@ -7,8 +7,11 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import date as _date
 from datetime import datetime, timezone
 from typing import Any
+
+from model import fetch as _fetch
 
 # prop -> list of (threshold_int, label) for the count-prop family.
 _COUNT_PROPS: dict[str, list[tuple[int, str]]] = {
@@ -111,3 +114,58 @@ def grade_day(predictions, outcomes_by_game, *, final_retry, now_iso):
         if g is not None:
             out.append(g)
     return out
+
+
+def _read_jsonl(path: str) -> list[dict]:
+    out: list[dict] = []
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            for raw in fh:
+                line = raw.strip()
+                if not line:
+                    continue
+                try:
+                    out.append(json.loads(line))
+                except json.JSONDecodeError:
+                    print(f"[grader] skipping corrupt line: {line[:120]!r}", file=sys.stderr)
+    except FileNotFoundError:
+        return []
+    return out
+
+
+def grade_file(predictions_path, grades_path, slate_date, now_iso, *,
+               fetch_fn=None, window_days: int = 3) -> int:
+    """Grade one date: read predictions JSONL, fetch each distinct game's outcome,
+    grade, OVERWRITE grades JSONL. Returns count written. final_retry is computed
+    from (now - slate_date) >= window_days-1."""
+    fetch_fn = fetch_fn or _fetch.game_boxscore
+    preds = _read_jsonl(predictions_path)
+    if not preds:
+        return 0
+    try:
+        now_d = datetime.fromisoformat(now_iso.replace("Z", "+00:00")).date()
+        slate_d = _date.fromisoformat(slate_date)
+        final_retry = (now_d - slate_d).days >= (window_days - 1)
+    except (ValueError, AttributeError):
+        final_retry = False
+
+    game_ids = {p.get("game_id") for p in preds if p.get("game_id") is not None}
+    outcomes = {gid: fetch_fn(gid) for gid in game_ids}
+
+    grades = grade_day(preds, outcomes, final_retry=final_retry, now_iso=now_iso)
+    with open(grades_path, "w", encoding="utf-8") as fh:
+        for g in grades:
+            fh.write(json.dumps(g, separators=(",", ":")) + "\n")
+    return len(grades)
+
+
+if __name__ == "__main__":
+    def _main() -> None:
+        args = sys.argv[1:]
+        if len(args) < 3:
+            print("Usage: python -m model.grader <predictions_jsonl> <grades_jsonl> "
+                  "<slate_date YYYY-MM-DD> [now_iso]", file=sys.stderr)
+            sys.exit(1)
+        now = args[3] if len(args) >= 4 else datetime.now(tz=timezone.utc).isoformat()
+        print(grade_file(args[0], args[1], args[2], now))
+    _main()

@@ -118,3 +118,49 @@ def test_grade_day_one_grade_per_prediction():
     outcomes = {100: {"game_id": 100, "status": "final",
                       "players": {1: {"bat": {"h":1,"tb":1,"hr":0,"r":0,"rbi":0}, "pit": None}}}}
     assert len(grader.grade_day(preds, outcomes, final_retry=False, now_iso="x")) == 1
+
+
+import json
+from pathlib import Path
+
+def test_grade_file_reads_predictions_writes_grades(tmp_path):
+    preds_path = tmp_path / "2026-06-27.jsonl"
+    grades_path = tmp_path / "2026-06-27.grades.jsonl"
+    preds_path.write_text(
+        json.dumps({"date":"2026-06-27","game_id":100,"player_id":1,"player":"X",
+                    "team":"NYY","prop":"hits","probs":{},"factors":{}}) + "\n")
+    fake = {100: {"game_id":100,"status":"final",
+                  "players":{1:{"bat":{"h":3,"tb":5,"hr":1,"r":1,"rbi":2},"pit":None}}}}
+    n = grader.grade_file(str(preds_path), str(grades_path), "2026-06-27",
+                          "2026-06-28T13:00:00Z",
+                          fetch_fn=lambda gid: fake.get(gid), window_days=3)
+    assert n == 1
+    rows = [json.loads(l) for l in grades_path.read_text().splitlines() if l.strip()]
+    assert rows[0]["results"] == {"1+": True, "2+": True, "3+": True}
+
+def test_grade_file_idempotent_overwrite(tmp_path):
+    preds_path = tmp_path / "2026-06-27.jsonl"
+    grades_path = tmp_path / "2026-06-27.grades.jsonl"
+    preds_path.write_text(
+        json.dumps({"date":"2026-06-27","game_id":100,"player_id":1,"player":"X",
+                    "team":"NYY","prop":"hits","probs":{},"factors":{}}) + "\n")
+    fake = {100: {"game_id":100,"status":"final",
+                  "players":{1:{"bat":{"h":1,"tb":1,"hr":0,"r":0,"rbi":0},"pit":None}}}}
+    f = lambda gid: fake.get(gid)
+    grader.grade_file(str(preds_path), str(grades_path), "2026-06-27", "x", fetch_fn=f)
+    grader.grade_file(str(preds_path), str(grades_path), "2026-06-27", "x", fetch_fn=f)
+    rows = [l for l in grades_path.read_text().splitlines() if l.strip()]
+    assert len(rows) == 1  # overwritten, not appended
+
+def test_grade_file_final_retry_at_window_edge(tmp_path):
+    # slate 3 days before now -> final_retry True -> unfinished game voids
+    preds_path = tmp_path / "2026-06-24.jsonl"
+    grades_path = tmp_path / "2026-06-24.grades.jsonl"
+    preds_path.write_text(
+        json.dumps({"date":"2026-06-24","game_id":100,"player_id":1,"player":"X",
+                    "team":"NYY","prop":"hits","probs":{},"factors":{}}) + "\n")
+    f = lambda gid: {"game_id":100,"status":"postponed","players":{}}
+    grader.grade_file(str(preds_path), str(grades_path), "2026-06-24",
+                      "2026-06-26T13:00:00Z", fetch_fn=f, window_days=3)
+    rows = [json.loads(l) for l in grades_path.read_text().splitlines() if l.strip()]
+    assert rows[0]["status"] == "void" and rows[0]["void_reason"] == "postponed"
