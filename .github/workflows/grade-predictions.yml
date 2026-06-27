@@ -54,7 +54,7 @@ jobs:
               continue   # no predictions for that date
             fi
             python -m model.grader "$workdir/${d}.jsonl" "$workdir/${d}.grades.jsonl" "$d" "$now"
-            [ -s "$workdir/${d}.grades.jsonl" ] && changed=1 || true
+            { [ -s "$workdir/${d}.grades.jsonl" ] || [ -s "$workdir/${d}.kcn-grades.jsonl" ]; } && changed=1 || true
           done
 
           if [ "$changed" = "0" ]; then

@@ -293,3 +293,33 @@ def test_grade_kcn_file_writes_and_overwrites(tmp_path):
                           status_fn=lambda g: status.get(g, "other"))
     rows2 = [l for l in out.read_text().splitlines() if l.strip()]
     assert len(rows2) == 1
+
+
+# ---------------------------------------------------------------------------
+# FIX final-review: NEU lean + null game_id passthrough
+# ---------------------------------------------------------------------------
+
+def test_actual_lean_neu():
+    """Batter faces starter but neither Ks nor gets a hit → actual_lean == NEU."""
+    from model import grader
+    kcn = {"player_id": 11, "k_prob": 0.3, "c_prob": 0.25, "lean": "K"}
+    pbp = [{"batter_id": 11, "pitcher_id": 99, "kind": "other"}]
+    g = grader.grade_kcn_matchup(kcn, 99, 776, "2026-06-27", pbp,
+                                 final_retry=False, now_iso="x", game_final=True)
+    assert g["status"] == "graded"
+    assert g["actual_lean"] == "NEU"
+    assert g["pa"] == 1 and g["k"] == 0 and g["hit"] == 0
+
+
+def test_kcn_grade_null_game_id_passthrough():
+    """grade_kcn_day with game_id=None at final_retry=True produces void/postponed
+    with game_id=None (documents no-crash behavior)."""
+    from model import grader
+    preds = [
+        {"date": "2026-06-27", "game_id": None, "player_id": 99, "prop": "strikeouts",
+         "kcn": [{"player_id": 11, "k_prob": 0.3, "c_prob": 0.2, "lean": "K"}]},
+    ]
+    grades = grader.grade_kcn_day(preds, {}, set(), final_retry=True, now_iso="x")
+    assert len(grades) == 1
+    assert grades[0]["game_id"] is None
+    assert grades[0]["status"] == "void" and grades[0]["void_reason"] == "postponed"
