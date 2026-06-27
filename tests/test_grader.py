@@ -100,3 +100,21 @@ def test_not_final_returns_none_unless_final_retry():
 
 def test_missing_outcome_returns_none():
     assert grader.grade_prediction(_pred("hits"), None, final_retry=False, now_iso="x") is None
+
+def test_grade_day_grades_present_skips_unsettled():
+    preds = [_pred("hits", player_id=1, game_id=100),
+             _pred("rbi",  player_id=1, game_id=100),
+             _pred("hits", player_id=2, game_id=200)]  # game 200 not final -> skipped
+    outcomes = {100: {"game_id": 100, "status": "final",
+                      "players": {1: {"bat": {"h":2,"tb":2,"hr":0,"r":0,"rbi":1}, "pit": None}}},
+                200: {"game_id": 200, "status": "live", "players": {}}}
+    grades = grader.grade_day(preds, outcomes, final_retry=False, now_iso="x")
+    assert len(grades) == 2  # two from game 100; game 200 unsettled, omitted
+    assert {g["prop"] for g in grades} == {"hits", "rbi"}
+
+def test_grade_day_one_grade_per_prediction():
+    # a prediction carries 3 weightings but produces exactly ONE grade
+    preds = [_pred("hits", player_id=1, game_id=100)]
+    outcomes = {100: {"game_id": 100, "status": "final",
+                      "players": {1: {"bat": {"h":1,"tb":1,"hr":0,"r":0,"rbi":0}, "pit": None}}}}
+    assert len(grader.grade_day(preds, outcomes, final_retry=False, now_iso="x")) == 1

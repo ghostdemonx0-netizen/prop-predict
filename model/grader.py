@@ -98,3 +98,16 @@ def grade_prediction(pred: dict, outcome: dict | None, *,
     rec["actual"] = actual
     rec["results"] = {label: actual >= n for n, label in _COUNT_PROPS[prop]}
     return rec
+
+
+def grade_day(predictions, outcomes_by_game, *, final_retry, now_iso):
+    """Grade every prediction for a date. `outcomes_by_game` maps game_id ->
+    GameOutcome (missing game_id -> None outcome -> unsettled). Returns the list
+    of grade records; unsettled predictions (None) are dropped."""
+    out: list[dict] = []
+    for pred in predictions:
+        outcome = outcomes_by_game.get(pred.get("game_id"))
+        g = grade_prediction(pred, outcome, final_retry=final_retry, now_iso=now_iso)
+        if g is not None:
+            out.append(g)
+    return out
