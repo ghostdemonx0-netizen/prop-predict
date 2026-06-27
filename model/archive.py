@@ -205,55 +205,42 @@ def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:
 def archive_records(
     board: dict[str, Any],
     now_iso: str,
-    *,
-    window_min: int = 40,
 ) -> list[dict[str, Any]]:
     """
-    Return archive records for every row whose game is "locking soon".
+    Return archive records for every row whose game has frozen (is in started_ids).
 
-    A game qualifies when:
-      - its game_id is NOT in board["started_ids"], AND
-      - its game_time is 0 ≤ minutes_until_start ≤ window_min from now_iso.
+    A row qualifies when its game_id is present in board["started_ids"].
+    Frozen rows are stable — capturing any time after lock yields the identical final
+    prediction.  The cross-call dedup in dedup_new / record_day ensures each game is
+    recorded exactly once regardless of how many times the recorder runs.
 
     Each returned record carries date (from board) and captured_at=now_iso.
     """
-    now     = _parse_iso(now_iso)
+    _parse_iso(now_iso)  # validate format; raises ValueError if malformed
+
     started = set(board.get("started_ids", []))
     date    = board.get("date")
-
-    # Determine qualifying game_ids from the games list
-    qualifying: set[Any] = set()
-    for game in board.get("games", []):
-        gid = game.get("game_id")
-        if gid is None or gid in started:          # I2: skip None game_ids
-            continue
-        gt_str = game.get("game_time")
-        if not gt_str:                             # I1: skip games with no game_time
-            continue
-        gt = _parse_iso(gt_str)
-        mins_until = (gt - now).total_seconds() / 60.0
-        if 0.0 <= mins_until <= window_min:
-            qualifying.add(gid)
-
-    if not qualifying:
-        return []
 
     # Prop list keys in the board (order doesn't matter for correctness)
     prop_list_keys = ("hr", "strikeouts", "hits", "total_bases", "runs", "rbi", "hrr")
 
-    seen: set[tuple[Any, Any, str]] = set()          # M3: intra-call dedup
+    seen: set[tuple[Any, Any, str]] = set()          # intra-call dedup
     records: list[dict[str, Any]] = []
     for prop_name in prop_list_keys:
         for row in board.get(prop_name, []):
-            if row.get("game_id") in qualifying:
-                key = (row.get("game_id"), row.get("player_id"), prop_name)
-                if key in seen:
-                    continue
-                seen.add(key)
-                rec = record_from_row(row, prop_name)
-                rec["date"]         = date
-                rec["captured_at"]  = now_iso
-                records.append(rec)
+            gid = row.get("game_id")
+            if gid is None:
+                continue                             # skip rows with no game_id
+            if gid not in started:
+                continue                             # skip non-frozen games
+            key = (gid, row.get("player_id"), prop_name)
+            if key in seen:
+                continue
+            seen.add(key)
+            rec = record_from_row(row, prop_name)
+            rec["date"]        = date
+            rec["captured_at"] = now_iso
+            records.append(rec)
 
     return records
 
@@ -266,8 +253,6 @@ def record_day(
     board_path: str,
     archive_path: str,
     now_iso: str,
-    *,
-    window_min: int = 40,
 ) -> int:
     """
     Load the board JSON from `board_path`, load any existing records from
@@ -291,7 +276,7 @@ def record_day(
         board: dict[str, Any] = json.load(fh)
 
     # 2. Compute candidates (pure, no I/O)
-    candidates = archive_records(board, now_iso, window_min=window_min)
+    candidates = archive_records(board, now_iso)
 
     # 3. Create parent dirs before acquiring the lock so the open() below works
     os.makedirs(os.path.dirname(os.path.abspath(archive_path)), exist_ok=True)

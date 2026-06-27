@@ -100,7 +100,9 @@ HR_ROW_STARTED = {**HR_ROW_SOON, "game_id": GAME_ID_STARTED, "game_time": GAME_T
 FAKE_BOARD = {
     "date": DATE,
     "updated": NOW_ISO,
-    "started_ids": [GAME_ID_STARTED],
+    # GAME_ID_SOON is the frozen (started) game — its rows are the final locked prediction.
+    # GAME_ID_FAR and GAME_ID_STARTED are live/unknown — NOT in started_ids → excluded.
+    "started_ids": [GAME_ID_SOON],
     "games": [
         {"game_id": GAME_ID_SOON,    "game_time": GAME_TIME_SOON,    "matchup": "AAA @ BBB"},
         {"game_id": GAME_ID_FAR,     "game_time": GAME_TIME_FAR,     "matchup": "CCC @ DDD"},
@@ -292,18 +294,21 @@ def test_runs_opp_pitcher():
 
 
 # ===========================================================================
-# archive_records — filtering
+# archive_records — filtering (at-lock / frozen-game rule)
 # ===========================================================================
 
-def test_archive_includes_soon_game():
+def test_archive_includes_frozen_game():
+    """A game whose game_id IS in started_ids (frozen) → its rows ARE emitted."""
     recs = archive_records(FAKE_BOARD, NOW_ISO)
     assert any(r["game_id"] == GAME_ID_SOON for r in recs)
 
-def test_archive_excludes_far_future_game():
+def test_archive_excludes_live_game():
+    """A game whose game_id is NOT in started_ids (still live) → rows are NOT emitted."""
     recs = archive_records(FAKE_BOARD, NOW_ISO)
     assert not any(r["game_id"] == GAME_ID_FAR for r in recs)
 
-def test_archive_excludes_started_game():
+def test_archive_excludes_non_frozen_game():
+    """GAME_ID_STARTED (1003) is not in started_ids in FAKE_BOARD → rows are excluded."""
     recs = archive_records(FAKE_BOARD, NOW_ISO)
     assert not any(r["game_id"] == GAME_ID_STARTED for r in recs)
 
@@ -322,23 +327,12 @@ def test_archive_stamps_captured_at_on_every_record():
     for rec in archive_records(FAKE_BOARD, NOW_ISO):
         assert rec["captured_at"] == NOW_ISO
 
-def test_archive_narrow_window_excludes_20min_game():
-    # 20-min game is excluded when window_min=10
-    recs = archive_records(FAKE_BOARD, NOW_ISO, window_min=10)
-    assert not any(r["game_id"] == GAME_ID_SOON for r in recs)
-
-def test_archive_window_exactly_at_edge_includes_game():
-    # window_min=20: game starting in exactly 20 min should be included (0 <= mins <= window)
-    recs = archive_records(FAKE_BOARD, NOW_ISO, window_min=20)
-    assert any(r["game_id"] == GAME_ID_SOON for r in recs)
-
-def test_archive_past_game_not_captured():
-    # A game whose game_time is BEFORE now_iso should not appear
-    past_board = {
+def test_archive_non_frozen_game_not_captured():
+    """A game NOT in started_ids is never captured, regardless of its game_time."""
+    board = {
         "date": DATE,
         "updated": NOW_ISO,
         "started_ids": [],
-        "games": [{"game_id": 9999, "game_time": "2026-06-26T19:30:00Z", "matchup": "X @ Y"}],
         "hr": [{
             "prop": "HR", "game_id": 9999, "game_time": "2026-06-26T19:30:00Z",
             "player_id": 1, "player": "Past Guy", "team": "X",
@@ -346,48 +340,45 @@ def test_archive_past_game_not_captured():
         }],
         "strikeouts": [], "hits": [], "total_bases": [], "runs": [], "rbi": [], "hrr": [],
     }
-    assert archive_records(past_board, NOW_ISO) == []
+    assert archive_records(board, NOW_ISO) == []
 
 def test_archive_empty_board_returns_empty():
     empty = {
         "date": DATE, "updated": NOW_ISO, "started_ids": [],
-        "games": [],
         "hr": [], "strikeouts": [], "hits": [], "total_bases": [], "runs": [], "rbi": [], "hrr": [],
     }
     assert archive_records(empty, NOW_ISO) == []
 
-def test_archive_record_count_matches_soon_rows():
-    # FAKE_BOARD has: 1 HR, 1 K, 1 runs row for the soon game → 3 records
+def test_archive_record_count_matches_frozen_rows():
+    """FAKE_BOARD has: 1 HR, 1 K, 1 runs row for the frozen game → 3 records."""
     recs = archive_records(FAKE_BOARD, NOW_ISO)
     assert len(recs) == 3
 
 
 # ===========================================================================
-# C1 — mixed-timezone crash in _parse_iso / archive_records
+# C1 — now_iso format validation (_parse_iso still called for the timestamp)
 # ===========================================================================
 
-def test_archive_now_without_z_game_time_with_z():
-    """C1: now_iso has no Z (naive parse) but game_time has Z (aware) — must not crash."""
+def test_archive_now_without_z_is_valid():
+    """C1: now_iso with no Z suffix is accepted; frozen game rows are returned."""
     board = {
         "date": DATE,
         "updated": NOW_ISO,
-        "started_ids": [],
-        "games": [{"game_id": 5001, "game_time": "2026-06-26T20:20:00Z"}],
+        "started_ids": [5001],   # game is frozen → rows qualify
         "hr": [{"game_id": 5001, "game_time": "2026-06-26T20:20:00Z",
                 "player_id": 1, "player": "X", "team": "A", "probability": 0.1}],
         "strikeouts": [], "hits": [], "total_bases": [], "runs": [], "rbi": [], "hrr": [],
     }
-    recs = archive_records(board, "2026-06-26T20:00:00")  # no Z → naive parse
+    recs = archive_records(board, "2026-06-26T20:00:00")  # no Z
     assert any(r["game_id"] == 5001 for r in recs)
 
 
-def test_archive_now_with_z_game_time_without_z():
-    """C1: now_iso has Z (aware) but game_time has no Z (naive parse) — must not crash."""
+def test_archive_now_with_z_is_valid():
+    """C1: now_iso with Z suffix is accepted; frozen game rows are returned."""
     board = {
         "date": DATE,
         "updated": NOW_ISO,
-        "started_ids": [],
-        "games": [{"game_id": 5002, "game_time": "2026-06-26T20:20:00"}],  # no Z
+        "started_ids": [5002],   # game is frozen → rows qualify
         "hr": [{"game_id": 5002, "game_time": "2026-06-26T20:20:00",
                 "player_id": 2, "player": "Y", "team": "B", "probability": 0.2}],
         "strikeouts": [], "hits": [], "total_bases": [], "runs": [], "rbi": [], "hrr": [],
@@ -430,16 +421,15 @@ def test_k_row_missing_over_prob_but_has_hist_does_not_crash():
 
 
 # ===========================================================================
-# I1 — KeyError on game missing game_time
+# I1 — game not in started_ids is not captured (no crash)
 # ===========================================================================
 
-def test_archive_game_missing_game_time_is_skipped():
-    """I1: A game stub with no game_time must not crash — it is simply skipped."""
+def test_archive_game_not_in_started_ids_is_skipped():
+    """I1: A game whose game_id is not in started_ids is simply not captured."""
     board = {
         "date": DATE,
         "updated": NOW_ISO,
-        "started_ids": [],
-        "games": [{"game_id": 6001}],  # no game_time key
+        "started_ids": [],          # game 6001 is not frozen
         "hr": [{"game_id": 6001, "player_id": 1, "player": "X", "team": "A",
                 "probability": 0.1}],
         "strikeouts": [], "hits": [], "total_bases": [], "runs": [], "rbi": [], "hrr": [],
@@ -449,16 +439,15 @@ def test_archive_game_missing_game_time_is_skipped():
 
 
 # ===========================================================================
-# I2 — None game_id mismatch
+# I2 — None game_id rows skipped (guard against malformed rows)
 # ===========================================================================
 
 def test_archive_game_id_none_rows_not_emitted():
-    """I2: A game with game_id=None + a row with no game_id → row is NOT emitted."""
+    """I2: A row with game_id=None is always skipped, even if None is in started_ids."""
     board = {
         "date": DATE,
         "updated": NOW_ISO,
-        "started_ids": [],
-        "games": [{"game_id": None, "game_time": GAME_TIME_SOON}],
+        "started_ids": [],          # none means no frozen games either
         "hr": [{"game_id": None, "player_id": 1, "player": "X", "team": "A",
                 "probability": 0.1}],
         "strikeouts": [], "hits": [], "total_bases": [], "runs": [], "rbi": [], "hrr": [],
@@ -488,8 +477,7 @@ def test_archive_dedup_duplicate_rows_same_game_player_prop():
     dup_board = {
         "date": DATE,
         "updated": NOW_ISO,
-        "started_ids": [],
-        "games": [{"game_id": GAME_ID_SOON, "game_time": GAME_TIME_SOON, "matchup": "AAA @ BBB"}],
+        "started_ids": [GAME_ID_SOON],  # game is frozen → rows qualify
         "hr": [HR_ROW_SOON, HR_ROW_SOON],  # duplicate
         "strikeouts": [], "hits": [], "total_bases": [], "runs": [], "rbi": [], "hrr": [],
     }
