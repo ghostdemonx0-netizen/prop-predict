@@ -347,3 +347,64 @@ def get_starters(game_id: int) -> dict[str, int | None]:
         pitchers = box.get(side, {}).get("pitchers", []) or []
         out[side] = int(pitchers[0]) if pitchers else None
     return out
+
+
+def _norm_status(raw: str) -> str:
+    s = (raw or "").lower()
+    if "final" in s or "completed" in s or "game over" in s:
+        return "final"
+    if "postpon" in s:
+        return "postponed"
+    if "suspend" in s:
+        return "suspended"
+    if "progress" in s or "live" in s or "delayed" in s or "warmup" in s:
+        return "live"
+    return "other"
+
+
+def _parse_boxscore(box: dict, status: str) -> dict:
+    """Pure: turn statsapi.boxscore_data + a status string into a GameOutcome
+    (without game_id). A batter with >0 plate appearances gets a `bat` dict; a
+    pitcher who faced batters gets a `pit` dict; otherwise the sub-dict is None.
+    A player absent from every side is simply not in `players` (== DNP)."""
+    players: dict[int, dict] = {}
+    for side in ("home", "away"):
+        for pdata in (box.get(side, {}) or {}).get("players", {}).values():
+            pid = pdata.get("personId")
+            if pid is None:
+                continue
+            stats = pdata.get("stats", {}) or {}
+            bat_s = stats.get("batting", {}) or {}
+            pit_s = stats.get("pitching", {}) or {}
+            bat = None
+            if int(bat_s.get("plateAppearances", 0) or 0) > 0:
+                bat = {
+                    "h":   int(bat_s.get("hits", 0) or 0),
+                    "tb":  int(bat_s.get("totalBases", 0) or 0),
+                    "hr":  int(bat_s.get("homeRuns", 0) or 0),
+                    "r":   int(bat_s.get("runs", 0) or 0),
+                    "rbi": int(bat_s.get("rbi", 0) or 0),
+                }
+            pit = None
+            if int(pit_s.get("battersFaced", 0) or 0) > 0:
+                pit = {"k": int(pit_s.get("strikeOuts", 0) or 0)}
+            players[int(pid)] = {"bat": bat, "pit": pit}
+    return {"status": _norm_status(status), "players": players}
+
+
+def game_boxscore(game_id: int) -> dict:
+    """Final outcome for one game: GameOutcome dict. Status from schedule(game_id),
+    player stats from boxscore_data(game_id). Network-tolerant: status 'other' +
+    empty players on failure (the grader then leaves predictions unsettled)."""
+    try:
+        sched = _with_retries(lambda: statsapi.schedule(game_id=game_id))
+        status = sched[0].get("status", "") if sched else ""
+    except Exception:
+        status = ""
+    try:
+        box = _with_retries(lambda: statsapi.boxscore_data(game_id))
+    except Exception:
+        return {"game_id": game_id, "status": _norm_status(status), "players": {}}
+    out = _parse_boxscore(box, status)
+    out["game_id"] = game_id
+    return out
