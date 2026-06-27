@@ -218,7 +218,7 @@ def archive_records(
     """
     _parse_iso(now_iso)  # validate format; raises ValueError if malformed
 
-    started = set(board.get("started_ids", []))
+    started = set(board.get("started_ids") or [])  # tolerate a null started_ids
     date    = board.get("date")
 
     # Prop list keys in the board (order doesn't matter for correctness)

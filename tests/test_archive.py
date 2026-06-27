@@ -447,13 +447,21 @@ def test_archive_game_id_none_rows_not_emitted():
     board = {
         "date": DATE,
         "updated": NOW_ISO,
-        "started_ids": [],          # none means no frozen games either
+        "started_ids": [None],      # even with None present, the game_id=None guard must fire first
         "hr": [{"game_id": None, "player_id": 1, "player": "X", "team": "A",
                 "probability": 0.1}],
         "strikeouts": [], "hits": [], "total_bases": [], "runs": [], "rbi": [], "hrr": [],
     }
     recs = archive_records(board, NOW_ISO)
     assert recs == []
+
+
+def test_archive_started_ids_null_does_not_crash():
+    """A board with started_ids explicitly null must not crash (set(None) guard)."""
+    board = {"date": DATE, "updated": NOW_ISO, "started_ids": None,
+             "hr": [], "strikeouts": [], "hits": [], "total_bases": [],
+             "runs": [], "rbi": [], "hrr": []}
+    assert archive_records(board, NOW_ISO) == []
 
 
 # ===========================================================================
