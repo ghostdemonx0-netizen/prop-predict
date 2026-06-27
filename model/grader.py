@@ -51,18 +51,35 @@ def _base(pred: dict, now_iso: str) -> dict:
 
 def grade_prediction(pred: dict, outcome: dict | None, *,
                      final_retry: bool, now_iso: str) -> dict | None:
-    """Grade one prediction. Returns a grade record, or None to mean
-    'unsettled — retry next run'. (Void/strikeouts added in Tasks 3-4.)"""
+    """Grade one prediction. Returns a grade record, or None (unsettled —
+    retry next run). Void cases: game not final (postponed/live/None) when
+    final_retry is False → None; when final_retry is True → void/postponed.
+    Final game with player absent or missing needed sub-dict → void/DNP.
+    Final game with player present → graded (strikeouts or count branch)."""
     prop = pred.get("prop")
     pid = pred.get("player_id")
-    players = (outcome or {}).get("players", {})
-    pstats = players.get(pid)
-    bat = (pstats or {}).get("bat")
     rec = _base(pred, now_iso)
+    status = (outcome or {}).get("status")
+
+    # No outcome fetched, or game not final yet:
+    if outcome is None or status != "final":
+        if final_retry:
+            rec["status"] = "void"
+            rec["void_reason"] = "postponed"
+            return rec
+        return None  # unsettled — retry next run
+
+    # Final game — locate the player; absence == DNP/scratch == void.
+    pstats = (outcome.get("players") or {}).get(pid)
+    needed = "pit" if prop == "strikeouts" else "bat"
+    if pstats is None or pstats.get(needed) is None:
+        rec["status"] = "void"
+        rec["void_reason"] = "DNP"
+        return rec
 
     # --- strikeouts: over/under a numeric line (pitcher) ---
     if prop == "strikeouts":
-        pit = (pstats or {}).get("pit")
+        pit = pstats["pit"]
         line = pred.get("factors", {}).get("line")
         actual_k = int(pit.get("k", 0))
         label = f"over {line:g}" if isinstance(line, float) else f"over {line}"
@@ -75,6 +92,7 @@ def grade_prediction(pred: dict, outcome: dict | None, *,
             rec["results"] = {label: actual_k > line}
         return rec
 
+    bat = pstats["bat"]
     actual = _count_actual(prop, bat)
     rec["status"] = "graded"
     rec["actual"] = actual

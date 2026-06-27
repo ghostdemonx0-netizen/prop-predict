@@ -82,3 +82,21 @@ def test_grade_strikeouts_over_under_push():
     push = grader.grade_prediction(_pred("strikeouts", player_id=67890, line=6),
              _outcome(pit={"k": 6}, player_id=67890), final_retry=False, now_iso="x")
     assert push["push"] is True and push["results"] == {"over 6": None}
+
+def test_void_when_player_absent_in_final_game():
+    g = grader.grade_prediction(_pred("hits"),
+            {"game_id": 776543, "status": "final", "players": {}},  # player not in box
+            final_retry=False, now_iso="x")
+    assert g["status"] == "void" and g["void_reason"] == "DNP"
+    assert "actual" not in g
+
+def test_not_final_returns_none_unless_final_retry():
+    pred = _pred("hits")
+    live = {"game_id": 776543, "status": "live", "players": {}}
+    assert grader.grade_prediction(pred, live, final_retry=False, now_iso="x") is None
+    # on the date's last in-window run, an unfinished game settles to void
+    g = grader.grade_prediction(pred, live, final_retry=True, now_iso="x")
+    assert g["status"] == "void" and g["void_reason"] == "postponed"
+
+def test_missing_outcome_returns_none():
+    assert grader.grade_prediction(_pred("hits"), None, final_retry=False, now_iso="x") is None
