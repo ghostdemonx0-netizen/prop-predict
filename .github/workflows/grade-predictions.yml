@@ -1,0 +1,72 @@
+name: grade-predictions
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Scores archived predictions against real box scores. DAILY, over a trailing
+# 3-day window. Triggered by cron-job.org (reliable); GitHub schedule is a loose
+# backup only (idempotent, so a double fire is harmless).
+#
+# ENABLE: merge to main, then add a once-daily cron-job.org entry that POSTs the
+# workflow_dispatch for grade-predictions.yml.
+#
+# PRIVACY: reads + writes ONLY archive/*.jsonl on the predictions-archive branch.
+# Never touches web/public/data or any live-site path.
+# ──────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "30 11 * * *"   # ~backup; cron-job.org is the real trigger
+
+concurrency:
+  group: grade-predictions
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Grade the trailing 3-day window
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git fetch origin predictions-archive --depth=1
+          base_sha=$(git rev-parse origin/predictions-archive)
+          now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          today=$(date -u +%F)
+          workdir=$(mktemp -d)
+
+          changed=0
+          for back in 0 1 2; do
+            d=$(date -u -d "$today -$back day" +%F 2>/dev/null || date -u -v-"${back}"d +%F)
+            if ! git show "origin/predictions-archive:archive/${d}.jsonl" > "$workdir/${d}.jsonl" 2>/dev/null; then
+              continue   # no predictions for that date
+            fi
+            python -m model.grader "$workdir/${d}.jsonl" "$workdir/${d}.grades.jsonl" "$d" "$now"
+            [ -s "$workdir/${d}.grades.jsonl" ] && changed=1 || true
+          done
+
+          if [ "$changed" = "0" ]; then
+            echo "No grades produced this run."; exit 0
+          fi
+
+          # Commit the grades files onto predictions-archive (normal push, never force).
+          git checkout -b grade-push "$base_sha"
+          mkdir -p archive
+          cp "$workdir"/*.grades.jsonl archive/ 2>/dev/null || true
+          git config user.email "archive-bot@users.noreply.github.com"
+          git config user.name "archive-bot"
+          git add archive/*.grades.jsonl
+          git commit -m "grades @ ${now}"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" grade-push:predictions-archive
