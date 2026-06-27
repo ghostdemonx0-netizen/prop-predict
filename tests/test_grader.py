@@ -264,3 +264,32 @@ def test_grade_kcn_day_iterates_strikeouts_preds():
     grades = grader.grade_kcn_day(preds, pbp_by_game, {776}, final_retry=False, now_iso="x")
     assert len(grades) == 1
     assert grades[0]["actual_lean"] == "H" and grades[0]["hit"] == 1
+
+
+# ---------------------------------------------------------------------------
+# KCN file I/O (B3)
+# ---------------------------------------------------------------------------
+
+def test_grade_kcn_file_writes_and_overwrites(tmp_path):
+    import json
+    from model import grader
+    preds = tmp_path / "2026-06-27.jsonl"
+    out = tmp_path / "2026-06-27.kcn-grades.jsonl"
+    preds.write_text(json.dumps({
+        "date": "2026-06-27", "game_id": 776, "player_id": 99, "prop": "strikeouts",
+        "kcn": [{"player_id": 11, "k_prob": 0.3, "c_prob": 0.2, "lean": "K"}],
+    }) + "\n")
+    pbp = {776: [{"batter_id": 11, "pitcher_id": 99, "kind": "k"}]}
+    status = {776: "final"}
+    n = grader.grade_kcn_file(str(preds), str(out), "2026-06-27", "2026-06-28T13:00:00Z",
+                              pbp_fn=lambda g: pbp.get(g, []),
+                              status_fn=lambda g: status.get(g, "other"), window_days=3)
+    assert n == 1
+    rows = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
+    assert rows[0]["actual_lean"] == "K" and rows[0]["k"] == 1
+    # idempotent overwrite
+    grader.grade_kcn_file(str(preds), str(out), "2026-06-27", "2026-06-28T13:00:00Z",
+                          pbp_fn=lambda g: pbp.get(g, []),
+                          status_fn=lambda g: status.get(g, "other"))
+    rows2 = [l for l in out.read_text().splitlines() if l.strip()]
+    assert len(rows2) == 1

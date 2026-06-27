@@ -228,6 +228,36 @@ def grade_kcn_day(predictions, pbp_by_game, final_games, *, final_retry, now_iso
     return out
 
 
+def grade_kcn_file(predictions_path, kcn_grades_path, slate_date, now_iso, *,
+                   pbp_fn=None, status_fn=None, window_days: int = 3) -> int:
+    """Grade KCN matchups for one date, OVERWRITE the kcn-grades JSONL, return count."""
+    pbp_fn = pbp_fn or _fetch.game_pbp
+    if status_fn is None:
+        def status_fn(g):
+            return _fetch.game_boxscore(g).get("status", "other")
+    preds = _read_jsonl(predictions_path)
+    if not preds:
+        return 0
+    try:
+        now_d = datetime.fromisoformat(now_iso.replace("Z", "+00:00")).date()
+    except (ValueError, AttributeError):
+        final_retry = False
+    else:
+        final_retry = (now_d - _date.fromisoformat(slate_date)).days >= (window_days - 1)
+
+    game_ids = {p.get("game_id") for p in preds
+                if p.get("prop") == "strikeouts" and p.get("kcn") and p.get("game_id") is not None}
+    pbp_by_game = {g: pbp_fn(g) for g in game_ids}
+    final_games = {g for g in game_ids if status_fn(g) == "final"}
+
+    grades = grade_kcn_day(preds, pbp_by_game, final_games,
+                           final_retry=final_retry, now_iso=now_iso)
+    with open(kcn_grades_path, "w", encoding="utf-8") as fh:
+        for g in grades:
+            fh.write(json.dumps(g, separators=(",", ":")) + "\n")
+    return len(grades)
+
+
 if __name__ == "__main__":
     def _main() -> None:
         args = sys.argv[1:]
@@ -236,5 +266,12 @@ if __name__ == "__main__":
                   "<slate_date YYYY-MM-DD> [now_iso]", file=sys.stderr)
             sys.exit(1)
         now = args[3] if len(args) >= 4 else datetime.now(tz=timezone.utc).isoformat()
-        print(grade_file(args[0], args[1], args[2], now))
+        prop_out = args[1]
+        grade_file(args[0], prop_out, args[2], now)
+        if prop_out.endswith(".grades.jsonl"):
+            kcn_out = prop_out[:-len(".grades.jsonl")] + ".kcn-grades.jsonl"
+        else:
+            kcn_out = prop_out + ".kcn-grades.jsonl"
+        grade_kcn_file(args[0], kcn_out, args[2], now)
+        print(f"{prop_out}; {kcn_out}")
     _main()

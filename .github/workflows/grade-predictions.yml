@@ -64,10 +64,10 @@ jobs:
           # Commit the grades files onto predictions-archive (normal push, never force).
           git checkout -b grade-push "$base_sha"
           mkdir -p archive
-          cp "$workdir"/*.grades.jsonl archive/ 2>/dev/null || true
+          cp "$workdir"/*.grades.jsonl "$workdir"/*.kcn-grades.jsonl archive/ 2>/dev/null || true
           git config user.email "archive-bot@users.noreply.github.com"
           git config user.name "archive-bot"
-          git add archive/*.grades.jsonl
+          git add archive/*.grades.jsonl archive/*.kcn-grades.jsonl
           git diff --cached --quiet && { echo "Grades unchanged, nothing to push."; exit 0; }
           git commit -m "grades @ ${now}"
           git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" grade-push:predictions-archive
