@@ -60,3 +60,12 @@ jobs:
           git add web/public/data
           git commit -q -m "board snapshot $(date -u +%FT%TZ)"
           git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:board-data
+
+  # Snapshot every just-frozen game's predictions into the private
+  # predictions-archive branch. Runs AFTER refresh fully finishes (needs:),
+  # so the board is already published + deployed — an archive hiccup can never
+  # hold up the live site. Rides board-refresh's cron (one cadence dial).
+  archive:
+    needs: refresh
+    uses: ./.github/workflows/archive-predictions.yml
+    secrets: inherit

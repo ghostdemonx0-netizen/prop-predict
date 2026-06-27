@@ -12,9 +12,11 @@ name: archive-predictions
 #   git push -u origin predictions-archive && \
 #   git checkout -
 #
-# DORMANT UNTIL MERGED: GitHub only fires scheduled workflows from the default
-# branch (main). This file is safe to commit now — it won't trigger until you
-# deliberately merge it to main AND run the seed command above.
+# HOW IT RUNS: chained off board-refresh. The refresh-board workflow CALLS this
+# one as a follow-on job (workflow_call) right after it publishes the board, so
+# the archive always reads a freshly-published board and rides the SAME cron
+# cadence as board-refresh (one dial — trim board-refresh, this trims with it).
+# workflow_dispatch is kept for manual one-off runs/testing.
 #
 # PRIVACY GUARANTEE: this workflow NEVER writes to web/public/data or any path
 # the live site serves. It reads board-data (read-only) and appends ONLY to
@@ -22,10 +24,8 @@ name: archive-predictions
 # ──────────────────────────────────────────────────────────────────────────────
 
 on:
-  schedule:
-    # Every 30 min, offset a few minutes so board-refresh has had time to publish.
-    - cron: "8,38 * * * *"
-  workflow_dispatch: {}
+  workflow_call: {}     # called by refresh-board as its last job
+  workflow_dispatch: {} # manual one-off runs
 
 concurrency:
   group: archive-predictions
