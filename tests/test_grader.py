@@ -69,3 +69,16 @@ def test_grade_total_bases_and_hrr():
             _outcome(bat={"h": 1, "tb": 1, "hr": 0, "r": 1, "rbi": 1}),  # 1+1+1 = 3
             final_retry=False, now_iso="x")
     assert hrr["actual"] == 3 and hrr["results"] == {"2+": True, "3+": True, "4+": False}
+
+def test_grade_strikeouts_over_under_push():
+    over = grader.grade_prediction(_pred("strikeouts", player_id=67890, line=6.5),
+             _outcome(pit={"k": 7}, player_id=67890), final_retry=False, now_iso="x")
+    assert over["actual"] == 7 and over["results"] == {"over 6.5": True}
+
+    under = grader.grade_prediction(_pred("strikeouts", player_id=67890, line=6.5),
+             _outcome(pit={"k": 5}, player_id=67890), final_retry=False, now_iso="x")
+    assert under["results"] == {"over 6.5": False}
+
+    push = grader.grade_prediction(_pred("strikeouts", player_id=67890, line=6),
+             _outcome(pit={"k": 6}, player_id=67890), final_retry=False, now_iso="x")
+    assert push["push"] is True and push["results"] == {"over 6": None}

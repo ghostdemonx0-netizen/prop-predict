@@ -59,6 +59,22 @@ def grade_prediction(pred: dict, outcome: dict | None, *,
     pstats = players.get(pid)
     bat = (pstats or {}).get("bat")
     rec = _base(pred, now_iso)
+
+    # --- strikeouts: over/under a numeric line (pitcher) ---
+    if prop == "strikeouts":
+        pit = (pstats or {}).get("pit")
+        line = pred.get("factors", {}).get("line")
+        actual_k = int(pit.get("k", 0))
+        label = f"over {line:g}" if isinstance(line, float) else f"over {line}"
+        rec["status"] = "graded"
+        rec["actual"] = actual_k
+        if float(line) == int(line) and actual_k == int(line):
+            rec["push"] = True
+            rec["results"] = {label: None}
+        else:
+            rec["results"] = {label: actual_k > line}
+        return rec
+
     actual = _count_actual(prop, bat)
     rec["status"] = "graded"
     rec["actual"] = actual
