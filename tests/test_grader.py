@@ -1,5 +1,9 @@
 # tests/test_grader.py
+import json
+from pathlib import Path
+
 from model import fetch
+from model import grader
 
 _SAMPLE_BOX = {
     "home": {
@@ -38,8 +42,6 @@ def test_parse_boxscore_dnp_player_absent():
 def test_parse_boxscore_status_normalization():
     assert fetch._parse_boxscore({"home": {"players": {}}, "away": {"players": {}}}, "Postponed")["status"] == "postponed"
     assert fetch._parse_boxscore({"home": {"players": {}}, "away": {"players": {}}}, "In Progress")["status"] == "live"
-
-from model import grader
 
 def _pred(prop, player_id=12345, game_id=776543, line=None):
     p = {"date": "2026-06-27", "game_id": game_id, "player_id": player_id,
@@ -89,6 +91,7 @@ def test_void_when_player_absent_in_final_game():
             final_retry=False, now_iso="x")
     assert g["status"] == "void" and g["void_reason"] == "DNP"
     assert "actual" not in g
+    assert "results" not in g
 
 def test_not_final_returns_none_unless_final_retry():
     pred = _pred("hits")
@@ -119,9 +122,6 @@ def test_grade_day_one_grade_per_prediction():
                       "players": {1: {"bat": {"h":1,"tb":1,"hr":0,"r":0,"rbi":0}, "pit": None}}}}
     assert len(grader.grade_day(preds, outcomes, final_retry=False, now_iso="x")) == 1
 
-
-import json
-from pathlib import Path
 
 def test_grade_file_reads_predictions_writes_grades(tmp_path):
     preds_path = tmp_path / "2026-06-27.jsonl"
@@ -164,3 +164,34 @@ def test_grade_file_final_retry_at_window_edge(tmp_path):
                       "2026-06-26T13:00:00Z", fetch_fn=f, window_days=3)
     rows = [json.loads(l) for l in grades_path.read_text().splitlines() if l.strip()]
     assert rows[0]["status"] == "void" and rows[0]["void_reason"] == "postponed"
+
+
+# ---------------------------------------------------------------------------
+# FIX 1: strikeouts missing line voids instead of crashing
+# ---------------------------------------------------------------------------
+
+def test_strikeouts_missing_line_voids():
+    # prediction has no factors.line — must not raise, must void with no_line
+    pred = _pred("strikeouts", player_id=67890)  # no line= arg
+    outcome = _outcome(pit={"k": 7}, player_id=67890)
+    g = grader.grade_prediction(pred, outcome, final_retry=False, now_iso="x")
+    assert g["status"] == "void"
+    assert g["void_reason"] == "no_line"
+    assert "results" not in g
+
+
+# ---------------------------------------------------------------------------
+# FIX 5: minor coverage tests
+# ---------------------------------------------------------------------------
+
+def test_norm_status_none():
+    assert fetch._norm_status(None) == "other"
+
+
+def test_strikeouts_integer_line_over_no_push():
+    # line=6 (int), k=8 -> over, no push
+    g = grader.grade_prediction(_pred("strikeouts", player_id=67890, line=6),
+            _outcome(pit={"k": 8}, player_id=67890), final_retry=False, now_iso="x")
+    assert g["status"] == "graded"
+    assert g["results"] == {"over 6": True}
+    assert "push" not in g

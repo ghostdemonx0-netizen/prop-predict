@@ -9,8 +9,6 @@ import json
 import sys
 from datetime import date as _date
 from datetime import datetime, timezone
-from typing import Any
-
 from model import fetch as _fetch
 
 # prop -> list of (threshold_int, label) for the count-prop family.
@@ -84,8 +82,12 @@ def grade_prediction(pred: dict, outcome: dict | None, *,
     if prop == "strikeouts":
         pit = pstats["pit"]
         line = pred.get("factors", {}).get("line")
+        if line is None:
+            rec["status"] = "void"
+            rec["void_reason"] = "no_line"
+            return rec
         actual_k = int(pit.get("k", 0))
-        label = f"over {line:g}" if isinstance(line, float) else f"over {line}"
+        label = f"over {line}"
         rec["status"] = "graded"
         rec["actual"] = actual_k
         if float(line) == int(line) and actual_k == int(line):
@@ -103,7 +105,7 @@ def grade_prediction(pred: dict, outcome: dict | None, *,
     return rec
 
 
-def grade_day(predictions, outcomes_by_game, *, final_retry, now_iso):
+def grade_day(predictions, outcomes_by_game, *, final_retry, now_iso) -> list[dict]:
     """Grade every prediction for a date. `outcomes_by_game` maps game_id ->
     GameOutcome (missing game_id -> None outcome -> unsettled). Returns the list
     of grade records; unsettled predictions (None) are dropped."""
@@ -144,10 +146,11 @@ def grade_file(predictions_path, grades_path, slate_date, now_iso, *,
         return 0
     try:
         now_d = datetime.fromisoformat(now_iso.replace("Z", "+00:00")).date()
-        slate_d = _date.fromisoformat(slate_date)
-        final_retry = (now_d - slate_d).days >= (window_days - 1)
     except (ValueError, AttributeError):
         final_retry = False
+    else:
+        slate_d = _date.fromisoformat(slate_date)
+        final_retry = (now_d - slate_d).days >= (window_days - 1)
 
     game_ids = {p.get("game_id") for p in preds if p.get("game_id") is not None}
     outcomes = {gid: fetch_fn(gid) for gid in game_ids}
