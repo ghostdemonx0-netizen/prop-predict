@@ -408,3 +408,34 @@ def game_boxscore(game_id: int) -> dict:
     out = _parse_boxscore(box, status)
     out["game_id"] = game_id
     return out
+
+
+_PBP_K_EVENTS   = {"strikeout", "strikeout_double_play"}
+_PBP_HIT_EVENTS = {"single", "double", "triple", "home_run"}
+
+
+def _parse_pbp(data: dict) -> list[dict]:
+    """Pure: statsapi game_playByPlay -> [{batter_id, pitcher_id, kind}] for
+    COMPLETED plate appearances. kind: 'k' | 'hit' | 'other'."""
+    out: list[dict] = []
+    for play in data.get("allPlays", []) or []:
+        if not (play.get("about", {}) or {}).get("isComplete"):
+            continue
+        mu = play.get("matchup", {}) or {}
+        bid = (mu.get("batter") or {}).get("id")
+        pid = (mu.get("pitcher") or {}).get("id")
+        if bid is None or pid is None:
+            continue
+        et = ((play.get("result") or {}).get("eventType") or "").lower()
+        kind = "k" if et in _PBP_K_EVENTS else ("hit" if et in _PBP_HIT_EVENTS else "other")
+        out.append({"batter_id": int(bid), "pitcher_id": int(pid), "kind": kind})
+    return out
+
+
+def game_pbp(game_id: int) -> list[dict]:
+    """Plate-appearance list for one game (network-tolerant: [] on failure)."""
+    try:
+        data = _with_retries(lambda: statsapi.get("game_playByPlay", {"gamePk": game_id}))
+    except Exception:
+        return []
+    return _parse_pbp(data)

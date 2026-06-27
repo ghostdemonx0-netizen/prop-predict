@@ -195,3 +195,23 @@ def test_strikeouts_integer_line_over_no_push():
     assert g["status"] == "graded"
     assert g["results"] == {"over 6": True}
     assert "push" not in g
+
+
+def test_parse_pbp_classifies_k_hit_other():
+    from model import fetch
+    data = {"allPlays": [
+        {"about": {"isComplete": True}, "matchup": {"batter": {"id": 11}, "pitcher": {"id": 99}},
+         "result": {"eventType": "strikeout"}},
+        {"about": {"isComplete": True}, "matchup": {"batter": {"id": 11}, "pitcher": {"id": 99}},
+         "result": {"eventType": "single"}},
+        {"about": {"isComplete": True}, "matchup": {"batter": {"id": 12}, "pitcher": {"id": 99}},
+         "result": {"eventType": "walk"}},
+        {"about": {"isComplete": False}, "matchup": {"batter": {"id": 13}, "pitcher": {"id": 99}},
+         "result": {"eventType": "single"}},  # incomplete -> skipped
+    ]}
+    out = fetch._parse_pbp(data)
+    assert out == [
+        {"batter_id": 11, "pitcher_id": 99, "kind": "k"},
+        {"batter_id": 11, "pitcher_id": 99, "kind": "hit"},
+        {"batter_id": 12, "pitcher_id": 99, "kind": "other"},
+    ]
