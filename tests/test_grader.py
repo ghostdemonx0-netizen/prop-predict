@@ -38,3 +38,34 @@ def test_parse_boxscore_dnp_player_absent():
 def test_parse_boxscore_status_normalization():
     assert fetch._parse_boxscore({"home": {"players": {}}, "away": {"players": {}}}, "Postponed")["status"] == "postponed"
     assert fetch._parse_boxscore({"home": {"players": {}}, "away": {"players": {}}}, "In Progress")["status"] == "live"
+
+from model import grader
+
+def _pred(prop, player_id=12345, game_id=776543, line=None):
+    p = {"date": "2026-06-27", "game_id": game_id, "player_id": player_id,
+         "player": "Aaron Judge", "team": "NYY", "prop": prop, "probs": {}, "factors": {}}
+    if line is not None:
+        p["factors"]["line"] = line
+    return p
+
+def _outcome(bat=None, pit=None, player_id=12345, status="final", game_id=776543):
+    return {"game_id": game_id, "status": status,
+            "players": {player_id: {"bat": bat, "pit": pit}}}
+
+def test_grade_hits_all_thresholds():
+    g = grader.grade_prediction(_pred("hits"),
+            _outcome(bat={"h": 2, "tb": 4, "hr": 1, "r": 1, "rbi": 1}),
+            final_retry=False, now_iso="2026-06-28T13:00:00Z")
+    assert g["status"] == "graded"
+    assert g["actual"] == 2
+    assert g["results"] == {"1+": True, "2+": True, "3+": False}
+
+def test_grade_total_bases_and_hrr():
+    tb = grader.grade_prediction(_pred("total_bases"),
+            _outcome(bat={"h": 1, "tb": 4, "hr": 1, "r": 1, "rbi": 1}),
+            final_retry=False, now_iso="x")
+    assert tb["actual"] == 4 and tb["results"] == {"2+": True, "3+": True, "4+": True}
+    hrr = grader.grade_prediction(_pred("hrr"),
+            _outcome(bat={"h": 1, "tb": 1, "hr": 0, "r": 1, "rbi": 1}),  # 1+1+1 = 3
+            final_retry=False, now_iso="x")
+    assert hrr["actual"] == 3 and hrr["results"] == {"2+": True, "3+": True, "4+": False}
