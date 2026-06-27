@@ -32,7 +32,7 @@
 
 # PHASE A — Recorder (branch `feat/kcn-recorder` off `main`)
 
-### Task A1: Capture KCN on strikeouts records
+### Task 1: [Phase A] Capture KCN on strikeouts records
 
 **Files:**
 - Modify: `model/archive.py` (in `record_from_row`, strikeouts branch)
@@ -103,7 +103,7 @@ git commit -m "feat(archive): capture KCN (k_prob/c_prob/lean) on strikeouts rec
 
 ---
 
-### Task A2: Split park/weather for Hits/TB (capture-only)
+### Task 2: [Phase A] Split park/weather for Hits/TB (capture-only)
 
 **Files:**
 - Modify: `model/pipeline.py` (`_threshold_rows`, the TB park/weather block ~300–332)
@@ -192,7 +192,7 @@ git commit -m "feat(pipeline): record park_factor + weather_factor for Hits/TB, 
 
 # PHASE B — Grader (branch `feat/predictions-grader`, rebased on updated `main`)
 
-### Task B1: Play-by-play fetch (`_parse_pbp` + `game_pbp`)
+### Task 3: [Phase B] Play-by-play fetch (`_parse_pbp` + `game_pbp`)
 
 **Files:**
 - Modify: `model/fetch.py` (append)
@@ -277,7 +277,7 @@ git commit -m "feat(grader): play-by-play fetch + parse (B1)"
 
 ---
 
-### Task B2: KCN matchup grading core
+### Task 4: [Phase B] KCN matchup grading core
 
 **Files:**
 - Modify: `model/grader.py`
@@ -422,7 +422,7 @@ git commit -m "feat(grader): KCN matchup grading core — tally + grade_kcn_day 
 
 ---
 
-### Task B3: KCN file I/O + CLI + workflow wiring
+### Task 5: [Phase B] KCN file I/O + CLI + workflow wiring
 
 **Files:**
 - Modify: `model/grader.py` (add `grade_kcn_file`; CLI writes both files)
