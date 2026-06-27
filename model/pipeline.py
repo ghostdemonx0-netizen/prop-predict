@@ -298,6 +298,8 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                 pitcher_factor = (actual_ev / neutral_ev) if neutral_ev > 0 else 1.0
 
                 park_weather_factor = 1.0
+                park_factor = 1.0
+                weather_factor = 1.0
                 if units == "bases":
                     nenv_vec, _ = _batter_outcome_vector(
                         b, opp, 1.0, 1.0, slot, bvp,
@@ -306,6 +308,19 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     )
                     nenv_ev = nenv_vec[1] + 2 * nenv_vec[2] + 3 * nenv_vec[3] + 4 * nenv_vec[4]
                     park_weather_factor = (actual_ev / nenv_ev) if nenv_ev > 0 else 1.0
+                    # split: park-only (weather neutral) and weather-only (park neutral)
+                    pk_vec, _ = _batter_outcome_vector(
+                        b, opp, eff_park, 1.0, slot, bvp,
+                        apply_xbh_park=True, park_1b=p1f, park_2b=p2f, park_3b=p3f,
+                    )
+                    pk_ev = pk_vec[1] + 2 * pk_vec[2] + 3 * pk_vec[3] + 4 * pk_vec[4]
+                    park_factor = (pk_ev / nenv_ev) if nenv_ev > 0 else 1.0
+                    wx_vec, _ = _batter_outcome_vector(
+                        b, opp, 1.0, weather_mult, slot, bvp,
+                        apply_xbh_park=True, park_1b=1.0, park_2b=1.0, park_3b=1.0,
+                    )
+                    wx_ev = wx_vec[1] + 2 * wx_vec[2] + 3 * wx_vec[3] + 4 * wx_vec[4]
+                    weather_factor = (wx_ev / nenv_ev) if nenv_ev > 0 else 1.0
 
                 epa = expected_pa_for_slot(slot)
                 vs = None
@@ -326,6 +341,8 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     "recent_form_mult": b.get("recent_form_mult", 1.0),
                     "pitcher_factor": pitcher_factor,
                     "park_weather_factor": park_weather_factor,
+                    "park_factor": park_factor,
+                    "weather_factor": weather_factor,
                     "vs": vs,
                     "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
                     "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],

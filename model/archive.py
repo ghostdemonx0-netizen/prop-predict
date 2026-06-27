@@ -58,6 +58,8 @@ _FACTOR_KEYS: tuple[str, ...] = (
     "pitcher_factor_hist",
     "park_weather_factor",
     "park_weather_factor_hist",
+    "park_factor",
+    "weather_factor",
     "recent_form_mult_hist",
     "hard_hit_form",
     "hard_hit_form_hist",

@@ -128,3 +128,52 @@ def test_hrr_uses_hrr_park_factor_runs_uses_run_park_factor_col():
     assert hrr_row["park_weather_factor"] != runs_row["park_weather_factor"], (
         "HRR and Runs park_weather_factor should differ for COL"
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 2 (Phase A): split park_factor / weather_factor for TB rows
+# ---------------------------------------------------------------------------
+
+# Pinned baseline from current code (pre-implementation); must NOT change post-implementation.
+_PINNED_TB_P_GE2 = 0.39634350464612905
+_PINNED_TB_P_GE3 = 0.23083415252074782
+_PINNED_TB_P_GE4 = 0.15761146289006178
+
+
+def _bat_tb(pid):
+    """TB batter fixture with season hit/XBH components needed by _batter_outcome_vector."""
+    return {
+        "player_id": pid, "name": str(pid), "team": "AAA", "bats": "R",
+        "season_pa": 400, "season_1b": 55, "season_2b": 20, "season_3b": 2, "season_hr": 10,
+        "hit_rate": 0.25, "k_rate": 0.22,
+        "recent_form_mult": 1.0,
+        "lineup_status": "confirmed",
+    }
+
+
+_SLATE_TB = [{"game_id": 10, "home": "AAA", "away": "BBB", "park_team": "AAA",
+               "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+
+
+def _build_tb_rows_for_test():
+    from model.pipeline import build_total_bases_rows
+    batter = _bat_tb(99)
+    def lineups_fn(g):
+        return {"home": [batter], "away": []}
+    return build_total_bases_rows(_SLATE_TB, lineups_fn, lambda p: _pit(p), _W)
+
+
+def test_tb_rows_split_park_and_weather_without_changing_probs():
+    """park_factor and weather_factor are captured; projections p_ge2/3/4 are unchanged."""
+    rows = _build_tb_rows_for_test()
+    r = rows[0]
+    # New fields exist and are sane multipliers
+    assert "park_factor" in r and "weather_factor" in r
+    assert 0.5 < r["park_factor"] < 2.0
+    assert 0.5 < r["weather_factor"] < 2.0
+    # Split is consistent with the combined factor (within rounding)
+    assert abs(r["park_factor"] * r["weather_factor"] - r["park_weather_factor"]) < 0.05
+    # PROJECTIONS UNCHANGED: pin the p_ge values to the pre-change output
+    assert r["p_ge2"] == _PINNED_TB_P_GE2
+    assert r["p_ge3"] == _PINNED_TB_P_GE3
+    assert r["p_ge4"] == _PINNED_TB_P_GE4
