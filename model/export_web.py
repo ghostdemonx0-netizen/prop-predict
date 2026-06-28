@@ -115,11 +115,19 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
         prof["lineup_status"] = status
         return prof
 
+    def _started_set(pid: int):
+        """True-start game_pks for this pitcher-season; None if unavailable (-> all appearances)."""
+        gl = get_or_compute(f"pit-gamelog-{pid}-{season}", lambda: fetch.pitcher_gamelog(pid, season))
+        if not gl or not isinstance(gl, list) or "started" not in (gl[0] or {}):
+            return None
+        return {g["game_pk"] for g in gl if g.get("started") and g.get("game_pk") is not None}
+
     def pitcher_fn(pid: int) -> dict:
         m = meta.get(pid, {})
         events = get_or_compute(f"pit-events-{pid}-{season}", lambda: fetch.pitcher_events(pid, season))
         prof = profiles.pitcher_profile_from_events(
-            events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)), throws=m.get("throws", "R"))
+            events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)),
+            throws=m.get("throws", "R"), started_game_pks=_started_set(pid))
         prof["pitcher_status"] = pitcher_status.get(pid, "confirmed")
         return prof
 
@@ -160,7 +168,8 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
         m = meta.get(pid, {})
         prof = profiles.blended_pitcher_profile(_events_by_season(pid, "pit"), as_of=as_of,
                                                 current_season=season, player_id=pid,
-                                                name=m.get("name", str(pid)), throws=m.get("throws", "R"))
+                                                name=m.get("name", str(pid)), throws=m.get("throws", "R"),
+                                                started_game_pks=_started_set(pid))
         prof["pitcher_status"] = pitcher_status.get(pid, "confirmed")
         return prof
 
