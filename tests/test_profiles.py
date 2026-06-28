@@ -256,7 +256,7 @@ def test_with_gamelog_recent_window_no_current_season():
 from model import profiles as _profiles
 
 
-def _ev(gp, n_bf, n_k):
+def _pit_ev(gp, n_bf, n_k):
     return [{"game_date": "2026-05-01",
              "events": "strikeout" if i < n_k else "field_out", "game_pk": gp}
             for i in range(n_bf)]
@@ -265,9 +265,9 @@ def _ev(gp, n_bf, n_k):
 def _swingman_events():
     ev = []
     for gp in (1, 2, 3):       # 3 true starts: 20 BF, 6 K each
-        ev += _ev(gp, 20, 6)
+        ev += _pit_ev(gp, 20, 6)
     for gp in (4, 5):          # 2 relief outings: 3 BF, 1 K each
-        ev += _ev(gp, 3, 1)
+        ev += _pit_ev(gp, 3, 1)
     return ev
 
 
@@ -286,7 +286,7 @@ def test_pitcher_profile_none_is_all_appearances():
 
 def test_pitcher_profile_under_two_starts_falls_back():
     prof = _profiles.pitcher_profile_from_events(
-        _ev(1, 3, 1), as_of="2026-06-01", player_id=1, started_game_pks={1})
+        _pit_ev(1, 3, 1), as_of="2026-06-01", player_id=1, started_game_pks={1})
     assert prof["k_line"] == 4.5
     assert prof["expected_bf"] == 24.0
 
