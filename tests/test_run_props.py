@@ -143,3 +143,19 @@ def test_expected_count_applies_lineup_mult():
     assert rp.expected_count(0.50) == 0.50
     assert abs(rp.expected_count(0.50, lineup_mult=1.10) - 0.55) < 1e-9
     assert rp.expected_count(0.50, pitcher_mult=1.2) == rp.expected_count(0.50, pitcher_mult=1.2, lineup_mult=1.0)
+
+
+# --- HRR negative-binomial tail ---
+
+def test_ge_probs_default_is_poisson_unchanged():
+    from model.projections import poisson_over_prob
+    out = rp.ge_probs(1.8, [("p_ge2", 2), ("p_ge3", 3)])
+    assert out["p_ge2"] == poisson_over_prob(1.8, 1.5)
+    assert out["p_ge3"] == poisson_over_prob(1.8, 2.5)
+
+
+def test_ge_probs_nb_size_uses_negative_binomial():
+    from model.projections import poisson_over_prob
+    out = rp.ge_probs(1.8, [("p_ge3", 3)], nb_size=rp.HRR_NB_SIZE)
+    assert out["p_ge3"] > poisson_over_prob(1.8, 2.5)   # fatter tail
+    assert rp.HRR_NB_SIZE == 4.0

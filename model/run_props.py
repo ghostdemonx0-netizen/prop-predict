@@ -5,12 +5,14 @@ a Poisson mean; over-thresholds come from the Poisson CDF. See
 docs/superpowers/specs/2026-06-25-runs-rbi-hrr-design.md. League baselines and
 REG_GAMES are calibration constants (require sign-off).
 """
-from model.projections import poisson_over_prob
+from model.projections import poisson_over_prob, nb_over_prob
 
 LEAGUE_R_PER_GAME = 0.50
 LEAGUE_RBI_PER_GAME = 0.50
 LEAGUE_HRR_PER_GAME = 1.80
 REG_GAMES = 40.0
+
+HRR_NB_SIZE = 4.0   # negative-binomial dispersion for HRR (lower = fatter tail; tunable from grader data)
 
 RECENT_GAMES_WINDOW = 15
 PROD_SHRINK_GAMES = 10
@@ -67,8 +69,11 @@ def expected_count(rate: float, *, pitcher_mult: float = 1.0, platoon_mult: floa
     return max(0.0, rate * pitcher_mult * platoon_mult * park_mult * form_mult * lineup_mult)
 
 
-def ge_probs(lam: float, thresholds: list[tuple[str, int]]) -> dict[str, float]:
-    """{label: P(count >= n)} for a Poisson(lam) count. Monotonic by construction."""
+def ge_probs(lam: float, thresholds: list[tuple[str, int]], *, nb_size: float | None = None) -> dict[str, float]:
+    """{label: P(count >= n)} for a count of mean lam. Poisson by default;
+    Negative Binomial (fatter tail) when nb_size is given. Monotonic by construction."""
+    if nb_size:
+        return {label: nb_over_prob(lam, n - 0.5, nb_size) for (label, n) in thresholds}
     return {label: poisson_over_prob(lam, n - 0.5) for (label, n) in thresholds}
 
 
