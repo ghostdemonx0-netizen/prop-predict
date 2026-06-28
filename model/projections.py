@@ -78,6 +78,28 @@ def poisson_over_prob(lam: float, line: float) -> float:
     return 1 - cdf
 
 
+def nb_over_prob(mu: float, line: float, size: float) -> float:
+    """P(X > line) for X ~ Negative Binomial with mean=mu and size (dispersion).
+
+    Same line semantics as poisson_over_prob: floor(line)+1 is the first counted
+    value. Larger size -> approaches Poisson; smaller size -> fatter tail.
+    variance = mu + mu**2 / size.
+    """
+    if mu <= 0:
+        return 0.0
+    if size <= 0:
+        return poisson_over_prob(mu, line)
+    threshold = math.floor(line) + 1
+    log_p_fail = math.log(size / (size + mu))   # ln(r / (r + mu))
+    log_p_succ = math.log(mu / (size + mu))     # ln(mu / (r + mu))
+    cdf = 0.0
+    for k in range(threshold):
+        log_pmf = (math.lgamma(k + size) - math.lgamma(size) - math.lgamma(k + 1)
+                   + size * log_p_fail + k * log_p_succ)
+        cdf += math.exp(log_pmf)
+    return max(0.0, 1.0 - cdf)
+
+
 def lineup_expected_ks(k_probs: list[float], expected_bf: float) -> float | None:
     """Opponent-adjusted expected strikeouts.
 
