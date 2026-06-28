@@ -398,7 +398,16 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
         for side, opp in (("home", away_p), ("away", home_p)):
             team = game.get(side, "?")
             park = hrr_park_factor(team) if prop == "HRR" else run_park_factor(team)
-            for b in lineups.get(side, []):
+            order = lineups.get(side, [])
+            # Ordered teammate-quality reads for Approach C (lineup context)
+            onbase_order = [b.get("hit_rate", _run_props.LEAGUE_ONBASE) for b in order]
+            power_order = [
+                _run_props.slg_per_pa(b.get("season_1b", 0), b.get("season_2b", 0),
+                                      b.get("season_3b", 0), b.get("season_hr", 0),
+                                      b.get("season_pa", 0))
+                for b in order
+            ]
+            for i, b in enumerate(order):
                 games = b.get("games", 0)
                 total = b.get(cfg["total_field"], 0)
                 rate = _run_props.regressed_per_game(total, games, cfg["league"], _run_props.REG_GAMES)
@@ -413,7 +422,27 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
                     season_rate,
                 )
                 blended = _run_props.blend_forms(hard_hit, production)
-                lam = _run_props.expected_count(rate, pitcher_mult=psupp, platoon_mult=platoon, park_mult=park, form_mult=blended)
+
+                # --- Approach C: lineup context ---
+                status = b.get("lineup_status", "confirmed")
+                pos = i + 1
+                runs_slot = _run_props.slot_factor(pos, "RUNS")
+                runs_team = _run_props.teammate_factor(
+                    _run_props.neighbor_avg(power_order, i, behind=True), _run_props.LEAGUE_SLG)
+                runs_lmult = _run_props.lineup_mult(runs_slot, runs_team, status)
+                rbi_slot = _run_props.slot_factor(pos, "RBI")
+                rbi_team = _run_props.teammate_factor(
+                    _run_props.neighbor_avg(onbase_order, i, behind=False), _run_props.LEAGUE_ONBASE)
+                rbi_lmult = _run_props.lineup_mult(rbi_slot, rbi_team, status)
+                if prop == "RUNS":
+                    lmult, lslot, lteam = runs_lmult, runs_slot, runs_team
+                elif prop == "RBI":
+                    lmult, lslot, lteam = rbi_lmult, rbi_slot, rbi_team
+                else:  # HRR
+                    lmult, lslot, lteam = _run_props.hrr_lineup_mult(runs_lmult, rbi_lmult), None, None
+
+                lam = _run_props.expected_count(rate, pitcher_mult=psupp, platoon_mult=platoon,
+                                                park_mult=park, form_mult=blended, lineup_mult=lmult)
                 m = matchup(
                     b_k=b.get("k_rate", 0.22), b_hit=b.get("hit_rate", 0.22),
                     p_k=opp.get("k_per_bf", 0.22) if opp else 0.22,
@@ -435,6 +464,8 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
                     "production_form": production,
                     "pitcher_factor": psupp,
                     "park_weather_factor": park,
+                    "lineup_mult": lmult,
+                    **({"lineup_slot": lslot, "lineup_teammate": lteam} if lslot is not None else {}),
                     "vs": vs,
                     "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"],
                     "wind_dir": w["wind_dir"], "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
