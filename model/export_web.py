@@ -157,6 +157,9 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
         prof["total_hrr"] = prof["total_hrr_hist"]
         # recent form is current-season only — the history twin is the form-neutral baseline
         prof["recent_form_mult"] = 1.0
+        prof["production_form_hr"] = 1.0
+        prof["production_form_hit"] = 1.0
+        prof["production_form_tb"] = 1.0
         prof["recent_games"] = 0
         prof["recent_r"] = 0
         prof["recent_rbi"] = 0
