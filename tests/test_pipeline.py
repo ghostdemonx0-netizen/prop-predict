@@ -245,3 +245,23 @@ def test_hrr_lineup_effect_is_damped_vs_runs():
     hrr_mult = next(r for r in _pl.build_hrr_rows(slate, lambda g: {"home": lineup, "away": lineup},
                     _c_pitcher, _c_weather) if r["player_id"] == 1)["lineup_mult"]
     assert abs(hrr_mult - 1.0) < abs(runs_mult - 1.0)
+
+
+# --- Production-form blend for HR/Hits/TB ---
+
+def test_hr_row_blends_production_form_80_20():
+    from model import run_props
+    bat = {"player_id": 501, "name": "Hot", "bats": "R", "lineup_status": "confirmed",
+           "season_hr": 20, "season_pa": 400, "season_1b": 50, "season_2b": 20, "season_3b": 2,
+           "hit_rate": 0.25, "k_rate": 0.22, "recent_form_mult": 1.0,
+           "production_form_hr": 1.20, "production_form_hit": 1.0, "production_form_tb": 1.0}
+    slate = [{"game_id": 9, "home": "COL", "away": "LAD", "park_team": "COL",
+              "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+    L = lambda g: {"home": [bat], "away": []}
+    P = lambda pid: {"name": "P", "player_id": pid, "throws": "R", "hr_allowed_rate": 0.033,
+                     "bf": 400, "k_per_bf": 0.22, "hit_allowed_rate": 0.22}
+    W = lambda g: {"wind_speed_mph": 0, "wind_from_deg": 0, "temp_f": 70, "precip_pct": 0}
+    row = _pl.build_hr_rows(slate, L, P, W)[0]
+    assert abs(row["recent_form_mult"] - run_props.blend_forms(1.0, 1.20, w_hard=0.80)) < 1e-9
+    assert row["hard_hit_form"] == 1.0
+    assert row["production_form"] == 1.20

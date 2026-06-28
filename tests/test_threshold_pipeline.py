@@ -126,7 +126,11 @@ def test_hits_row_carries_recent_form_mult_and_pitcher_factor():
     assert "pitcher_factor" in r, "pitcher_factor missing from hits row"
     assert isinstance(r["recent_form_mult"], (int, float))
     assert isinstance(r["pitcher_factor"], (int, float))
-    assert r["recent_form_mult"] == 1.15
+    # recent_form_mult is now the BLENDED form (hard-hit + production); raw hard-hit
+    # is exposed separately as hard_hit_form. No production field on the fixture -> prod=1.0.
+    from model import run_props
+    assert r["hard_hit_form"] == 1.15
+    assert r["recent_form_mult"] == run_props.blend_forms(1.15, 1.0, w_hard=0.60)
 
 
 def test_tb_row_carries_recent_form_mult_and_pitcher_factor():
@@ -139,7 +143,9 @@ def test_tb_row_carries_recent_form_mult_and_pitcher_factor():
     r = rows[0]
     assert "recent_form_mult" in r
     assert "pitcher_factor" in r
-    assert r["recent_form_mult"] == 0.90
+    from model import run_props
+    assert r["hard_hit_form"] == 0.90
+    assert r["recent_form_mult"] == run_props.blend_forms(0.90, 1.0, w_hard=0.60)
 
 
 def test_pitcher_factor_favorable_gt_1_hits():

@@ -268,3 +268,12 @@ def test_pitcher_fn_uses_true_starts(monkeypatch):
     prof = pitcher_fn(700)
     assert prof["expected_bf"] == 20.0   # starts-only (NOT 66/5 = 13.2)
     assert prof["k_line"] == 5.5
+
+
+def test_batter_hist_fn_neutralizes_production_form():
+    import inspect
+    from model import export_web
+    src = inspect.getsource(export_web.make_profile_fns)
+    assert 'prof["production_form_hr"] = 1.0' in src
+    assert 'prof["production_form_hit"] = 1.0' in src
+    assert 'prof["production_form_tb"] = 1.0' in src
