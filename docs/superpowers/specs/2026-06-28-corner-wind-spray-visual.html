@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corner Wind + Spray Engine — Visual</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --line:#30363d; --ink:#e6edf3; --mut:#9da7b3;
+    --grass:#16331f; --dirt:#3a2a18; --accent:#58a6ff; --good:#3fb950; --bad:#f85149; --amber:#d29922;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;padding:24px}
+  h1{font-size:22px;margin:0 0 4px} h2{font-size:15px;margin:18px 0 8px;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+  .sub{color:var(--mut);margin:0 0 18px}
+  .wrap{max-width:1040px;margin:0 auto}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  label{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
+  input[type=range]{width:100%}
+  .val{color:var(--ink);font-weight:600}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0}
+  .bar{height:22px;border-radius:6px;overflow:hidden;display:flex;border:1px solid var(--line);background:#0b0f14}
+  .bar i{display:block;height:100%}
+  .sprayfill{background:var(--accent)} .handfill{background:#6e7681}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600}
+  .big{font-size:30px;font-weight:800}
+  .delta-good{color:var(--good)} .delta-bad{color:var(--bad)} .muted{color:var(--mut)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  td,th{border:1px solid var(--line);padding:5px 8px;text-align:center} th{color:var(--mut);font-weight:600}
+  .toggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .toggle button{background:#0b0f14;color:var(--mut);border:0;padding:6px 14px;cursor:pointer;font-weight:600}
+  .toggle button.on{background:var(--accent);color:#04101f}
+  .flow{font-size:13px;color:var(--mut);background:#0b0f14;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:6px}
+  .flow b{color:var(--ink)}
+  svg{display:block;margin:0 auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Corner Wind + Spray Engine</h1>
+  <p class="sub">Drag the sliders. Watch how a batter's spray turns a corner wind the old model ignored into a real HR boost (or penalty).</p>
+
+  <div class="flow">
+    <b>The chain:</b> 3 scouts (overall / air / HR) → weighted vote = <b>his_spray</b> → blend with handedness by sample size (cap 70%) = <b>final pull%</b> → that points his <b>HR field</b> → project the wind onto it → <b>HR weather multiplier</b>.
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+    <!-- LEFT: inputs + blend -->
+    <div class="card">
+      <h2>1 · The batter</h2>
+      <div class="row"><span>Handedness</span>
+        <span class="toggle"><button id="rhb" class="on" onclick="setHand('R')">RHB</button><button id="lhb" onclick="setHand('L')">LHB</button></span>
+      </div>
+
+      <label>Total batted balls (3-yr pooled): <span class="val" id="nVal"></span></label>
+      <input id="n" type="range" min="0" max="1500" value="1100" step="10">
+
+      <label>His real spray — pull% (Stage-A vote output): <span class="val" id="sprayVal"></span></label>
+      <input id="spray" type="range" min="20" max="80" value="66" step="1">
+
+      <h2 style="margin-top:18px">Spray ⟷ Handedness dial</h2>
+      <div class="row muted" style="font-size:12px">weight = min(0.70, n/(n+150)) · handedness default = 40% pull</div>
+      <div class="bar" id="blendBar"><i class="sprayfill" id="sb"></i><i class="handfill" id="hb"></i></div>
+      <div class="row"><span><span class="pill" style="background:#13314f;color:var(--accent)">spray</span> <span id="wSpray"></span></span>
+        <span><span id="wHand"></span> <span class="pill" style="background:#21262d;color:#adbac7">handedness</span></span></div>
+
+      <div class="row" style="margin-top:14px"><span class="muted">final pull% =</span> <span class="big" id="finalPull"></span></div>
+      <div class="flow" id="finalNote"></div>
+    </div>
+
+    <!-- RIGHT: field + wind -->
+    <div class="card">
+      <h2>2 · The wind on the field</h2>
+      <label>Wind blowing toward (0 = out to CF, − = toward LF, + = toward RF): <span class="val" id="wdVal"></span></label>
+      <input id="wd" type="range" min="-180" max="180" value="-90" step="5">
+      <label>Wind speed (mph): <span class="val" id="wsVal"></span></label>
+      <input id="ws" type="range" min="0" max="20" value="10" step="1">
+
+      <svg id="field" width="420" height="300" viewBox="0 0 420 300"></svg>
+      <div class="row muted" style="font-size:12px;justify-content:center">🟦 his HR field &nbsp; · &nbsp; ➡ wind</div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="card" style="margin-top:18px">
+    <h2>3 · The payoff — old model vs. new</h2>
+    <table>
+      <tr><th></th><th>Old model (center-field only)</th><th>New model (his HR field)</th></tr>
+      <tr><td>wind blowing out toward his field</td><td id="oldWind"></td><td id="newWind"></td></tr>
+      <tr><td>HR weather multiplier</td><td id="oldMult"></td><td id="newMult"></td></tr>
+    </table>
+    <div class="row" style="margin-top:12px;justify-content:center">
+      <span class="muted">What the old model missed on this play:&nbsp;</span><span class="big" id="delta"></span>
+    </div>
+  </div>
+
+  <p class="sub" style="margin-top:18px">Constants shown are seeds (tunable from grader data). v1 scope = HR prop. Temp held at 72°F for clarity.</p>
+</div>
+
+<script>
+let HAND = 'R';
+const $ = id => document.getElementById(id);
+function setHand(h){ HAND=h; $('rhb').classList.toggle('on',h==='R'); $('lhb').classList.toggle('on',h==='L'); render(); }
+
+const HAND_DEFAULT_PULL = 0.40, CAP = 0.70, K = 150, CORNER = 45, TEMP = 72;
+
+function render(){
+  const n = +$('n').value, hisSpray = +$('spray').value/100, wd = +$('wd').value, ws = +$('ws').value;
+  $('nVal').textContent = n + ' balls';
+  $('sprayVal').textContent = (hisSpray*100).toFixed(0) + '% pull';
+  $('wdVal').textContent = wd + '°';
+  $('wsVal').textContent = ws + ' mph';
+
+  // Stage B dial
+  const w = Math.min(CAP, n/(n+K));
+  $('sb').style.width = (w*100)+'%'; $('hb').style.width = ((1-w)*100)+'%';
+  $('wSpray').textContent = (w*100).toFixed(0)+'%'; $('wHand').textContent = ((1-w)*100).toFixed(0)+'%';
+
+  const finalPull = (1-w)*HAND_DEFAULT_PULL + w*hisSpray;
+  $('finalPull').textContent = (finalPull*100).toFixed(0)+'% pull';
+  $('finalNote').innerHTML = `final = ${((1-w)*100).toFixed(0)}% × <b>40%</b> (handedness) + ${(w*100).toFixed(0)}% × <b>${(hisSpray*100).toFixed(0)}%</b> (his spray) = <b>${(finalPull*100).toFixed(0)}% pull</b> → he hits toward ${HAND==='R'?'LEFT':'RIGHT'} field this much.`;
+
+  // pull_lean: league avg(0.40)->0, full(1.0)->1
+  const pullLean = Math.max(0, Math.min(1, (finalPull - HAND_DEFAULT_PULL)/(1 - HAND_DEFAULT_PULL)));
+  const sign = HAND==='R' ? -1 : 1;              // RHB pulls to LF (negative angle)
+  const hrField = sign * CORNER * pullLean;       // degrees rel CF (− = LF, + = RF)
+
+  // wind: wd is "blowing toward" relative to CF (0 = out to CF)
+  const oldWind = ws * Math.cos(wd*Math.PI/180);                 // vs CF (0°)
+  const newWind = ws * Math.cos((wd - hrField)*Math.PI/180);     // vs his HR field
+  const mult = ow => Math.max(0.7, Math.min(1.4, 1 + 0.02*ow + 0.005*(TEMP-70)));
+  const oldM = mult(oldWind), newM = mult(newWind);
+
+  $('oldWind').textContent = oldWind.toFixed(1)+' mph';
+  $('newWind').textContent = newWind.toFixed(1)+' mph';
+  $('oldMult').textContent = '×'+oldM.toFixed(3);
+  $('newMult').textContent = '×'+newM.toFixed(3);
+  const d = (newM-oldM)*100;
+  const de = $('delta');
+  de.textContent = (d>=0?'+':'')+d.toFixed(1)+'% HR';
+  de.className = 'big ' + (d>0.05?'delta-good':(d<-0.05?'delta-bad':'muted'));
+
+  drawField(hrField, wd, ws);
+}
+
+function drawField(hrField, wd, ws){
+  const cx=210, cy=255, R=200;
+  const pt=(deg,r)=>[cx + r*Math.sin(deg*Math.PI/180), cy - r*Math.cos(deg*Math.PI/180)];
+  const [lfx,lfy]=pt(-45,R), [rfx,rfy]=pt(45,R), [cfx,cfy]=pt(0,R*1.0);
+  // HR-field wedge (±10° around hrField)
+  const [w1x,w1y]=pt(hrField-9,R), [w2x,w2y]=pt(hrField+9,R);
+  // wind arrow: from home toward wd
+  const [wx,wy]=pt(wd, 60+ws*5);
+  let s = `<defs><marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e6edf3"/></marker></defs>`;
+  // grass fan
+  s += `<path d="M${cx},${cy} L${lfx},${lfy} A${R},${R} 0 0 1 ${rfx},${rfy} Z" fill="var(--grass)" stroke="var(--line)"/>`;
+  // foul lines
+  s += `<line x1="${cx}" y1="${cy}" x2="${lfx}" y2="${lfy}" stroke="#4d5763"/><line x1="${cx}" y1="${cy}" x2="${rfx}" y2="${rfy}" stroke="#4d5763"/>`;
+  s += `<line x1="${cx}" y1="${cy}" x2="${cfx}" y2="${cfy}" stroke="#2a3038" stroke-dasharray="4 4"/>`;
+  // labels
+  s += `<text x="${lfx-6}" y="${lfy-6}" fill="#9da7b3" font-size="12" text-anchor="end">LF</text>`;
+  s += `<text x="${cfx}" y="${cfy-8}" fill="#9da7b3" font-size="12" text-anchor="middle">CF</text>`;
+  s += `<text x="${rfx+6}" y="${rfy-6}" fill="#9da7b3" font-size="12">RF</text>`;
+  // HR field wedge
+  s += `<path d="M${cx},${cy} L${w1x},${w1y} A${R},${R} 0 0 1 ${w2x},${w2y} Z" fill="rgba(88,166,255,.35)" stroke="var(--accent)"/>`;
+  // wind arrow
+  s += `<line x1="${cx}" y1="${cy}" x2="${wx}" y2="${wy}" stroke="#e6edf3" stroke-width="3" marker-end="url(#arr)"/>`;
+  // home plate
+  s += `<circle cx="${cx}" cy="${cy}" r="4" fill="#e6edf3"/>`;
+  $('field').innerHTML = s;
+}
+
+['n','spray','wd','ws'].forEach(id=>$(id).addEventListener('input',render));
+render();
+</script>
+</body>
+</html>
