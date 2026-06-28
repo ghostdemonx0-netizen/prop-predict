@@ -47,7 +47,7 @@ def test_rbi_and_hrr_rows_thresholds():
     _hrate = run_props.regressed_per_game(200, 100, run_props.LEAGUE_HRR_PER_GAME, run_props.REG_GAMES)
     _hlam = run_props.expected_count(_hrate, pitcher_mult=run_props.pitcher_suppression_mult(0.22),
                                      platoon_mult=hr_platoon_mult("R", "R"), park_mult=run_park_factor("AAA"))
-    assert math.isclose(hrr["p_ge2"], run_props.ge_probs(_hlam, [("p_ge2", 2)])["p_ge2"])
+    assert math.isclose(hrr["p_ge2"], run_props.ge_probs(_hlam, [("p_ge2", 2)], nb_size=run_props.HRR_NB_SIZE)["p_ge2"])
 
 
 # ---------------------------------------------------------------------------
