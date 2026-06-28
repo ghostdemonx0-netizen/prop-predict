@@ -301,6 +301,27 @@ def batter_gamelog(player_id: int, season: int) -> list[dict]:
     return out
 
 
+def pitcher_gamelog(player_id: int, season: int) -> list[dict]:
+    """Per-game start flag for one pitcher-season: [{game_pk, started}]."""
+    try:
+        data = _with_retries(lambda: statsapi.get("people", {
+            "personIds": str(player_id),
+            "hydrate": f"stats(group=[pitching],type=[gameLog],season={season},sportId=1)",
+        }))
+        splits = data["people"][0].get("stats", [{}])[0].get("splits", [])
+    except Exception:
+        return []
+    out = []
+    for sp in splits:
+        st = sp.get("stat", {}) or {}
+        game = sp.get("game", {}) or {}
+        out.append({
+            "game_pk": game.get("gamePk"),
+            "started": int(st.get("gamesStarted", 0) or 0) >= 1,
+        })
+    return out
+
+
 def get_bvp(batter_id: int, pitcher_id: int) -> dict | None:
     """Career batter-vs-pitcher line from the MLB Stats API.
 

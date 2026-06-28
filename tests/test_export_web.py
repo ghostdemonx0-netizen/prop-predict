@@ -239,3 +239,32 @@ def test_run_factor_fields_includes_lineup_factors():
     assert "lineup_mult" in src
     assert "lineup_slot" in src
     assert "lineup_teammate" in src
+
+
+def test_pitcher_fn_uses_true_starts(monkeypatch):
+    from model import export_web, fetch
+    slate = [{"game_id": 1, "home": "AAA", "away": "BBB", "home_id": 10, "away_id": 20,
+              "started": False, "home_pitcher_id": 700, "away_pitcher_id": 701}]
+    monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
+    monkeypatch.setattr(fetch, "get_recent_lineup", lambda tid, d, **k: [])
+    monkeypatch.setattr(fetch, "get_player_meta", lambda ids: {700: {"name": "Swing", "throws": "R"}})
+
+    ev = []
+    for gp in (1, 2, 3):       # 3 starts: 20 BF, 6 K
+        ev += [{"game_date": "2026-05-01", "events": "strikeout" if i < 6 else "field_out", "game_pk": gp} for i in range(20)]
+    for gp in (4, 5):          # 2 relief: 3 BF, 1 K
+        ev += [{"game_date": "2026-05-01", "events": "strikeout" if i < 1 else "field_out", "game_pk": gp} for i in range(3)]
+    gl = [{"game_pk": gp, "started": True} for gp in (1, 2, 3)] + [{"game_pk": gp, "started": False} for gp in (4, 5)]
+
+    def goc(key, prod):
+        if key.startswith("pit-events"):
+            return ev
+        if key.startswith("pit-gamelog"):
+            return gl
+        return prod()
+    monkeypatch.setattr(export_web, "get_or_compute", goc)
+
+    _, pitcher_fn, _, _ = export_web.make_profile_fns(slate, 2026, "2026-06-01")
+    prof = pitcher_fn(700)
+    assert prof["expected_bf"] == 20.0   # starts-only (NOT 66/5 = 13.2)
+    assert prof["k_line"] == 5.5

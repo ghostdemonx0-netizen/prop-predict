@@ -18,6 +18,7 @@ _RECENT_SHRINK_R = 25.0   # shrinkage weight toward season hard-hit rate; tunabl
 
 _K_EVENTS = ("strikeout", "strikeout_double_play")
 _HIT_EVENTS = ("single", "double", "triple", "home_run")
+_MIN_TRUE_STARTS = 2   # swingman fix: need >= this many true starts to use starts-only workload
 
 
 def _hard_hit_rate(rows: list[dict]) -> float:
@@ -90,8 +91,13 @@ def k_line_from_starts(ks_per_game: list[int], *, fallback: float = 4.5, min_gam
 
 def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: int,
                                 name: str = "", team: str = "", throws: str = "",
-                                k_line: float = 4.5) -> dict:
-    """events: [{game_date, events, game_pk}, ...] for one pitcher-season."""
+                                k_line: float = 4.5, started_game_pks: set | None = None) -> dict:
+    """events: [{game_date, events, game_pk}, ...] for one pitcher-season.
+
+    started_game_pks: when provided, k_line + expected_bf use only those games
+    (true starts); fewer than _MIN_TRUE_STARTS -> generic-starter fallback.
+    None -> all appearances (unchanged behavior / safe degradation).
+    """
     past = [e for e in events if e["game_date"] < as_of]
     pa_rows = [e for e in past if e["events"]]
     pa = len(pa_rows)
@@ -102,7 +108,21 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
     for e in pa_rows:
         if e["game_pk"] is not None and e["events"] in _K_EVENTS:
             ks_by_game[e["game_pk"]] += 1
-    games = len(ks_by_game)
+
+    # Workload (expected_bf) + k_line: true starts only when a started set is given.
+    if started_game_pks is not None:
+        start_ks = {gp: k for gp, k in ks_by_game.items() if gp in started_game_pks}
+        start_pa = sum(1 for e in pa_rows if e["game_pk"] in started_game_pks)
+        if len(start_ks) >= _MIN_TRUE_STARTS:
+            expected_bf = start_pa / len(start_ks)
+            line = k_line_from_starts(list(start_ks.values()), fallback=k_line)
+        else:
+            expected_bf = 24.0
+            line = k_line     # generic-starter default (4.5)
+    else:
+        games = len(ks_by_game)
+        expected_bf = (pa / games) if games else 24.0
+        line = k_line_from_starts(list(ks_by_game.values()), fallback=k_line)
 
     return {
         "player_id": player_id,
@@ -110,9 +130,9 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
         "team": team,
         "throws": throws,
         "k_per_bf": (ks / pa) if pa else 0.0,
-        "expected_bf": (pa / games) if games else 24.0,
+        "expected_bf": expected_bf,
         "opponent_k_mult": 1.0,
-        "k_line": k_line_from_starts(list(ks_by_game.values()), fallback=k_line),
+        "k_line": line,
         "hit_allowed_rate": (hits / pa) if pa else 0.0,
         "hr_allowed_rate": (hr / pa) if pa else 0.0,
         "bf": pa,
@@ -177,12 +197,14 @@ def _count_pitcher(events: list[dict], as_of: str) -> tuple:
 
 
 def blended_pitcher_profile(events_by_season: dict, *, as_of: str, current_season: int,
-                            player_id: int, name: str = "", throws: str = "") -> dict:
+                            player_id: int, name: str = "", throws: str = "",
+                            started_game_pks: set | None = None) -> dict:
     """Same shape as pitcher_profile_from_events but with k_per_bf/hit_allowed_rate/
     hr_allowed_rate blended+regressed. expected_bf, k_line, bf come from the current season only."""
     # workload (expected_bf), k_line, bf come from the CURRENT season only
     prof = pitcher_profile_from_events(events_by_season.get(current_season, []), as_of=as_of,
-                                       player_id=player_id, name=name, throws=throws)
+                                       player_id=player_id, name=name, throws=throws,
+                                       started_game_pks=started_game_pks)
     seasons = _seasons_in_order(events_by_season, current_season)
     counts = [_count_pitcher(evs, as_of) for evs in seasons]   # [(pa,ks,hits,hr), ...]
     ks_made, eff_pa = marcel_blend([(c[1], c[0]) for c in counts])
