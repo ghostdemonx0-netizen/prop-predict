@@ -189,3 +189,59 @@ def test_games_carry_side_statuses():
     g = games[0]
     assert g["home_lineup_status"] == "projected"
     assert g["away_lineup_status"] == "confirmed"
+
+
+# --- Approach C: lineup-context wiring tests ---
+from model import pipeline as _pl
+
+
+def _c_profile(pid, name, *, hit_rate=0.22, slg_components=(5, 2, 1, 1, 40), bats="R",
+               games=80, total_r=40, status="confirmed"):
+    s1b, s2b, s3b, hr, pa = slg_components
+    return {
+        "player_id": pid, "name": name, "bats": bats, "lineup_status": status,
+        "hit_rate": hit_rate, "k_rate": 0.22,
+        "season_1b": s1b, "season_2b": s2b, "season_3b": s3b, "season_hr": hr, "season_pa": pa,
+        "games": games, "total_r": total_r, "total_rbi": 40, "total_hrr": 120,
+        "recent_r": 0, "recent_rbi": 0, "recent_hrr": 0, "recent_games": 0,
+        "recent_form_mult": 1.0,
+    }
+
+
+def _c_slate():
+    return [{"game_id": 1, "home": "COL", "away": "LAD", "park_team": "COL",
+             "home_id": 10, "away_id": 20,
+             "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False,
+             "home_lineup_status": "confirmed", "away_lineup_status": "confirmed"}]
+
+
+def _c_pitcher(pid):
+    return {"name": "P", "player_id": pid, "throws": "R", "hit_allowed_rate": 0.22, "k_per_bf": 0.22}
+
+
+def _c_weather(game):
+    return {"wind_speed_mph": 0.0, "wind_from_deg": 0.0, "temp_f": 70.0, "precip_pct": 0}
+
+
+def _c_stacked_lineup():
+    mashers = [_c_profile(i, f"M{i}", slg_components=(10, 8, 2, 12, 40)) for i in range(2, 10)]
+    return [_c_profile(1, "Leadoff")] + mashers
+
+
+def test_runs_row_boosted_when_strong_hitters_bat_behind():
+    lineup = _c_stacked_lineup()
+    rows = _pl.build_runs_rows(_c_slate(), lambda g: {"home": lineup, "away": lineup},
+                               _c_pitcher, _c_weather)
+    leadoff_row = next(r for r in rows if r["player_id"] == 1)
+    assert leadoff_row["lineup_mult"] > 1.0
+    assert "lineup_slot" in leadoff_row and "lineup_teammate" in leadoff_row
+
+
+def test_hrr_lineup_effect_is_damped_vs_runs():
+    lineup = _c_stacked_lineup()
+    slate = _c_slate()
+    runs_mult = next(r for r in _pl.build_runs_rows(slate, lambda g: {"home": lineup, "away": lineup},
+                     _c_pitcher, _c_weather) if r["player_id"] == 1)["lineup_mult"]
+    hrr_mult = next(r for r in _pl.build_hrr_rows(slate, lambda g: {"home": lineup, "away": lineup},
+                    _c_pitcher, _c_weather) if r["player_id"] == 1)["lineup_mult"]
+    assert abs(hrr_mult - 1.0) < abs(runs_mult - 1.0)

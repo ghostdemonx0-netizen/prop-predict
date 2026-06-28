@@ -26,10 +26,14 @@ def test_runs_rows_have_two_thresholds_in_range():
     assert 0.0 < r["p_ge1"] <= 1.0 and 0.0 <= r["p_ge2"] <= r["p_ge1"]
     assert r["prop"] == "RUNS" and r["vs"]["lean"] in ("K", "H", "NEU")
 
-    # Independent recomputation: catch wrong-league/field regressions
+    # Independent recomputation: catch wrong-league/field regressions.
+    # Approach C: the lone home batter has no neighbors -> teammate-neutral, so its
+    # Runs lineup multiplier is the slot(1) baseline blended at the confirmed weight.
     _rate = run_props.regressed_per_game(60, 100, run_props.LEAGUE_R_PER_GAME, run_props.REG_GAMES)
+    _lmult = run_props.lineup_mult(run_props.slot_factor(1, "RUNS"), 1.0, "confirmed")
     _lam = run_props.expected_count(_rate, pitcher_mult=run_props.pitcher_suppression_mult(0.22),
-                                    platoon_mult=hr_platoon_mult("R", "R"), park_mult=run_park_factor("AAA"))
+                                    platoon_mult=hr_platoon_mult("R", "R"), park_mult=run_park_factor("AAA"),
+                                    lineup_mult=_lmult)
     assert math.isclose(r["p_ge1"], run_props.ge_probs(_lam, [("p_ge1", 1)])["p_ge1"])
 
 def test_rbi_and_hrr_rows_thresholds():

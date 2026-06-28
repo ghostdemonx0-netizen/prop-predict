@@ -69,6 +69,13 @@ _FACTOR_KEYS: tuple[str, ...] = (
     "expected_ks",
     "expected_ks_hist",
     "line",
+    # Approach C — lineup-context factor (runs / rbi / hrr)
+    "lineup_mult",
+    "lineup_mult_hist",
+    "lineup_slot",
+    "lineup_slot_hist",
+    "lineup_teammate",
+    "lineup_teammate_hist",
 )
 
 

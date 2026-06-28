@@ -81,3 +81,65 @@ def test_expected_count_form_mult():
 def test_expected_count_form_mult_default_unchanged():
     # Existing behavior: default form_mult=1.0 must not change anything
     assert rp.expected_count(0.5) == 0.5
+
+
+# --- Approach C: lineup-context tests ---
+
+def test_slot_factor_runs_peaks_top_rbi_peaks_middle():
+    assert rp.slot_factor(1, "RUNS") > rp.slot_factor(9, "RUNS")   # leadoff scores more
+    assert rp.slot_factor(4, "RBI") > rp.slot_factor(1, "RBI")     # cleanup drives in more
+    assert rp.slot_factor(1, "RUNS") == 1.15
+    assert rp.slot_factor(4, "RBI") == 1.18
+
+
+def test_slot_factor_clamps_out_of_range_position():
+    assert rp.slot_factor(0, "RUNS") == rp.slot_factor(1, "RUNS")
+    assert rp.slot_factor(12, "RBI") == rp.slot_factor(9, "RBI")
+
+
+def test_slg_per_pa_total_bases_over_pa():
+    # 5 singles, 2 doubles, 1 triple, 2 HR over 40 PA = (5 + 4 + 3 + 8)/40 = 0.5
+    assert rp.slg_per_pa(5, 2, 1, 2, 40) == 0.5
+    assert rp.slg_per_pa(1, 0, 0, 0, 0) == 0.0   # no PA -> 0
+
+
+def test_trust_weight_confirmed_vs_projected():
+    assert rp.trust_weight("confirmed") == 0.80
+    assert rp.trust_weight("projected") == 0.35
+    assert rp.trust_weight("anything_else") == 0.35   # default to cautious
+
+
+def test_teammate_factor_centers_at_one():
+    assert rp.teammate_factor(0.360, 0.360) == 1.0
+    assert abs(rp.teammate_factor(0.432, 0.360) - 1.10) < 1e-9   # +20%, S=0.5 -> +10%
+    assert rp.teammate_factor(None, 0.360) == 1.0
+
+
+def test_neighbor_avg_circular_behind_and_ahead():
+    vals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+    assert rp.neighbor_avg(vals, 0, behind=True) == 1.5    # idx1,idx2
+    assert rp.neighbor_avg(vals, 0, behind=False) == 7.5   # wraps to idx8,idx7
+    assert rp.neighbor_avg(vals, 8, behind=True) == 0.5    # wraps to idx0,idx1
+
+
+def test_neighbor_avg_skips_self_and_handles_short_lists():
+    assert rp.neighbor_avg([5.0], 0, behind=True) is None
+    assert rp.neighbor_avg([], 0, behind=True) is None
+
+
+def test_lineup_mult_blend_and_cap():
+    assert abs(rp.lineup_mult(1.08, 1.14, "confirmed") - 1.128) < 1e-9
+    assert abs(rp.lineup_mult(1.08, 1.14, "projected") - 1.101) < 1e-9
+    assert rp.lineup_mult(1.20, 2.0, "confirmed") == 1.15
+    assert rp.lineup_mult(0.5, 0.2, "confirmed") == 0.85
+
+
+def test_hrr_lineup_mult_damped_and_capped():
+    assert abs(rp.hrr_lineup_mult(1.15, 1.05) - 1.055) < 1e-9
+    assert rp.hrr_lineup_mult(1.0, 1.0) == 1.0
+
+
+def test_expected_count_applies_lineup_mult():
+    assert rp.expected_count(0.50) == 0.50
+    assert abs(rp.expected_count(0.50, lineup_mult=1.10) - 0.55) < 1e-9
+    assert rp.expected_count(0.50, pitcher_mult=1.2) == rp.expected_count(0.50, pitcher_mult=1.2, lineup_mult=1.0)

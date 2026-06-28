@@ -1060,3 +1060,19 @@ def test_record_day_writes_only_to_archive_path(tmp_path):
     assert unexpected == set(), (
         f"record_day created unexpected paths outside archive_path: {unexpected}"
     )
+
+
+# --- Approach C: recorder captures the lineup factor ---
+
+def test_record_from_row_captures_lineup_factors():
+    row = {
+        "game_id": 1, "player_id": 7, "player": "X", "team": "AAA",
+        "p_ge1": 0.42, "p_ge2": 0.15,
+        "lineup_mult": 1.08, "lineup_slot": 1.05, "lineup_teammate": 1.12,
+        "lineup_mult_hist": 1.06,
+    }
+    rec = record_from_row(row, "runs")
+    assert rec["factors"]["lineup_mult"] == 1.08
+    assert rec["factors"]["lineup_slot"] == 1.05
+    assert rec["factors"]["lineup_teammate"] == 1.12
+    assert rec["factors"]["lineup_mult_hist"] == 1.06
