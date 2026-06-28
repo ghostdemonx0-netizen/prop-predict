@@ -181,3 +181,27 @@ def test_tb_rows_split_park_and_weather_without_changing_probs():
     assert r["p_ge2"] == _PINNED_TB_P_GE2
     assert r["p_ge3"] == _PINNED_TB_P_GE3
     assert r["p_ge4"] == _PINNED_TB_P_GE4
+
+
+# --- HRR negative-binomial tail ---
+
+def test_hrr_cfg_routes_through_nb_runs_does_not():
+    from model.pipeline import _RUN_PROP_CFG
+    assert _RUN_PROP_CFG["HRR"].get("nb_size") == run_props.HRR_NB_SIZE
+    assert _RUN_PROP_CFG["RUNS"].get("nb_size") is None
+    assert _RUN_PROP_CFG["RBI"].get("nb_size") is None
+
+
+def test_hrr_row_uses_negative_binomial_tail():
+    hrr = build_hrr_rows(_SLATE, _L, lambda p: _pit(p), _W)[0]
+    # Reconstruct the HRR mean the pipeline used (single batter -> no neighbors ->
+    # lineup mult is neutral; no recent form).
+    rate = run_props.regressed_per_game(200, 100, run_props.LEAGUE_HRR_PER_GAME, run_props.REG_GAMES)
+    lam = run_props.expected_count(
+        rate, pitcher_mult=run_props.pitcher_suppression_mult(0.22),
+        platoon_mult=hr_platoon_mult("R", "R"), park_mult=hrr_park_factor("AAA"),
+        form_mult=1.0, lineup_mult=1.0)
+    assert math.isclose(
+        hrr["p_ge3"], run_props.ge_probs(lam, [("p_ge3", 3)], nb_size=run_props.HRR_NB_SIZE)["p_ge3"])
+    # NB tail is fatter than Poisson at the same mean
+    assert hrr["p_ge3"] > run_props.ge_probs(lam, [("p_ge3", 3)])["p_ge3"]

@@ -374,7 +374,7 @@ from model.parks import run_park_factor, hrr_park_factor  # noqa: E402
 _RUN_PROP_CFG = {
     "RUNS": {"thresholds": [("p_ge1", 1), ("p_ge2", 2)], "total_field": "total_r",   "recent_field": "recent_r",   "league": _run_props.LEAGUE_R_PER_GAME},
     "RBI":  {"thresholds": [("p_ge1", 1), ("p_ge2", 2)], "total_field": "total_rbi", "recent_field": "recent_rbi", "league": _run_props.LEAGUE_RBI_PER_GAME},
-    "HRR":  {"thresholds": [("p_ge2", 2), ("p_ge3", 3), ("p_ge4", 4)], "total_field": "total_hrr", "recent_field": "recent_hrr", "league": _run_props.LEAGUE_HRR_PER_GAME},
+    "HRR":  {"thresholds": [("p_ge2", 2), ("p_ge3", 3), ("p_ge4", 4)], "total_field": "total_hrr", "recent_field": "recent_hrr", "league": _run_props.LEAGUE_HRR_PER_GAME, "nb_size": _run_props.HRR_NB_SIZE},
 }
 
 
@@ -470,7 +470,7 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
                     "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"],
                     "wind_dir": w["wind_dir"], "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
                 }
-                row.update(_run_props.ge_probs(lam, cfg["thresholds"]))
+                row.update(_run_props.ge_probs(lam, cfg["thresholds"], nb_size=cfg.get("nb_size")))
                 rows.append(row)
     rows.sort(key=lambda r: r[cfg["thresholds"][0][0]], reverse=True)
     return rows
