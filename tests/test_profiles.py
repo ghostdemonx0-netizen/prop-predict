@@ -304,3 +304,39 @@ def test_blended_pitcher_profile_passes_started_set():
         started_game_pks={1, 2, 3})
     assert prof["expected_bf"] == 20.0
     assert prof["k_line"] == 5.5
+
+
+# --- Production-form for HR/Hits/TB ---
+
+def _pf_pa(date, ev):
+    return {"game_date": date, "events": ev, "launch_speed": 95.0}
+
+
+def _pf_season(old_ev, recent_ev, *, old_n=40, recent_n=60):
+    ev = [_pf_pa(f"2026-04-{i % 28 + 1:02d}", old_ev) for i in range(old_n)]
+    ev += [_pf_pa(f"2026-06-{i % 28 + 1:02d}", recent_ev) for i in range(recent_n)]
+    return ev
+
+
+def test_production_form_hot_hits_above_one():
+    p = batter_profile_from_events(_pf_season("field_out", "single"), as_of="2026-07-01", player_id=1)
+    assert p["production_form_hit"] > 1.0
+
+
+def test_production_form_cold_hits_below_one():
+    p = batter_profile_from_events(_pf_season("single", "field_out"), as_of="2026-07-01", player_id=1)
+    assert p["production_form_hit"] < 1.0
+
+
+def test_production_form_uniform_is_neutral():
+    p = batter_profile_from_events(_pf_season("single", "single"), as_of="2026-07-01", player_id=1)
+    assert abs(p["production_form_hit"] - 1.0) < 1e-9
+
+
+def test_production_form_hr_is_heavily_shrunk():
+    ev = [_pf_pa(f"2026-04-{i % 28 + 1:02d}", "field_out") for i in range(40)]
+    ev += [_pf_pa("2026-06-01", "home_run"), _pf_pa("2026-06-02", "home_run")]
+    ev += [_pf_pa(f"2026-06-{i % 20 + 3:02d}", "field_out") for i in range(58)]
+    p = batter_profile_from_events(ev, as_of="2026-07-01", player_id=1)
+    assert 1.0 < p["production_form_hr"] <= 1.20
+    assert "production_form_tb" in p

@@ -15,6 +15,9 @@ _HR_R, _K_R, _HIT_R = 300.0, 200.0, 200.0
 
 _RECENT_BIP = 55          # recent-form window size in batted balls; tunable
 _RECENT_SHRINK_R = 25.0   # shrinkage weight toward season hard-hit rate; tunable
+_RECENT_PA = 60           # production-form window in plate appearances; tunable
+_PROD_SHRINK_PA = 50.0    # shrinkage toward season for production form (tames HR noise); tunable
+_TB_VALUE = {"single": 1, "double": 2, "triple": 3, "home_run": 4}
 
 _K_EVENTS = ("strikeout", "strikeout_double_play")
 _HIT_EVENTS = ("single", "double", "triple", "home_run")
@@ -25,6 +28,24 @@ def _hard_hit_rate(rows: list[dict]) -> float:
     if not rows:
         return 0.0
     return sum(1 for e in rows if e["launch_speed"] >= 95) / len(rows)
+
+
+def _production_form(pa_sorted: list[dict], season_count: float, season_pa: int,
+                     value_fn, *, recent_pa: int = _RECENT_PA, shrink_pa: float = _PROD_SHRINK_PA) -> float:
+    """Recent outcome-rate vs season, shrunk toward 1.0 and clamped. 1.0 when no data."""
+    if season_pa <= 0:
+        return 1.0
+    season_rate = season_count / season_pa
+    if season_rate <= 0:
+        return 1.0
+    recent = pa_sorted[-recent_pa:]
+    n = len(recent)
+    if n == 0:
+        return 1.0
+    recent_rate = sum(value_fn(e) for e in recent) / n
+    raw = recent_rate / season_rate
+    shrunk = (raw * n + 1.0 * shrink_pa) / (n + shrink_pa)
+    return max(0.80, min(shrunk, 1.20))
 
 
 def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int,
@@ -54,6 +75,13 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
     shrunk = (recent_hard_raw * n + season_hard * _RECENT_SHRINK_R) / (n + _RECENT_SHRINK_R)
     recent_form_mult = max(0.8, min(1.25, 1.0 + (shrunk - season_hard) * 1.5))
 
+    # Production form (actual results lately) per prop, blended with hard-hit downstream.
+    pa_sorted = sorted(pa_rows, key=lambda e: e["game_date"])
+    tb_total = s1 + 2 * s2 + 3 * s3 + 4 * hr
+    production_form_hr = _production_form(pa_sorted, hr, pa, lambda e: 1 if e["events"] == "home_run" else 0)
+    production_form_hit = _production_form(pa_sorted, hits, pa, lambda e: 1 if e["events"] in _HIT_EVENTS else 0)
+    production_form_tb = _production_form(pa_sorted, tb_total, pa, lambda e: _TB_VALUE.get(e["events"], 0))
+
     return {
         "player_id": player_id,
         "name": name or str(player_id),
@@ -65,6 +93,9 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
         "season_2b": s2,
         "season_3b": s3,
         "recent_form_mult": recent_form_mult,
+        "production_form_hr": production_form_hr,
+        "production_form_hit": production_form_hit,
+        "production_form_tb": production_form_tb,
         "k_rate": (ks / pa) if pa else 0.0,
         "hit_rate": (hits / pa) if pa else 0.0,
     }
