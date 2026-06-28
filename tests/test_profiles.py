@@ -250,3 +250,57 @@ def test_with_gamelog_recent_window_no_current_season():
     assert result["recent_r"] == 0
     assert result["recent_rbi"] == 0
     assert result["recent_hrr"] == 0
+
+
+# --- Swingman true-starts fix ---
+from model import profiles as _profiles
+
+
+def _ev(gp, n_bf, n_k):
+    return [{"game_date": "2026-05-01",
+             "events": "strikeout" if i < n_k else "field_out", "game_pk": gp}
+            for i in range(n_bf)]
+
+
+def _swingman_events():
+    ev = []
+    for gp in (1, 2, 3):       # 3 true starts: 20 BF, 6 K each
+        ev += _ev(gp, 20, 6)
+    for gp in (4, 5):          # 2 relief outings: 3 BF, 1 K each
+        ev += _ev(gp, 3, 1)
+    return ev
+
+
+def test_pitcher_profile_filters_to_starts():
+    prof = _profiles.pitcher_profile_from_events(
+        _swingman_events(), as_of="2026-06-01", player_id=1, started_game_pks={1, 2, 3})
+    assert prof["expected_bf"] == 20.0   # 60 PA / 3 starts (NOT 66/5)
+    assert prof["k_line"] == 5.5         # median 6 -> whole -> 5.5
+
+
+def test_pitcher_profile_none_is_all_appearances():
+    prof = _profiles.pitcher_profile_from_events(
+        _swingman_events(), as_of="2026-06-01", player_id=1)
+    assert prof["expected_bf"] == 66 / 5  # all 5 games, unchanged behavior
+
+
+def test_pitcher_profile_under_two_starts_falls_back():
+    prof = _profiles.pitcher_profile_from_events(
+        _ev(1, 3, 1), as_of="2026-06-01", player_id=1, started_game_pks={1})
+    assert prof["k_line"] == 4.5
+    assert prof["expected_bf"] == 24.0
+
+
+def test_pitcher_profile_rates_still_from_all_appearances():
+    prof = _profiles.pitcher_profile_from_events(
+        _swingman_events(), as_of="2026-06-01", player_id=1, started_game_pks={1, 2, 3})
+    assert abs(prof["k_per_bf"] - (20 / 66)) < 1e-9   # 18 start K + 2 relief K over 66 PA
+
+
+def test_blended_pitcher_profile_passes_started_set():
+    by_season = {2026: _swingman_events(), 2025: [], 2024: []}
+    prof = _profiles.blended_pitcher_profile(
+        by_season, as_of="2026-06-01", current_season=2026, player_id=1,
+        started_game_pks={1, 2, 3})
+    assert prof["expected_bf"] == 20.0
+    assert prof["k_line"] == 5.5
