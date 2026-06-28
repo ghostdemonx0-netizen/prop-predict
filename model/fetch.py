@@ -370,23 +370,29 @@ def _parse_boxscore(box: dict, status: str) -> dict:
     players: dict[int, dict] = {}
     for side in ("home", "away"):
         for pdata in (box.get(side, {}) or {}).get("players", {}).values():
-            pid = pdata.get("personId")
+            pid = (pdata.get("person") or {}).get("id")
             if pid is None:
                 continue
             stats = pdata.get("stats", {}) or {}
             bat_s = stats.get("batting", {}) or {}
             pit_s = stats.get("pitching", {}) or {}
             bat = None
-            if int(bat_s.get("plateAppearances", 0) or 0) > 0:
+            bat_pa = int(bat_s.get("atBats", 0) or 0) + int(bat_s.get("baseOnBalls", 0) or 0)
+            if bat_pa > 0:
+                h  = int(bat_s.get("hits", 0) or 0)
+                d  = int(bat_s.get("doubles", 0) or 0)
+                t  = int(bat_s.get("triples", 0) or 0)
+                hr = int(bat_s.get("homeRuns", 0) or 0)
                 bat = {
-                    "h":   int(bat_s.get("hits", 0) or 0),
-                    "tb":  int(bat_s.get("totalBases", 0) or 0),
-                    "hr":  int(bat_s.get("homeRuns", 0) or 0),
+                    "h":   h,
+                    "tb":  h + d + 2 * t + 3 * hr,
+                    "hr":  hr,
                     "r":   int(bat_s.get("runs", 0) or 0),
                     "rbi": int(bat_s.get("rbi", 0) or 0),
                 }
             pit = None
-            if int(pit_s.get("battersFaced", 0) or 0) > 0:
+            pit_pa = int(pit_s.get("atBats", 0) or 0) + int(pit_s.get("baseOnBalls", 0) or 0)
+            if pit_pa > 0:
                 pit = {"k": int(pit_s.get("strikeOuts", 0) or 0)}
             players[int(pid)] = {"bat": bat, "pit": pit}
     return {"status": _norm_status(status), "players": players}

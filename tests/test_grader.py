@@ -10,14 +10,18 @@ _SAMPLE_BOX = {
         "battingOrder": [12345],
         "pitchers": [67890],
         "players": {
-            "ID12345": {"personId": 12345,
-                        "stats": {"batting": {"plateAppearances": 4, "hits": 2,
-                                              "totalBases": 4, "homeRuns": 1,
+            # Real API shape: no plateAppearances/totalBases; use atBats+BB for PA detection;
+            # TB is computed as h + doubles + 2*triples + 3*hr.
+            # hits=2, doubles=0, triples=0, homeRuns=1 → tb = 2 + 0 + 0 + 3 = 5
+            "ID12345": {"person": {"id": 12345},
+                        "stats": {"batting": {"atBats": 4, "baseOnBalls": 0, "hits": 2,
+                                              "doubles": 0, "triples": 0, "homeRuns": 1,
                                               "runs": 1, "rbi": 1},
                                   "pitching": {}}},
-            "ID67890": {"personId": 67890,
+            # Real API shape: no battersFaced; use atBats+BB for pitcher PA detection.
+            "ID67890": {"person": {"id": 67890},
                         "stats": {"batting": {},
-                                  "pitching": {"battersFaced": 25, "strikeOuts": 7}}},
+                                  "pitching": {"atBats": 20, "baseOnBalls": 5, "strikeOuts": 7}}},
         },
     },
     "away": {"battingOrder": [], "pitchers": [], "players": {}},
@@ -26,15 +30,15 @@ _SAMPLE_BOX = {
 def test_parse_boxscore_batter_and_pitcher():
     out = fetch._parse_boxscore(_SAMPLE_BOX, "Final")
     assert out["status"] == "final"
-    assert out["players"][12345]["bat"] == {"h": 2, "tb": 4, "hr": 1, "r": 1, "rbi": 1}
+    assert out["players"][12345]["bat"] == {"h": 2, "tb": 5, "hr": 1, "r": 1, "rbi": 1}
     assert out["players"][12345]["pit"] is None
     assert out["players"][67890]["pit"] == {"k": 7}
     assert out["players"][67890]["bat"] is None
 
 def test_parse_boxscore_dnp_player_absent():
     # a roster player with zero plate appearances is treated as did-not-bat (no "bat")
-    box = {"home": {"players": {"ID999": {"personId": 999,
-            "stats": {"batting": {"plateAppearances": 0}, "pitching": {}}}}},
+    box = {"home": {"players": {"ID999": {"person": {"id": 999},
+            "stats": {"batting": {"atBats": 0, "baseOnBalls": 0}, "pitching": {}}}}},
            "away": {"players": {}}}
     out = fetch._parse_boxscore(box, "Final")
     assert out["players"][999]["bat"] is None
