@@ -160,3 +160,30 @@ def test_bvp_hr_mult_one_hr_in_many_meetings_is_neutral():
 def test_bvp_hr_mult_never_homered_in_twenty():
     assert bvp_hr_mult(0, 20) == pytest.approx((0.033 * 600) / 620 / 0.033)
     assert bvp_hr_mult(0, 20) == pytest.approx(0.968, abs=1e-3)
+
+
+# --- HRR negative-binomial tail ---
+from model.projections import nb_over_prob
+
+
+def test_nb_fatter_tail_than_poisson_same_mean():
+    assert nb_over_prob(1.8, 2.5, 4.0) > poisson_over_prob(1.8, 2.5)
+
+
+def test_nb_approaches_poisson_for_large_size():
+    assert abs(nb_over_prob(1.8, 2.5, 1e6) - poisson_over_prob(1.8, 2.5)) < 1e-3
+
+
+def test_nb_zero_mean_is_zero():
+    assert nb_over_prob(0.0, 1.5, 4.0) == 0.0
+
+
+def test_nb_monotonic_in_threshold():
+    p2 = nb_over_prob(1.8, 1.5, 4.0)
+    p3 = nb_over_prob(1.8, 2.5, 4.0)
+    p4 = nb_over_prob(1.8, 3.5, 4.0)
+    assert p2 >= p3 >= p4 >= 0.0
+
+
+def test_nb_size_nonpositive_falls_back_to_poisson():
+    assert nb_over_prob(1.8, 2.5, 0.0) == poisson_over_prob(1.8, 2.5)
