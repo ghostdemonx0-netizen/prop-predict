@@ -257,7 +257,8 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
 
     _runs_thresholds = ("p_ge1", "p_ge2")
     _hrr_thresholds = ("p_ge2", "p_ge3", "p_ge4")
-    _run_factor_fields = ("recent_form_mult", "pitcher_factor", "park_weather_factor", "hard_hit_form", "production_form")
+    _run_factor_fields = ("recent_form_mult", "pitcher_factor", "park_weather_factor", "hard_hit_form", "production_form",
+                          "lineup_mult", "lineup_slot", "lineup_teammate")
 
     def _attach(rows, hist_map, thresholds):
         for r in rows:

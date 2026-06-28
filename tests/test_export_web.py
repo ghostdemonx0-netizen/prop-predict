@@ -229,3 +229,13 @@ def test_batter_hist_fn_neutralizes_form_end_to_end(monkeypatch):
     assert hist["recent_form_mult"] == 1.0, "hard-hit form not neutralized in history twin"
     assert hist["recent_games"] == 0, "recent_games not zeroed in history twin"
     assert hist["recent_r"] == 0 and hist["recent_rbi"] == 0 and hist["recent_hrr"] == 0
+
+
+def test_run_factor_fields_includes_lineup_factors():
+    # The history-twin attach list must carry the lineup factor so it is archived.
+    import inspect
+    from model import export_web
+    src = inspect.getsource(export_web.build_board_with_history)
+    assert "lineup_mult" in src
+    assert "lineup_slot" in src
+    assert "lineup_teammate" in src
