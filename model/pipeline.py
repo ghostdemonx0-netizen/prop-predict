@@ -81,9 +81,12 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                 p_mult = pitcher_hr_mult(opp.get("hr_allowed_rate", 0.033), opp.get("bf", 0)) if opp else 1.0
                 bvp = bvp_fn(b.get("player_id"), opp.get("player_id")) if (bvp_fn and opp) else None
                 b_mult = bvp_hr_mult(bvp["hr"], bvp["pa"]) if bvp else 1.0
+                hard = b.get("recent_form_mult", 1.0)
+                prod = b.get("production_form_hr", 1.0)
+                form = _run_props.blend_forms(hard, prod, w_hard=0.80)
                 prob = hr_probability(
                     season_hr=b["season_hr"], season_pa=b["season_pa"],
-                    recent_form_mult=b.get("recent_form_mult", 1.0),
+                    recent_form_mult=form,
                     matchup_mult=platoon, pitcher_mult=p_mult, bvp_mult=b_mult,
                     park_mult=eff_park, weather_mult=weather_mult,
                     expected_pa=expected_pa_for_slot(slot),
@@ -106,7 +109,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     "probability": prob, "wind_out_mph": w["wind_out_mph"],
                     "weather_mult": weather_mult, "park_mult": eff_park,
                     "matchup_mult": platoon, "pitcher_mult": p_mult, "bvp_mult": b_mult,
-                    "recent_form_mult": b.get("recent_form_mult", 1.0),
+                    "recent_form_mult": form, "hard_hit_form": hard, "production_form": prod,
                     "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
                     "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
                     "bats": b.get("bats", "R"), "vs": vs,
@@ -193,7 +196,7 @@ def build_games(slate: list[dict], weather_fn) -> list[dict]:
     return out
 
 
-def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_xbh_park: bool = False, park_1b: float = 1.0, park_2b: float = 1.0, park_3b: float = 1.0):
+def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_xbh_park: bool = False, park_1b: float = 1.0, park_2b: float = 1.0, park_3b: float = 1.0, form_mult: float | None = None):
     """Per-PA [p0,p1,p2,p3,p4] (0..4 bases). HR reuses the adjusted HR rate;
     1B/2B/3B are regressed + matchup/platoon/recent-form.
 
@@ -218,7 +221,7 @@ def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_x
         b_mult = bvp_hr_mult(bvp["hr"], bvp["pa"]) if bvp else 1.0
     else:
         hit_factor = platoon = p_mult = b_mult = 1.0
-    form = b.get("recent_form_mult", 1.0)
+    form = form_mult if form_mult is not None else b.get("recent_form_mult", 1.0)
 
     # Per-component park factors + dampened weather for TB rows.
     # When apply_xbh_park is False (Hits path), all factors stay 1.0 → park-neutral.
@@ -281,10 +284,13 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
             eff_park = park_mult / sqrt(hr_park_factor(team))
             for slot, b in enumerate(lineups.get(side, [])):
                 bvp = bvp_fn(b.get("player_id"), opp.get("player_id")) if (bvp_fn and opp) else None
+                hard = b.get("recent_form_mult", 1.0)
+                prod = b.get("production_form_tb" if units == "bases" else "production_form_hit", 1.0)
+                form = _run_props.blend_forms(hard, prod, w_hard=0.60)
                 actual_vec, neutral_vec = _batter_outcome_vector(
                     b, opp, eff_park, weather_mult, slot, bvp,
                     apply_xbh_park=(units == "bases"),
-                    park_1b=p1f, park_2b=p2f, park_3b=p3f,
+                    park_1b=p1f, park_2b=p2f, park_3b=p3f, form_mult=form,
                 )
                 outcomes = [actual_vec[0], actual_vec[1] + actual_vec[2] + actual_vec[3] + actual_vec[4]] if units == "hits" else actual_vec
 
@@ -304,14 +310,14 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     nenv_vec, _ = _batter_outcome_vector(
                         b, opp, 1.0, 1.0, slot, bvp,
                         apply_xbh_park=True,
-                        park_1b=1.0, park_2b=1.0, park_3b=1.0,
+                        park_1b=1.0, park_2b=1.0, park_3b=1.0, form_mult=form,
                     )
                     nenv_ev = nenv_vec[1] + 2 * nenv_vec[2] + 3 * nenv_vec[3] + 4 * nenv_vec[4]
                     park_weather_factor = (actual_ev / nenv_ev) if nenv_ev > 0 else 1.0
                     # split: park-only (weather neutral) and weather-only (park neutral)
                     pk_vec, _ = _batter_outcome_vector(
                         b, opp, eff_park, 1.0, slot, bvp,
-                        apply_xbh_park=True, park_1b=p1f, park_2b=p2f, park_3b=p3f,
+                        apply_xbh_park=True, park_1b=p1f, park_2b=p2f, park_3b=p3f, form_mult=form,
                     )
                     pk_ev = pk_vec[1] + 2 * pk_vec[2] + 3 * pk_vec[3] + 4 * pk_vec[4]
                     park_factor = (pk_ev / nenv_ev) if nenv_ev > 0 else 1.0
@@ -338,7 +344,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                     "bats": b.get("bats", "R"),
                     "lineup_status": b.get("lineup_status", "confirmed"),
-                    "recent_form_mult": b.get("recent_form_mult", 1.0),
+                    "recent_form_mult": form, "hard_hit_form": hard, "production_form": prod,
                     "pitcher_factor": pitcher_factor,
                     "park_weather_factor": park_weather_factor,
                     "park_factor": park_factor,
