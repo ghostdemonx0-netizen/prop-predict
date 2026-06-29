@@ -38,3 +38,22 @@ def test_final_distribution_dial_and_cap():
     assert 0.50 < fin["pull"] <= 0.70
     empty = {"overall": _scout(0, 0, 0, 0), "air": _scout(0, 0, 0, 0), "hr": _scout(0, 0, 0, 0)}
     assert spray.final_distribution(empty, "R") == spray.HAND_DEFAULT["R"]
+
+
+def _res_R(p, c, o, n):
+    sc = {"overall": _scout(p, c, o, n), "air": _scout(p, c, o, 0), "hr": _scout(p, c, o, 0)}
+    z = _scout(0, 0, 0, 0)
+    return {"R": sc, "L": {"overall": z, "air": z, "hr": z}}
+
+
+def test_compute_league_default_averages_qualified_hitters():
+    out = spray.compute_league_default([_res_R(60, 30, 10, 500), _res_R(80, 10, 10, 500)], min_n=200)
+    assert abs(out["R"]["pull"] - 0.70) < 0.01
+    assert abs(out["R"]["center"] - 0.20) < 0.01
+    # thin samples ignored; no L data -> falls back to current default
+    assert out["L"] == spray.HAND_DEFAULT["L"]
+
+
+def test_compute_league_default_skips_thin_samples():
+    out = spray.compute_league_default([_res_R(90, 5, 5, 50)], min_n=200)  # n<min_n
+    assert out["R"] == spray.HAND_DEFAULT["R"]

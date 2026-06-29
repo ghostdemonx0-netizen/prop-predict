@@ -70,3 +70,34 @@ def final_distribution(scouts: dict, bats: str) -> dict:
     blended = {f: (1 - w) * default[f] + w * his[f] for f in ("pull", "center", "oppo")}
     tot = sum(blended.values()) or 1.0
     return {f: blended[f] / tot for f in blended}
+
+
+def compute_league_default(spray_results, min_n: int = 200) -> dict:
+    """League-average handedness default per side, from many batters' batter_spray() outputs.
+
+    Averages each qualified hitter's *combined-scout* distribution (same measure
+    `final_distribution` blends toward), so the result is on the right scale to paste
+    into HAND_DEFAULT. `spray_results` = iterable of {"R": scoutset, "L": scoutset}.
+    Sides with no qualifying hitters fall back to the current HAND_DEFAULT.
+    """
+    acc = {"R": {"pull": 0.0, "center": 0.0, "oppo": 0.0, "count": 0},
+           "L": {"pull": 0.0, "center": 0.0, "oppo": 0.0, "count": 0}}
+    for res in spray_results:
+        if not res:
+            continue
+        for side in ("R", "L"):
+            sc = res.get(side)
+            if not sc or (sc.get("overall") or {}).get("n", 0) < min_n:
+                continue
+            dist = combine_scouts(sc)
+            if dist is None:
+                continue
+            for f in ("pull", "center", "oppo"):
+                acc[side][f] += dist[f]
+            acc[side]["count"] += 1
+    out = {}
+    for side in ("R", "L"):
+        c = acc[side]["count"]
+        out[side] = ({f: acc[side][f] / c for f in ("pull", "center", "oppo")}
+                     if c else dict(HAND_DEFAULT[side]))
+    return out
