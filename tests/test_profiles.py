@@ -340,3 +340,28 @@ def test_production_form_hr_is_heavily_shrunk():
     p = batter_profile_from_events(ev, as_of="2026-07-01", player_id=1)
     assert 1.0 < p["production_form_hr"] <= 1.20
     assert "production_form_tb" in p
+
+
+# --- Current-mode k/hit pull-to-average ---
+
+def test_batter_current_rates_regressed_toward_league():
+    from model import profiles as P
+    ev = [{"game_date": "2026-05-01", "events": e, "launch_speed": 95.0}
+          for e in (["single"] * 5 + ["field_out"] * 5)]   # 10 PA, 5 hits -> raw 0.50
+    prof = P.batter_profile_from_events(ev, as_of="2026-07-01", player_id=1)
+    assert prof["hit_rate"] < 0.40
+    assert abs(prof["hit_rate"] - P.regress(5, 10, P.LEAGUE_HIT, P._HIT_R)) < 1e-9
+    empty = P.batter_profile_from_events([], as_of="2026-07-01", player_id=1)
+    assert empty["hit_rate"] == P.LEAGUE_HIT
+    assert empty["k_rate"] == P.LEAGUE_K
+
+
+def test_pitcher_current_rates_regressed_toward_league():
+    from model import profiles as P
+    ev = [{"game_date": "2026-05-01", "events": e, "game_pk": 1}
+          for e in (["strikeout"] * 3 + ["single"] * 3 + ["field_out"] * 4)]   # 10 PA
+    prof = P.pitcher_profile_from_events(ev, as_of="2026-07-01", player_id=1)
+    assert abs(prof["k_per_bf"] - P.regress(3, 10, P.LEAGUE_K, P._K_R)) < 1e-9
+    assert abs(prof["hit_allowed_rate"] - P.regress(3, 10, P.LEAGUE_HIT, P._HIT_R)) < 1e-9
+    empty = P.pitcher_profile_from_events([], as_of="2026-07-01", player_id=1)
+    assert empty["k_per_bf"] == P.LEAGUE_K

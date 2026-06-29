@@ -96,8 +96,8 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
         "production_form_hr": production_form_hr,
         "production_form_hit": production_form_hit,
         "production_form_tb": production_form_tb,
-        "k_rate": (ks / pa) if pa else 0.0,
-        "hit_rate": (hits / pa) if pa else 0.0,
+        "k_rate": regress(ks, pa, LEAGUE_K, _K_R),
+        "hit_rate": regress(hits, pa, LEAGUE_HIT, _HIT_R),
     }
 
 
@@ -160,11 +160,11 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
         "name": name or str(player_id),
         "team": team,
         "throws": throws,
-        "k_per_bf": (ks / pa) if pa else 0.0,
+        "k_per_bf": regress(ks, pa, LEAGUE_K, _K_R),
         "expected_bf": expected_bf,
         "opponent_k_mult": 1.0,
         "k_line": line,
-        "hit_allowed_rate": (hits / pa) if pa else 0.0,
+        "hit_allowed_rate": regress(hits, pa, LEAGUE_HIT, _HIT_R),
         "hr_allowed_rate": (hr / pa) if pa else 0.0,
         "bf": pa,
     }
