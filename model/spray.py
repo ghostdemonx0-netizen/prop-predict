@@ -74,6 +74,28 @@ def final_distribution(scouts: dict, bats: str) -> dict:
     return {f: blended[f] / tot for f in blended}
 
 
+def pool_spray(sides_list) -> dict:
+    """Merge a list of per-season {"R":scoutset,"L":scoutset} by SUMMING counts.
+
+    Spray is a stable trait, so pooling 3 seasons gives established hitters a big
+    sample (overall.n ~ 1,200+) -> they reach the dial cap from day one.
+    """
+    out = {side: {k: {"pull": 0, "center": 0, "oppo": 0, "n": 0} for k in ("overall", "air", "hr")}
+           for side in ("R", "L")}
+    for sides in sides_list:
+        if not sides:
+            continue
+        for side in ("R", "L"):
+            sc = sides.get(side)
+            if not sc:
+                continue
+            for bucket in ("overall", "air", "hr"):
+                src = sc.get(bucket) or {}
+                for f in ("pull", "center", "oppo", "n"):
+                    out[side][bucket][f] += src.get(f, 0)
+    return out
+
+
 def compute_league_default(spray_results, min_n: int = 200) -> dict:
     """League-average handedness default per side, from many batters' batter_spray() outputs.
 

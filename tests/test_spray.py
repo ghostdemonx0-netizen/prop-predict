@@ -57,3 +57,17 @@ def test_compute_league_default_averages_qualified_hitters():
 def test_compute_league_default_skips_thin_samples():
     out = spray.compute_league_default([_res_R(90, 5, 5, 50)], min_n=200)  # n<min_n
     assert out["R"] == spray.HAND_DEFAULT["R"]
+
+
+def _sides_R(p, c, o, n):
+    z = {"pull": 0, "center": 0, "oppo": 0, "n": 0}
+    return {"R": {"overall": {"pull": p, "center": c, "oppo": o, "n": n}, "air": dict(z), "hr": dict(z)},
+            "L": {"overall": dict(z), "air": dict(z), "hr": dict(z)}}
+
+
+def test_pool_spray_sums_counts_across_seasons():
+    out = spray.pool_spray([_sides_R(30, 15, 5, 50), _sides_R(20, 10, 10, 40), None])
+    assert out["R"]["overall"]["n"] == 90
+    assert out["R"]["overall"]["pull"] == 50
+    assert out["R"]["overall"]["center"] == 25
+    assert out["L"]["overall"]["n"] == 0   # no left-side data
