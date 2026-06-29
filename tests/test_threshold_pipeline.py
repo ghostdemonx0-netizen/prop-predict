@@ -524,6 +524,14 @@ def test_pitcher_factor_neutral_matchup_col_tb():
     assert abs(r["pitcher_factor"] - 1.0) < 0.10, f"pitcher_factor={r['pitcher_factor']:.4f} should be ≈1.0 for neutral matchup in COL"
 
 
+def test_tb_row_carries_spray_pull():
+    batter = _bat(99, 400, 55, 20, 2, 10)
+    lf = lambda g: {"home": [batter], "away": []}
+    rows = build_total_bases_rows(_slate(), lf, lambda p: _pit(p), _w, bvp_fn=None)
+    assert "spray_pull" in rows[0]
+    assert 0.0 <= rows[0]["spray_pull"] <= 1.0
+
+
 def test_bvp_hit_dial_boosts_hits_for_strong_history():
     batter = _bat(1, 400, 90, 25, 3, 20)
     lf = lambda g: {"home": [batter], "away": []}
