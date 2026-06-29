@@ -15,3 +15,27 @@ def test_pitcher_gamelog_empty_on_failure(monkeypatch):
     # malformed payload -> parsing raises -> [] (no slow retry path)
     monkeypatch.setattr(fetch.statsapi, "get", lambda *a, **k: {})
     assert fetch.pitcher_gamelog(700, 2026) == []
+
+
+# --- batter_spray (corner-wind data layer) ---
+import pandas as pd
+
+
+def test_batter_spray_buckets_by_side(monkeypatch):
+    df = pd.DataFrame([
+        {"stand": "R", "events": "home_run", "launch_angle": 28, "hc_x": 80, "hc_y": 90, "game_date": "2026-05-01"},
+        {"stand": "R", "events": "single", "launch_angle": 5, "hc_x": 125, "hc_y": 120, "game_date": "2026-05-02"},
+    ])
+    monkeypatch.setattr(fetch, "statcast_batter", lambda s, e, pid: df)
+    monkeypatch.setattr(fetch, "_with_retries", lambda fn: fn())
+    out = fetch.batter_spray(700, 2026)
+    assert out["R"]["overall"]["n"] == 2
+    assert out["R"]["hr"]["n"] == 1
+    assert out["R"]["hr"]["pull"] == 1       # the HR was pulled (LF for RHB)
+    assert out["R"]["air"]["n"] >= 1         # launch_angle>=10 ball counted as air
+
+
+def test_batter_spray_empty_on_failure(monkeypatch):
+    monkeypatch.setattr(fetch, "statcast_batter", lambda s, e, pid: (_ for _ in ()).throw(RuntimeError()))
+    monkeypatch.setattr(fetch, "_with_retries", lambda fn: fn())
+    assert fetch.batter_spray(700, 2026) == {}
