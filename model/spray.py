@@ -10,10 +10,11 @@ REL = {"overall": 1.0, "air": 1.5, "hr": 2.0}
 KCONF = {"overall": 120.0, "air": 100.0, "hr": 15.0}
 DIAL_K = 150.0
 CAP = 0.70
-# league-average spray per side (seed; recompute from data). pull/center/oppo.
+# league-average spray per side, MEASURED via compute_league_default over a league-wide
+# Statcast pull (2026-05-28..06-25, 484 batters). Refresh yearly. pull/center/oppo.
 HAND_DEFAULT = {
-    "R": {"pull": 0.50, "center": 0.30, "oppo": 0.20},
-    "L": {"pull": 0.50, "center": 0.30, "oppo": 0.20},
+    "R": {"pull": 0.456, "center": 0.289, "oppo": 0.255},
+    "L": {"pull": 0.482, "center": 0.264, "oppo": 0.254},
 }
 
 
@@ -45,14 +46,15 @@ def combine_scouts(scouts: dict):
     for key in ("overall", "air", "hr"):
         s = scouts.get(key) or {}
         n = s.get("n", 0)
-        if n <= 0:
+        share_total = s.get("pull", 0) + s.get("center", 0) + s.get("oppo", 0)
+        if n <= 0 or share_total <= 0:
             continue
         vote = REL[key] * _confidence(n, KCONF[key])
         if vote <= 0:
             continue
         wsum += vote
         for f in fields:
-            acc[f] += vote * s.get(f, 0.0)
+            acc[f] += vote * (s.get(f, 0.0) / share_total)   # normalize counts -> shares
     if wsum <= 0:
         return None
     return {f: acc[f] / wsum for f in fields}
