@@ -20,7 +20,7 @@ from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf
 from model import spray as _spray
 from model.projections import (
     hr_probability, hr_rate_per_pa, expected_strikeouts, poisson_over_prob,
-    lineup_expected_ks, expected_pa_for_slot, pitcher_hr_mult, bvp_hr_mult,
+    lineup_expected_ks, expected_pa_for_slot, pitcher_hr_mult, bvp_hr_mult, bvp_hit_mult,
 )
 from model.matchup import matchup, hr_platoon_mult, bvp_k_mult, classify_lean
 from model.counts import count_ge_prob
@@ -229,6 +229,10 @@ def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_x
     else:
         hit_factor = platoon = p_mult = b_mult = 1.0
     form = form_mult if form_mult is not None else b.get("recent_form_mult", 1.0)
+    # Career BvP hits dial on the contact components (1B/2B/3B). Applied to BOTH the
+    # actual and neutral vectors so it moves the probability but cancels in the
+    # pitcher/park/weather factor ratios. (HR component uses bvp_hr_mult separately.)
+    hit_mult = bvp_hit_mult(bvp.get("hits", 0), bvp["pa"]) if (bvp and bvp.get("pa")) else 1.0
 
     # Per-component park factors + dampened weather for TB rows.
     # When apply_xbh_park is False (Hits path), all factors stay 1.0 → park-neutral.
@@ -238,9 +242,9 @@ def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_x
         wx = 1.0
         park_1b = park_2b = park_3b = 1.0
 
-    p1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * hit_factor * form * park_1b
-    p2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * hit_factor * form * park_2b * wx
-    p3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * hit_factor * form * park_3b * wx
+    p1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * hit_factor * form * park_1b * hit_mult
+    p2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * hit_factor * form * park_2b * wx * hit_mult
+    p3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * hit_factor * form * park_3b * wx * hit_mult
     p4 = hr_rate_per_pa(b.get("season_hr", 0), pa, recent_form_mult=form, matchup_mult=platoon,
                         park_mult=eff_park, weather_mult=weather_mult, pitcher_mult=p_mult, bvp_mult=b_mult)
     p1, p2, p3, p4 = (max(0.0, x) for x in (p1, p2, p3, p4))
@@ -252,9 +256,9 @@ def _batter_outcome_vector(b, opp, eff_park, weather_mult, slot, bvp, *, apply_x
 
     # Neutral vector: same batter form + park/weather, but league-average pitcher
     # (no platoon, no pitcher quality, no bvp) so the ratio isolates pitcher effect.
-    n1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * form * park_1b
-    n2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * form * park_2b * wx
-    n3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * form * park_3b * wx
+    n1 = regress(b.get("season_1b", 0), pa, _LG_1B, _COMP_R) * form * park_1b * hit_mult
+    n2 = regress(b.get("season_2b", 0), pa, _LG_2B, _COMP_R) * form * park_2b * wx * hit_mult
+    n3 = regress(b.get("season_3b", 0), pa, _LG_3B, _COMP_R) * form * park_3b * wx * hit_mult
     n4 = hr_rate_per_pa(b.get("season_hr", 0), pa, recent_form_mult=form,
                         park_mult=eff_park, weather_mult=weather_mult)
     n1, n2, n3, n4 = (max(0.0, x) for x in (n1, n2, n3, n4))
@@ -359,6 +363,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     "bats": b.get("bats", "R"),
                     "lineup_status": b.get("lineup_status", "confirmed"),
                     "recent_form_mult": form, "hard_hit_form": hard, "production_form": prod,
+                    "bvp_hit_mult": bvp_hit_mult(bvp.get("hits", 0), bvp["pa"]) if (bvp and bvp.get("pa")) else 1.0,
                     "pitcher_factor": pitcher_factor,
                     "park_weather_factor": park_weather_factor,
                     "park_factor": park_factor,
