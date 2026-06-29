@@ -187,3 +187,25 @@ def test_nb_monotonic_in_threshold():
 
 def test_nb_size_nonpositive_falls_back_to_poisson():
     assert nb_over_prob(1.8, 2.5, 0.0) == poisson_over_prob(1.8, 2.5)
+
+
+# --- BvP hit dial ---
+from model.projections import bvp_hit_mult, LEAGUE_HIT
+
+
+def test_bvp_hit_mult_no_history_neutral():
+    assert bvp_hit_mult(0, 0) == 1.0
+
+
+def test_bvp_hit_mult_zero_hits_fades_down():
+    m = bvp_hit_mult(0, 30)
+    assert 0.90 <= m < 1.0
+
+
+def test_bvp_hit_mult_strong_sample_climbs_capped():
+    m = bvp_hit_mult(40, 60)
+    assert 1.0 < m <= 1.10
+
+
+def test_bvp_hit_mult_small_sample_barely_moves():
+    assert abs(bvp_hit_mult(6, 12) - 1.0) < 0.02
