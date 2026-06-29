@@ -112,6 +112,7 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
         prof = profiles.batter_profile_from_events(
             events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)), bats=m.get("bats", "R"))
         prof = profiles.with_gamelog(prof, _gamelog_fetch(pid), current_season=season)
+        prof["spray_sides"] = get_or_compute(f"bat-spray-{pid}-{season}", lambda: fetch.batter_spray(pid, season))
         prof["lineup_status"] = status
         return prof
 
@@ -164,6 +165,7 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
         prof["recent_r"] = 0
         prof["recent_rbi"] = 0
         prof["recent_hrr"] = 0
+        prof["spray_sides"] = get_or_compute(f"bat-spray-{pid}-{season}", lambda: fetch.batter_spray(pid, season))
         prof["lineup_status"] = status
         return prof
 
