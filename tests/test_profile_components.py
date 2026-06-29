@@ -1,6 +1,7 @@
 # tests/test_profile_components.py
 import math
 from model.profiles import batter_profile_from_events, blended_batter_profile
+from model.profiles import regress, LEAGUE_K, LEAGUE_HIT, _K_R, _HIT_R
 
 
 def _ev(d, e): return {"game_date": d, "events": e, "launch_speed": 90.0}
@@ -21,8 +22,8 @@ def test_profile_existing_fields_unchanged():
     p = batter_profile_from_events(evs, as_of="2026-06-01", player_id=2, name="Y", bats="L")
     assert p["season_pa"] == 3
     assert p["season_hr"] == 1
-    assert math.isclose(p["k_rate"], 1 / 3)
-    assert math.isclose(p["hit_rate"], 2 / 3)
+    assert math.isclose(p["k_rate"], regress(1, 3, LEAGUE_K, _K_R))    # regressed (was raw 1/3)
+    assert math.isclose(p["hit_rate"], regress(2, 3, LEAGUE_HIT, _HIT_R))  # regressed (was raw 2/3)
 
 
 def _bat_events_with_xb(n_pa, n_hr, n_1b, n_2b, n_3b, n_k, date):
