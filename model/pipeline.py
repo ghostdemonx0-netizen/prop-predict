@@ -16,7 +16,8 @@ Fetcher contracts:
 from math import sqrt
 
 from model.parks import get_park, hr_park_factor, hit_park_factor
-from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf
+from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf, wind_out_directional
+from model import spray as _spray
 from model.projections import (
     hr_probability, hr_rate_per_pa, expected_strikeouts, poisson_over_prob,
     lineup_expected_ks, expected_pa_for_slot, pitcher_hr_mult, bvp_hr_mult,
@@ -65,7 +66,6 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
         if game.get("started"):
             continue
         w = _game_weather(game, weather_fn)
-        weather_mult = weather_hr_multiplier(w["wind_out_mph"], w["temp_f"], w["park"]["dome"])
         park_mult = hr_park_factor(game["park_team"])
         lineups = lineups_fn(game)
         home_p = pitcher_fn(game["home_pitcher_id"]) if game.get("home_pitcher_id") else None
@@ -81,6 +81,13 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                 p_mult = pitcher_hr_mult(opp.get("hr_allowed_rate", 0.033), opp.get("bf", 0)) if opp else 1.0
                 bvp = bvp_fn(b.get("player_id"), opp.get("player_id")) if (bvp_fn and opp) else None
                 b_mult = bvp_hr_mult(bvp["hr"], bvp["pa"]) if bvp else 1.0
+                # per-batter directional wind (spray-weighted)
+                bats = b.get("bats", "R")
+                hand = bats if bats in ("R", "L") else ("L" if (opp and opp.get("throws") == "R") else "R")
+                sp = _spray.final_distribution((b.get("spray_sides") or {}).get(hand, {}), hand)
+                wod = wind_out_directional(w["wx"]["wind_speed_mph"], w["wx"]["wind_from_deg"],
+                                           w["park"]["cf_bearing_deg"], sp, hand)
+                weather_mult = weather_hr_multiplier(wod, w["temp_f"], w["park"]["dome"])
                 hard = b.get("recent_form_mult", 1.0)
                 prod = b.get("production_form_hr", 1.0)
                 form = _run_props.blend_forms(hard, prod, w_hard=0.80)
@@ -106,8 +113,8 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     "player_id": b.get("player_id"),
                     "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                     "player": b["name"], "team": team, "park": game["park_team"],
-                    "probability": prob, "wind_out_mph": w["wind_out_mph"],
-                    "weather_mult": weather_mult, "park_mult": eff_park,
+                    "probability": prob, "wind_out_mph": wod,
+                    "weather_mult": weather_mult, "park_mult": eff_park, "spray_pull": sp["pull"],
                     "matchup_mult": platoon, "pitcher_mult": p_mult, "bvp_mult": b_mult,
                     "recent_form_mult": form, "hard_hit_form": hard, "production_form": prod,
                     "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],

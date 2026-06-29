@@ -265,3 +265,28 @@ def test_hr_row_blends_production_form_80_20():
     assert abs(row["recent_form_mult"] - run_props.blend_forms(1.0, 1.20, w_hard=0.80)) < 1e-9
     assert row["hard_hit_form"] == 1.0
     assert row["production_form"] == 1.20
+
+
+def test_hr_directional_wind_helps_pull_hitter_lf_wind():
+    from model.parks import get_park
+    sides = {"R": {"overall": {"pull": 80, "center": 12, "oppo": 8, "n": 1200},
+                   "air": {"pull": 80, "center": 12, "oppo": 8, "n": 400},
+                   "hr": {"pull": 85, "center": 10, "oppo": 5, "n": 90}},
+             "L": {"overall": {"pull": 0, "center": 0, "oppo": 0, "n": 0},
+                   "air": {"pull": 0, "center": 0, "oppo": 0, "n": 0},
+                   "hr": {"pull": 0, "center": 0, "oppo": 0, "n": 0}}}
+    bat = {"player_id": 601, "name": "Pull", "bats": "R", "lineup_status": "confirmed",
+           "season_hr": 30, "season_pa": 500, "season_1b": 40, "season_2b": 20, "season_3b": 1,
+           "hit_rate": 0.25, "k_rate": 0.22, "recent_form_mult": 1.0, "spray_sides": sides}
+    slate = [{"game_id": 7, "home": "COL", "away": "LAD", "park_team": "COL", "home_id": 10, "away_id": 20,
+              "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+    L = lambda g: {"home": [bat], "away": []}
+    P = lambda pid: {"name": "P", "player_id": pid, "throws": "R", "hr_allowed_rate": 0.033, "bf": 400,
+                     "k_per_bf": 0.22, "hit_allowed_rate": 0.22}
+    cf = get_park("COL")["cf_bearing_deg"]
+    Wlf = lambda g: {"wind_speed_mph": 12, "wind_from_deg": (cf - 45 + 180) % 360, "temp_f": 72, "precip_pct": 0}
+    Wrf = lambda g: {"wind_speed_mph": 12, "wind_from_deg": (cf + 45 + 180) % 360, "temp_f": 72, "precip_pct": 0}
+    lf = _pl.build_hr_rows(slate, L, P, Wlf)[0]
+    rf = _pl.build_hr_rows(slate, L, P, Wrf)[0]
+    assert lf["probability"] > rf["probability"]   # LF-out helps this RHB pull hitter more than RF-out
+    assert "spray_pull" in lf
