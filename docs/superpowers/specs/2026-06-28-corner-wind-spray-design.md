@@ -16,9 +16,11 @@ But a crosswind out to a corner genuinely **carries balls out** to that corner. 
 
 ## 2. Scope
 
-- **HR prop only (v1).** Total Bases keeps its current dampened CF-wind for now (fast-follow).
+- **HR + Total Bases (v1).** HR gets the **full** directional wind; TB gets it **dampened on its extra-base components** (doubles/triples), exactly where TB already applies dampened weather. Singles stay weather-neutral.
+- **Hits prop — effectively weather-neutral.** Honest nuance: the small **HR slice** inside the Hits outcome vector already carries weather today; with this change that sliver becomes *directional* too — negligible and pre-existing (singles/doubles untouched), not a new effect.
 - Runs/RBI/HRR unaffected (weather not modeled there).
 - New **spray data layer** (backfill + fold) is part of this build — we do NOT wait for an organic cache rebuild.
+- **Graceful before backfill:** until the one-time spray backfill runs, every batter has n=0 → falls back to the handedness default → which *already* gives directional corner-wind credit (better than today's CF-only). Feature helps from day one; the backfill just personalizes it.
 
 ## 3. The spray engine
 
@@ -29,6 +31,8 @@ From Statcast batted-ball data (hit location + launch angle + event), compute th
 - **HR** — over home runs.
 
 Each scout returns `{pull, center, oppo}` shares (sum to 1). Field is classified from **spray angle** (`hc_x/hc_y`, home plate ≈ (125.42, 198.27)) into thirds of fair territory, sign-flipped by handedness so **pull = LF for RHB, RF for LHB** (and oppo the mirror).
+
+**Switch hitters:** Statcast tags the batting side (`stand`) per ball, so split a SW hitter's spray into his **lefty-side** and **righty-side** samples; use the side matching tonight's pitcher (bats L vs RHP, R vs LHP) with that side's handedness default.
 
 ### 3b. Combine the 3 scouts into one `his_spray` distribution (relevance × confidence vote)
 For each scout: `confidence = n/(n+K)`, `vote = relevance × confidence`. Blend **each field share** with the same votes:
@@ -63,6 +67,8 @@ Spray is a **stable physical trait** (like park/handedness), so `final` is the *
 | Center | 0° | 0° |
 | Oppo corner | +45° (RF) | −45° (LF) |
 
+**⚠️ Angle-convention reconciliation (must get right):** the existing `wind_dir_rel_cf` returns the wind's travel direction as **0=out to CF, 90=RF, 180=in, 270=LF**. The field bearings above use **∓45° (− = LF, + = RF)**. The implementation MUST convert both to a single convention before the `cos(...)` — a sign slip here would *invert* the wind effect. Add a test pinning "wind out to LF → positive wind_out for a RHB pull hitter."
+
 ### 4b. Wind-out, weighted by where he hits
 Using the wind's direction of travel relative to CF (`wind_to_deg_rel_cf` from `wind_dir_rel_cf`):
 ```
@@ -89,6 +95,7 @@ This **replaces** `wind_out_to_cf` as the input to `weather_hr_multiplier` for H
 - `model/profiles.py` (or `make_profile_fns`) attaches `spray = {pull,center,oppo}` (= `final`) + `spray_n` to each batter profile, via the spray engine over the spray cache + handedness.
 - `model/weather.py` gains `wind_out_directional(wind_speed, wind_from_deg, cf_bearing_deg, spray, hand)` implementing §4b.
 - `model/pipeline.py` `build_hr_rows` calls `wind_out_directional` per batter and passes the result into `weather_hr_multiplier` (replacing the per-game `wind_out_to_cf` for HR). Row keeps `wind_out_mph` = the directional value for display.
+- **TB (and the HR slice of any prop):** `_batter_outcome_vector` computes the same per-batter directional `weather_mult` from `wind_out_directional` and uses it where it already applies weather — **full** on the HR component (p4), **dampened** (existing `_XBH_WEATHER_DAMPEN`) on doubles/triples (p2/p3). Singles (p1) stay weather-neutral. This covers Total Bases and the (negligible) HR slice of Hits with the same directional value — one wind computation used everywhere weather appears.
 
 ## 7. Recorder / grader
 - Archive the new spray for later "did it help?" analysis — add `spray_pull` (the final pull share) to `_FACTOR_KEYS`; `weather_mult` is already archived. Grader auto-grades (HR outcomes vs new probabilities).
