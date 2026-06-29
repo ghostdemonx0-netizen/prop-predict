@@ -45,3 +45,25 @@ def test_weather_multiplier_is_one_in_dome():
 def test_weather_multiplier_is_clamped():
     assert weather_hr_multiplier(wind_out_mph=100, temp_f=120, dome=False) == pytest.approx(1.4)
     assert weather_hr_multiplier(wind_out_mph=-100, temp_f=10, dome=False) == pytest.approx(0.7)
+
+
+# --- directional (spray-weighted) wind ---
+from model.weather import wind_out_directional
+
+
+def test_dir_wind_lf_out_helps_rhb_pull_hitter():
+    # cf=0; wind_from=135 -> wind_to=315 -> rel -45 (toward the LF pole) -> helps a RHB pull hitter
+    spray = {"pull": 0.8, "center": 0.15, "oppo": 0.05}
+    assert wind_out_directional(10, 135, 0, spray, "R") > 3.0
+
+
+def test_dir_wind_lf_beats_rf_for_rhb_pull_hitter():
+    spray = {"pull": 0.8, "center": 0.15, "oppo": 0.05}
+    lf = wind_out_directional(10, 135, 0, spray, "R")   # rel -45 (LF, his pull)
+    rf = wind_out_directional(10, 225, 0, spray, "R")   # rel +45 (RF, his oppo)
+    assert lf > rf
+
+
+def test_dir_wind_center_for_average_hitter():
+    spray = {"pull": 0.5, "center": 0.3, "oppo": 0.2}
+    assert wind_out_directional(10, 180, 0, spray, "R") > 6.5   # most of a 10mph CF wind credited

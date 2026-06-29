@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from model import fetch, profiles
+from model import spray as _spray
 from model.cache import get_or_compute
 from model.pipeline import build_hr_rows, build_strikeout_rows, build_games, build_hits_rows, build_total_bases_rows, build_runs_rows, build_rbi_rows, build_hrr_rows
 
@@ -112,6 +113,10 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
         prof = profiles.batter_profile_from_events(
             events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)), bats=m.get("bats", "R"))
         prof = profiles.with_gamelog(prof, _gamelog_fetch(pid), current_season=season)
+        prof["spray_sides"] = _spray.pool_spray([
+            get_or_compute(f"bat-spray-{pid}-{yr}", lambda yr=yr: fetch.batter_spray(pid, yr))
+            for yr in (season, season - 1, season - 2)
+        ])
         prof["lineup_status"] = status
         return prof
 
@@ -164,6 +169,10 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
         prof["recent_r"] = 0
         prof["recent_rbi"] = 0
         prof["recent_hrr"] = 0
+        prof["spray_sides"] = _spray.pool_spray([
+            get_or_compute(f"bat-spray-{pid}-{yr}", lambda yr=yr: fetch.batter_spray(pid, yr))
+            for yr in (season, season - 1, season - 2)
+        ])
         prof["lineup_status"] = status
         return prof
 

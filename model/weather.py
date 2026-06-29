@@ -39,3 +39,29 @@ def weather_hr_multiplier(wind_out_mph: float, temp_f: float, dome: bool) -> flo
         return 1.0
     mult = 1.0 + 0.02 * wind_out_mph + 0.005 * (temp_f - 70.0)
     return max(0.7, min(1.4, mult))
+
+
+# Field travel directions relative to CF (signed deg; - = LF side, + = RF side).
+_FIELD_BEARING = {
+    "R": {"pull": -45.0, "center": 0.0, "oppo": 45.0},   # RHB pulls to LF
+    "L": {"pull": 45.0, "center": 0.0, "oppo": -45.0},   # LHB pulls to RF
+}
+
+
+def wind_out_directional(wind_speed_mph: float, wind_from_deg: float, cf_bearing_deg: float,
+                         spray: dict, bats: str) -> float:
+    """Wind (mph) blowing OUT, weighted across the batter's pull/center/oppo fields.
+
+    Projects the full wind vector onto each field's travel direction and weights by
+    how often the batter hits there. Reduces toward wind_out_to_cf when spray is
+    centered. Positive = helps HRs, negative = blows in.
+    """
+    wind_to = (wind_from_deg + 180.0) % 360.0
+    rel = ((wind_to - cf_bearing_deg + 180.0) % 360.0) - 180.0   # signed deg rel CF
+    bearings = _FIELD_BEARING["L" if bats == "L" else "R"]
+    out = 0.0
+    for field in ("pull", "center", "oppo"):
+        share = spray.get(field, 0.0)
+        if share:
+            out += share * wind_speed_mph * math.cos(math.radians(rel - bearings[field]))
+    return out

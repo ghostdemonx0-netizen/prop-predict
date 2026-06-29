@@ -277,3 +277,13 @@ def test_batter_hist_fn_neutralizes_production_form():
     assert 'prof["production_form_hr"] = 1.0' in src
     assert 'prof["production_form_hit"] = 1.0' in src
     assert 'prof["production_form_tb"] = 1.0' in src
+
+
+def test_batter_profiles_attach_pooled_spray_sides():
+    # both batter_fn and batter_hist_fn attach pooled 3-season spray (stable trait, same in both)
+    import inspect
+    from model import export_web
+    src = inspect.getsource(export_web.make_profile_fns)
+    assert src.count('prof["spray_sides"]') >= 2
+    assert "pool_spray" in src
+    assert "season - 2" in src   # pools current + 2 prior seasons

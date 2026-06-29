@@ -76,6 +76,9 @@ _FACTOR_KEYS: tuple[str, ...] = (
     "lineup_slot_hist",
     "lineup_teammate",
     "lineup_teammate_hist",
+    # Approach: corner-wind spray
+    "spray_pull",
+    "spray_pull_hist",
 )
 
 

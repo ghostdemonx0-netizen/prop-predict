@@ -1076,3 +1076,9 @@ def test_record_from_row_captures_lineup_factors():
     assert rec["factors"]["lineup_slot"] == 1.05
     assert rec["factors"]["lineup_teammate"] == 1.12
     assert rec["factors"]["lineup_mult_hist"] == 1.06
+
+
+def test_record_captures_spray_pull():
+    rec = record_from_row({"game_id": 1, "player_id": 7, "player": "X", "team": "AAA",
+                           "probability": 0.12, "spray_pull": 0.66}, "hr")
+    assert rec["factors"]["spray_pull"] == 0.66

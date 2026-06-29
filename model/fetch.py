@@ -11,6 +11,7 @@ import statsapi
 import requests
 import pandas as pd
 from pybaseball import statcast, statcast_batter, statcast_pitcher
+from model import spray as _spray
 
 # MLB Stats API team-id -> our park abbreviation
 _TEAM_ABBR = {
@@ -319,6 +320,42 @@ def pitcher_gamelog(player_id: int, season: int) -> list[dict]:
             "game_pk": game.get("gamePk"),
             "started": int(st.get("gamesStarted", 0) or 0) >= 1,
         })
+    return out
+
+
+def batter_spray(player_id: int, season: int) -> dict:
+    """Per-side spray counts for one batter-season from Statcast batted balls.
+
+    Returns {"R": scoutset, "L": scoutset}; scoutset has overall/air/hr each
+    {pull,center,oppo,n}. Balls with no hit location are skipped. {} on failure.
+    """
+    start, end = _date_window(season)
+    try:
+        df = _with_retries(lambda: statcast_batter(start, end, player_id))
+    except Exception:
+        return {}
+    if df is None or len(df) == 0:
+        return {}
+
+    def _empty():
+        return {k: {"pull": 0, "center": 0, "oppo": 0, "n": 0} for k in ("overall", "air", "hr")}
+
+    out = {"R": _empty(), "L": _empty()}
+    for r in df.itertuples():
+        hc_x, hc_y = getattr(r, "hc_x", None), getattr(r, "hc_y", None)
+        stand = getattr(r, "stand", None)
+        ev = getattr(r, "events", None)
+        if (hc_x is None or hc_y is None or pd.isna(hc_x) or pd.isna(hc_y)
+                or stand not in ("R", "L") or not ev or (isinstance(ev, float) and pd.isna(ev))):
+            continue
+        field = _spray.field_of(_spray.spray_angle(float(hc_x), float(hc_y)), stand)
+        la = getattr(r, "launch_angle", None)
+        is_air = la is not None and not pd.isna(la) and float(la) >= 10.0
+        is_hr = ev == "home_run"
+        for bucket, include in (("overall", True), ("air", is_air), ("hr", is_hr)):
+            if include:
+                out[stand][bucket][field] += 1
+                out[stand][bucket]["n"] += 1
     return out
 
 
