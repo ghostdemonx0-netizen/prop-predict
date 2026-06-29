@@ -522,3 +522,26 @@ def test_pitcher_factor_neutral_matchup_col_tb():
     assert rows
     r = rows[0]
     assert abs(r["pitcher_factor"] - 1.0) < 0.10, f"pitcher_factor={r['pitcher_factor']:.4f} should be ≈1.0 for neutral matchup in COL"
+
+
+def test_tb_directional_wind_pull_hitter_lf_beats_rf():
+    from model.parks import get_park
+    sides = {"R": {"overall": {"pull": 80, "center": 12, "oppo": 8, "n": 1200},
+                   "air": {"pull": 80, "center": 12, "oppo": 8, "n": 400},
+                   "hr": {"pull": 85, "center": 10, "oppo": 5, "n": 90}},
+             "L": {"overall": {"pull": 0, "center": 0, "oppo": 0, "n": 0},
+                   "air": {"pull": 0, "center": 0, "oppo": 0, "n": 0},
+                   "hr": {"pull": 0, "center": 0, "oppo": 0, "n": 0}}}
+    bat = {"player_id": 99, "name": "P", "team": "COL", "bats": "R", "season_pa": 400,
+           "season_1b": 55, "season_2b": 20, "season_3b": 2, "season_hr": 20,
+           "hit_rate": 0.25, "k_rate": 0.22, "recent_form_mult": 1.0,
+           "lineup_status": "confirmed", "spray_sides": sides}
+    slate = [{"game_id": 10, "home": "COL", "away": "SD", "park_team": "COL",
+              "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+    lf = lambda g: {"home": [bat], "away": []}
+    cf = get_park("COL")["cf_bearing_deg"]
+    Wlf = lambda g: {"wind_speed_mph": 14, "wind_from_deg": (cf - 45 + 180) % 360, "temp_f": 72, "precip_pct": 0}
+    Wrf = lambda g: {"wind_speed_mph": 14, "wind_from_deg": (cf + 45 + 180) % 360, "temp_f": 72, "precip_pct": 0}
+    lfp = build_total_bases_rows(slate, lf, lambda p: _pit(p), Wlf, bvp_fn=None)[0]["p_ge2"]
+    rfp = build_total_bases_rows(slate, lf, lambda p: _pit(p), Wrf, bvp_fn=None)[0]["p_ge2"]
+    assert lfp > rfp   # LF-out wind helps this RHB pull hitter's TB (via HR + XBH)

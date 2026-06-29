@@ -273,7 +273,6 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
         if game.get("started"):
             continue
         w = _game_weather(game, weather_fn)
-        weather_mult = weather_hr_multiplier(w["wind_out_mph"], w["temp_f"], w["park"]["dome"])
         park_mult = hr_park_factor(game["park_team"])
         lineups = lineups_fn(game)
         home_p = pitcher_fn(game["home_pitcher_id"]) if game.get("home_pitcher_id") else None
@@ -291,6 +290,14 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
             eff_park = park_mult / sqrt(hr_park_factor(team))
             for slot, b in enumerate(lineups.get(side, [])):
                 bvp = bvp_fn(b.get("player_id"), opp.get("player_id")) if (bvp_fn and opp) else None
+                # per-batter directional wind (spray-weighted): full on the HR component,
+                # dampened on doubles/triples inside _batter_outcome_vector.
+                bats = b.get("bats", "R")
+                hand = bats if bats in ("R", "L") else ("L" if (opp and opp.get("throws") == "R") else "R")
+                _sp = _spray.final_distribution((b.get("spray_sides") or {}).get(hand, {}), hand)
+                _wod = wind_out_directional(w["wx"]["wind_speed_mph"], w["wx"]["wind_from_deg"],
+                                            w["park"]["cf_bearing_deg"], _sp, hand)
+                weather_mult = weather_hr_multiplier(_wod, w["temp_f"], w["park"]["dome"])
                 hard = b.get("recent_form_mult", 1.0)
                 prod = b.get("production_form_tb" if units == "bases" else "production_form_hit", 1.0)
                 form = _run_props.blend_forms(hard, prod, w_hard=0.60)
