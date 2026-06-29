@@ -524,6 +524,19 @@ def test_pitcher_factor_neutral_matchup_col_tb():
     assert abs(r["pitcher_factor"] - 1.0) < 0.10, f"pitcher_factor={r['pitcher_factor']:.4f} should be ≈1.0 for neutral matchup in COL"
 
 
+def test_bvp_hit_dial_boosts_hits_for_strong_history():
+    batter = _bat(1, 400, 90, 25, 3, 20)
+    lf = lambda g: {"home": [batter], "away": []}
+    pf = lambda pid: _pit(pid)
+    strong = lambda b, p: {"pa": 60, "ab": 55, "hits": 40, "hr": 2, "k": 5, "avg": ".364"}
+    none = lambda b, p: None
+    hi = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=strong)[0]
+    base = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=none)[0]
+    assert hi["p_ge1"] > base["p_ge1"]        # strong BvP hits history bumps the hit prob
+    assert hi["bvp_hit_mult"] > 1.0
+    assert base["bvp_hit_mult"] == 1.0        # no history -> neutral
+
+
 def test_tb_directional_wind_pull_hitter_lf_beats_rf():
     from model.parks import get_park
     sides = {"R": {"overall": {"pull": 80, "center": 12, "oppo": 8, "n": 1200},

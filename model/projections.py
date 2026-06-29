@@ -3,6 +3,7 @@
 import math
 
 LEAGUE_HR_RATE = 0.033  # league-average HR per plate appearance
+LEAGUE_HIT = 0.22       # league-average hits per plate appearance (matches matchup.LEAGUE_HIT)
 
 
 def hr_rate_per_pa(
@@ -151,6 +152,18 @@ def bvp_hr_mult(
         return 1.0
     reg = (hr + league_hr_rate * regression_pa) / (pa + regression_pa)
     return max(lo, min(reg / league_hr_rate, hi))
+
+
+def bvp_hit_mult(hits: float, pa: float, *, league_hit_rate: float = LEAGUE_HIT,
+                 regression_pa: float = 600.0, min_pa: float = 1.0,
+                 lo: float = 0.90, hi: float = 1.10) -> float:
+    """Career batter-vs-THIS-pitcher hits dial. Mirrors bvp_hr_mult: the career hit
+    rate is regressed toward league (heavy phantom PAs), expressed vs league, capped
+    +/-10%. No history -> 1.0."""
+    if not pa or pa < min_pa:
+        return 1.0
+    rate = (hits + league_hit_rate * regression_pa) / (pa + regression_pa)
+    return max(lo, min(rate / league_hit_rate, hi))
 
 
 def pitcher_hr_mult(
