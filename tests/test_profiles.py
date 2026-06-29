@@ -1,5 +1,6 @@
 import pytest
 from model.profiles import batter_profile_from_events, pitcher_profile_from_events
+from model.profiles import regress, LEAGUE_K, LEAGUE_HIT, _K_R, _HIT_R
 
 
 def _ev(date, events=None, launch_speed=None):
@@ -17,8 +18,8 @@ def test_batter_profile_counts_and_rates():
     p = batter_profile_from_events(events, as_of="2026-06-10", player_id=1, name="Test", bats="L")
     assert p["season_pa"] == 4
     assert p["season_hr"] == 1
-    assert p["k_rate"] == pytest.approx(0.25)
-    assert p["hit_rate"] == pytest.approx(0.5)
+    assert p["k_rate"] == pytest.approx(regress(1, 4, LEAGUE_K, _K_R))   # regressed (was raw 0.25)
+    assert p["hit_rate"] == pytest.approx(regress(2, 4, LEAGUE_HIT, _HIT_R))  # regressed (was raw 0.5)
     assert p["player_id"] == 1 and p["bats"] == "L"
 
 
@@ -45,8 +46,8 @@ def test_pitcher_profile_from_events():
         {"game_date": "2026-06-06", "events": "strikeout", "game_pk": 12},
     ]
     p = pitcher_profile_from_events(events, as_of="2026-06-10", player_id=2, throws="L")
-    assert p["k_per_bf"] == pytest.approx(0.5)
-    assert p["hit_allowed_rate"] == pytest.approx(0.5)  # single + HR are both hits
+    assert p["k_per_bf"] == pytest.approx(regress(2, 4, LEAGUE_K, _K_R))         # regressed (was raw 0.5)
+    assert p["hit_allowed_rate"] == pytest.approx(regress(2, 4, LEAGUE_HIT, _HIT_R))  # regressed (was raw 0.5)
     assert p["hr_allowed_rate"] == pytest.approx(0.25)
     assert p["expected_bf"] == pytest.approx(2.0)  # 4 PA over 2 games
     assert p["bf"] == 4
@@ -55,7 +56,7 @@ def test_pitcher_profile_from_events():
 
 def test_pitcher_profile_no_data_defaults():
     p = pitcher_profile_from_events([], as_of="2026-06-10", player_id=3)
-    assert p["k_per_bf"] == 0.0
+    assert p["k_per_bf"] == LEAGUE_K   # no data -> regresses to league (was 0.0)
     assert p["expected_bf"] == 24.0
     assert p["bf"] == 0
 
@@ -64,8 +65,8 @@ def test_batter_profile_no_data_defaults():
     p = batter_profile_from_events([], as_of="2026-06-10", player_id=4)
     assert p["season_pa"] == 0
     assert p["season_hr"] == 0
-    assert p["k_rate"] == 0.0
-    assert p["hit_rate"] == 0.0
+    assert p["k_rate"] == LEAGUE_K     # no data -> regresses to league (was 0.0)
+    assert p["hit_rate"] == LEAGUE_HIT
     assert p["recent_form_mult"] == pytest.approx(1.0)
     assert p["name"] == "4"  # falls back to the id
 
@@ -294,7 +295,7 @@ def test_pitcher_profile_under_two_starts_falls_back():
 def test_pitcher_profile_rates_still_from_all_appearances():
     prof = _profiles.pitcher_profile_from_events(
         _swingman_events(), as_of="2026-06-01", player_id=1, started_game_pks={1, 2, 3})
-    assert abs(prof["k_per_bf"] - (20 / 66)) < 1e-9   # 18 start K + 2 relief K over 66 PA
+    assert abs(prof["k_per_bf"] - regress(20, 66, LEAGUE_K, _K_R)) < 1e-9   # regressed; 18 start K + 2 relief K over 66 PA
 
 
 def test_blended_pitcher_profile_passes_started_set():
@@ -340,3 +341,28 @@ def test_production_form_hr_is_heavily_shrunk():
     p = batter_profile_from_events(ev, as_of="2026-07-01", player_id=1)
     assert 1.0 < p["production_form_hr"] <= 1.20
     assert "production_form_tb" in p
+
+
+# --- Current-mode k/hit pull-to-average ---
+
+def test_batter_current_rates_regressed_toward_league():
+    from model import profiles as P
+    ev = [{"game_date": "2026-05-01", "events": e, "launch_speed": 95.0}
+          for e in (["single"] * 5 + ["field_out"] * 5)]   # 10 PA, 5 hits -> raw 0.50
+    prof = P.batter_profile_from_events(ev, as_of="2026-07-01", player_id=1)
+    assert prof["hit_rate"] < 0.40
+    assert abs(prof["hit_rate"] - P.regress(5, 10, P.LEAGUE_HIT, P._HIT_R)) < 1e-9
+    empty = P.batter_profile_from_events([], as_of="2026-07-01", player_id=1)
+    assert empty["hit_rate"] == P.LEAGUE_HIT
+    assert empty["k_rate"] == P.LEAGUE_K
+
+
+def test_pitcher_current_rates_regressed_toward_league():
+    from model import profiles as P
+    ev = [{"game_date": "2026-05-01", "events": e, "game_pk": 1}
+          for e in (["strikeout"] * 3 + ["single"] * 3 + ["field_out"] * 4)]   # 10 PA
+    prof = P.pitcher_profile_from_events(ev, as_of="2026-07-01", player_id=1)
+    assert abs(prof["k_per_bf"] - P.regress(3, 10, P.LEAGUE_K, P._K_R)) < 1e-9
+    assert abs(prof["hit_allowed_rate"] - P.regress(3, 10, P.LEAGUE_HIT, P._HIT_R)) < 1e-9
+    empty = P.pitcher_profile_from_events([], as_of="2026-07-01", player_id=1)
+    assert empty["k_per_bf"] == P.LEAGUE_K
