@@ -1082,3 +1082,9 @@ def test_record_captures_spray_pull():
     rec = record_from_row({"game_id": 1, "player_id": 7, "player": "X", "team": "AAA",
                            "probability": 0.12, "spray_pull": 0.66}, "hr")
     assert rec["factors"]["spray_pull"] == 0.66
+
+
+def test_record_captures_bvp_hit_mult():
+    rec = record_from_row({"game_id": 1, "player_id": 7, "player": "X", "team": "AAA",
+                           "p_ge1": 0.4, "bvp_hit_mult": 1.06}, "hits")
+    assert rec["factors"]["bvp_hit_mult"] == 1.06

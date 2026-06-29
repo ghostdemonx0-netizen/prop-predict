@@ -79,6 +79,9 @@ _FACTOR_KEYS: tuple[str, ...] = (
     # Approach: corner-wind spray
     "spray_pull",
     "spray_pull_hist",
+    # BvP hit dial (Hits/TB contact components)
+    "bvp_hit_mult",
+    "bvp_hit_mult_hist",
 )
 
 
