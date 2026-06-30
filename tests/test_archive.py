@@ -1088,3 +1088,17 @@ def test_record_captures_bvp_hit_mult():
     rec = record_from_row({"game_id": 1, "player_id": 7, "player": "X", "team": "AAA",
                            "p_ge1": 0.4, "bvp_hit_mult": 1.06}, "hits")
     assert rec["factors"]["bvp_hit_mult"] == 1.06
+
+
+def test_spray_mult_and_bat_order_captured():
+    # spray_mult (HR/TB power props) + bat_order context now recorded for tuning
+    row = dict(HR_ROW_SOON, spray_mult=1.034, bat_order=3)
+    f = record_from_row(row, "hr")["factors"]
+    assert math.isclose(f["spray_mult"], 1.034)
+    assert f["bat_order"] == 3
+
+
+def test_spray_mult_absent_when_not_on_row():
+    # rows without the field (e.g. hits) simply omit it — tolerant .get
+    f = record_from_row(HR_ROW_SOON, "hr")["factors"]
+    assert "spray_mult" not in f
