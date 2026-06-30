@@ -240,8 +240,8 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
     _tb_thresholds = ("p_ge2", "p_ge3", "p_ge4")
     # park_weather_factor is meaningful only for Total Bases, so it's omitted
     # from the hits twin set (it would always be an inert 1.0 on hits rows).
-    _hits_factor_fields = ("recent_form_mult", "pitcher_factor")
-    _tb_factor_fields = ("recent_form_mult", "pitcher_factor", "park_weather_factor")
+    _hits_factor_fields = ("recent_form_mult", "pitcher_factor", "hard_hit_form", "production_form")
+    _tb_factor_fields = ("recent_form_mult", "pitcher_factor", "park_weather_factor", "hard_hit_form", "production_form")
 
     for r in hits:
         h = hits_h.get(_key(r))
