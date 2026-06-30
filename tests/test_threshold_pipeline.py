@@ -583,3 +583,13 @@ def test_hits_row_has_no_spray_mult():
     pf = lambda pid: _pit(pid)
     rows = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=None)
     assert "spray_mult" not in rows[0]
+
+
+def test_threshold_rows_carry_bat_order():
+    lf = lambda g: {"home": [_bat(1, 400, 90, 25, 3, 20), _bat(3, 400, 80, 20, 2, 10)],
+                    "away": [_bat(2, 400, 90, 25, 3, 20)]}
+    pf = lambda pid: _pit(pid)
+    hits = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    tb = build_total_bases_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    assert {r["bat_order"] for r in hits} == {1, 2}
+    assert all(isinstance(r.get("bat_order"), int) for r in tb)

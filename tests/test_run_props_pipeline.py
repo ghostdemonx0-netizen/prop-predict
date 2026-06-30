@@ -205,3 +205,13 @@ def test_hrr_row_uses_negative_binomial_tail():
         hrr["p_ge3"], run_props.ge_probs(lam, [("p_ge3", 3)], nb_size=run_props.HRR_NB_SIZE)["p_ge3"])
     # NB tail is fatter than Poisson at the same mean
     assert hrr["p_ge3"] > run_props.ge_probs(lam, [("p_ge3", 3)])["p_ge3"]
+
+
+def test_run_prop_rows_carry_bat_order():
+    L2 = lambda g: {"home": [_bat(1, 100, 60, 70, 200), _bat(3, 100, 40, 40, 150)],
+                    "away": [_bat(2, 100, 50, 50, 180)]}
+    for build in (build_runs_rows, build_rbi_rows, build_hrr_rows):
+        rows = build(_SLATE, L2, lambda p: _pit(p), _W)
+        assert all(isinstance(r.get("bat_order"), int) for r in rows)
+        assert min(r["bat_order"] for r in rows) == 1
+        assert max(r["bat_order"] for r in rows) == 2
