@@ -153,7 +153,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
         <span className={`badge ${strengthTier(r.prob, kind)}`}>{strengthLabel(r.prob, kind)}</span>
         <span>{r.detail}</span>
         {r.time && <span className="inline-flex items-center gap-1" style={{ opacity: 0.75 }}><ClockIcon size={12} /> {r.time}</span>}
-        <StatusChip status={r.status} />
+        <StatusChip status={r.status} order={r.bat_order} />
       </div>
       {(r.playerHand || r.opponent || r.matchup) && (
         <div className="mt-1 flex flex-wrap items-center gap-2" style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
@@ -234,7 +234,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
               })()}
               {r.status && (
                 <span style={{ marginLeft: 6 }}>
-                  <StatusChip status={r.status} />
+                  <StatusChip status={r.status} order={r.bat_order} />
                 </span>
               )}
             </td>
@@ -488,7 +488,7 @@ const COL_GRID = `minmax(0, 1fr) repeat(7, ${COL_SLOT}px)`;
 const COL_GAP = "0.3rem";
 const COL_PAD = "0 0.25rem";
 
-type SortCol = "lean" | "hr" | "hits" | "tb" | "runs" | "rbi" | "hrr";
+type SortCol = "order" | "lean" | "hr" | "hits" | "tb" | "runs" | "rbi" | "hrr";
 type SortState = { col: SortCol; dir: 1 | -1 };
 
 /** Column headers for the 7-column layout: K/C/N · HR · Hits · TB · Runs · RBI · HRR. Click to sort. */
@@ -515,7 +515,16 @@ function ColHeaders({ hitsKind, tbKind, runsKind, rbiKind, hrrKind, sort, onSort
   );
   return (
     <div style={{ display: "grid", gridTemplateColumns: COL_GRID, gap: COL_GAP, padding: COL_PAD, alignItems: "end", borderBottom: "1px solid var(--line-strong)" }}>
-      <div />
+      <button
+        type="button"
+        onClick={() => onSort("order")}
+        title="sort by batting order"
+        style={{ background: "none", border: 0, padding: 0, cursor: "pointer", textAlign: "left", font: "inherit" }}
+      >
+        <div style={{ fontSize: "0.55rem", letterSpacing: "0.07em", fontWeight: 700, color: sort.col === "order" ? "var(--text)" : "var(--muted)" }}>
+          BATTERS<span style={{ color: "var(--green)" }}>{sort.col === "order" ? (sort.dir < 0 ? " ▾" : " ▴") : ""}</span>
+        </div>
+      </button>
       {cell(
         <>
           <span style={{ color: "#ffd9d6" }}>K</span>
@@ -625,7 +634,7 @@ function ColBatterRow({
             {hrRow.playerHand}
           </span>
         )}
-        {hrRow.status && <StatusChip status={hrRow.status} />}
+        {hrRow.status && <StatusChip status={hrRow.status} order={hrRow.bat_order} />}
       </span>
       {sphereCell(leanCell, "kcn")}
       {sphereCell(<HeatSphere prob={hrRow.prob} kind="hr" size={COL_SPHERE} />, "hr")}
@@ -656,8 +665,9 @@ function ColTeam({ team, side, rs, hitsByPlayer, tbByPlayer, runsByPlayer, rbiBy
   hrrKind: PropKind;
 }) {
   const [sort, setSort] = useState<SortState>({ col: "hr", dir: -1 });
-  const onSort = (col: SortCol) => setSort((s) => (s.col === col ? { col, dir: s.dir === -1 ? 1 : -1 } : { col, dir: -1 }));
+  const onSort = (col: SortCol) => setSort((s) => (s.col === col ? { col, dir: s.dir === -1 ? 1 : -1 } : { col, dir: col === "order" ? 1 : -1 }));
   const metric = (r: BoardRow) => {
+    if (sort.col === "order") return r.bat_order ?? 999; // unknown slots sort last
     if (sort.col === "lean") return r.lean?.prob ?? 0;
     if (sort.col === "hits") return hitsByPlayer.get(r.player)?.prob ?? 0;
     if (sort.col === "tb") return tbByPlayer.get(r.player)?.prob ?? 0;
@@ -687,6 +697,9 @@ function ColTeam({ team, side, rs, hitsByPlayer, tbByPlayer, runsByPlayer, rbiBy
       )}
       {/* headers repeat per team and are click-to-sort (high<->low) */}
       <ColHeaders hitsKind={hitsKind} tbKind={tbKind} runsKind={runsKind} rbiKind={rbiKind} hrrKind={hrrKind} sort={sort} onSort={onSort} />
+      <div className="factor-note" style={{ margin: "0.15rem 0 0", padding: "0 0.25rem", fontSize: "0.62rem", color: "var(--muted)" }}>
+        #= batting order
+      </div>
       {sorted.map((r) => (
         <ColBatterRow
           key={r.id}
