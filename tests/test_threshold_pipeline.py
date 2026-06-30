@@ -566,3 +566,20 @@ def test_tb_directional_wind_pull_hitter_lf_beats_rf():
     lfp = build_total_bases_rows(slate, lf, lambda p: _pit(p), Wlf, bvp_fn=None)[0]["p_ge2"]
     rfp = build_total_bases_rows(slate, lf, lambda p: _pit(p), Wrf, bvp_fn=None)[0]["p_ge2"]
     assert lfp > rfp   # LF-out wind helps this RHB pull hitter's TB (via HR + XBH)
+
+
+def test_tb_row_has_spray_mult_and_invariant():
+    lf = lambda g: {"home": [_bat(1, 400, 90, 25, 3, 20)], "away": [_bat(2, 400, 90, 25, 3, 20)]}
+    pf = lambda pid: _pit(pid)
+    rows = build_total_bases_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    r = rows[0]
+    assert "spray_mult" in r
+    neutral = r["park_weather_factor"] / r["spray_mult"]
+    assert abs(neutral * r["spray_mult"] - r["park_weather_factor"]) < 1e-9
+
+
+def test_hits_row_has_no_spray_mult():
+    lf = lambda g: {"home": [_bat(1, 400, 90, 25, 3, 20)], "away": [_bat(2, 400, 90, 25, 3, 20)]}
+    pf = lambda pid: _pit(pid)
+    rows = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    assert "spray_mult" not in rows[0]

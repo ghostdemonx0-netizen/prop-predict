@@ -290,3 +290,14 @@ def test_hr_directional_wind_helps_pull_hitter_lf_wind():
     rf = _pl.build_hr_rows(slate, L, P, Wrf)[0]
     assert lf["probability"] > rf["probability"]   # LF-out helps this RHB pull hitter more than RF-out
     assert "spray_pull" in lf
+
+
+def test_hr_row_has_spray_mult_and_invariant():
+    # spray_mult decomposes the directional weather into neutral x spray, no double-count.
+    rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    assert rows
+    r = rows[0]
+    assert "spray_mult" in r
+    neutral = r["weather_mult"] / r["spray_mult"]
+    assert 0.5 < neutral < 1.6
+    assert abs(neutral * r["spray_mult"] - r["weather_mult"]) < 1e-9
