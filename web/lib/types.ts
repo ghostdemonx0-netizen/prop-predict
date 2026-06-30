@@ -42,6 +42,7 @@ export type HrRow = {
   production_form?: number; // results-based recent-form component
   spray_mult?: number; // how this batter's pull tilt changes the wind effect (weather × spray = total)
   spray_pull?: number; // share of balls pulled (0..1)
+  bat_order?: number; // batting-order slot 1-9
   lineup_status?: string;
   probability_hist?: number;
 };
@@ -96,6 +97,7 @@ export type HitsRow = {
   bats?: string;
   vs?: Matchup;
   lineup_status?: string;
+  bat_order?: number; // batting-order slot 1-9 (inherited by TB/Runs/RBI/HRR)
   wind_out_mph?: number;
   wind_mph?: number;
   wind_dir?: number;

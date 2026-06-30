@@ -34,6 +34,7 @@ export type BoardRow = {
   hitProb?: number; // raw per-AB hit (contact) probability vs this pitcher — Top Plays "Top Contact"
   kProb?: number; // raw per-AB strikeout probability vs this pitcher — Top Plays "Top Batter Strikeouts"
   status?: string; // lineup_status (hitters) or pitcher_status (pitchers)
+  bat_order?: number; // batting-order slot 1-9 (hitters only)
 };
 
 /** K/H/N matchup sphere (shared with the player pages). */
