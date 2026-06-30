@@ -32,6 +32,17 @@ function pitLabel(t?: string) {
   return t === "L" ? "LHP" : t ? "RHP" : "";
 }
 
+/** Which field this batter pulls to (R pulls LF, L pulls RF). */
+function pullField(bats?: string) {
+  return bats === "L" ? "right field" : "left field";
+}
+/** Plain note for the Spray factor row. */
+function sprayNote(sprayPull?: number, sprayMult?: number, bats?: string) {
+  const pullPct = typeof sprayPull === "number" ? ` (${Math.round(sprayPull * 100)}% pull)` : "";
+  const helps = (sprayMult ?? 1) >= 1;
+  return `He pulls to ${pullField(bats)}${pullPct} — the wind is ${helps ? "working with" : "working against"} that.`;
+}
+
 function Back({ prop, date, source, threshold }: { prop?: string; date?: string; source?: string; threshold?: string }) {
   const q = new URLSearchParams();
   if (prop === "k") q.set("prop", "k"); // return to the strikeout board, not the default HR view
@@ -201,14 +212,38 @@ export default function PlayerPage({
           <Factor
             icon="🌬️"
             label="Weather"
-            mult={r.weather_mult}
+            mult={r.spray_mult ? r.weather_mult / r.spray_mult : r.weather_mult}
             note={`${typeof r.wind_mph === "number" ? Math.round(r.wind_mph) + "mph wind " : ""}${typeof r.wind_dir === "number" ? windText(r.wind_dir) : ""}${typeof r.temp_f === "number" ? `, ${Math.round(r.temp_f)}°` : ""}.`}
           />
+          {typeof r.spray_mult === "number" && Math.round((r.spray_mult - 1) * 100) !== 0 && (
+            <Factor
+              icon="🎯"
+              label="Spray"
+              mult={r.spray_mult}
+              note={sprayNote(r.spray_pull, r.spray_mult, r.bats)}
+            />
+          )}
+          {typeof r.hard_hit_form === "number" && (
+            <Factor
+              icon="💥"
+              label="Hard-hit form"
+              mult={r.hard_hit_form}
+              note={r.hard_hit_form > 1 ? "Squaring the ball up harder than his season norm lately." : r.hard_hit_form < 1 ? "Softer contact than usual recently." : "Contact quality around his season norm."}
+            />
+          )}
+          {typeof r.production_form === "number" && (
+            <Factor
+              icon="📈"
+              label="Production form"
+              mult={r.production_form}
+              note={r.production_form > 1 ? "Homering at a higher rate than his season pace lately." : r.production_form < 1 ? "Below his HR pace recently." : "Around his season HR pace."}
+            />
+          )}
           <Factor
             icon="🔥"
             label="Recent form"
             mult={r.recent_form_mult}
-            note={r.recent_form_mult > 1 ? "Hot lately — hitting the ball harder than his season norm." : r.recent_form_mult < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
+            note="The blended net of hard-hit + production form."
           />
           {r.vs && (r.pitcher_mult !== undefined || r.matchup_mult !== undefined) && (
             <Factor
@@ -307,11 +342,27 @@ export default function PlayerPage({
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
             How much each factor raises (green) or lowers (red) his normal probability.
           </p>
+          {typeof (r.hard_hit_form ?? r.hard_hit_form_hist) === "number" && (
+            <Factor
+              icon="💥"
+              label="Hard-hit form"
+              mult={pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist)}
+              note={pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist) > 1 ? "Squaring the ball up harder than his season norm lately." : pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist) < 1 ? "Softer contact than usual recently." : "Contact quality around his season norm."}
+            />
+          )}
+          {typeof (r.production_form ?? r.production_form_hist) === "number" && (
+            <Factor
+              icon="📈"
+              label="Production form"
+              mult={pick(r.production_form ?? 1, r.production_form_hist)}
+              note={pick(r.production_form ?? 1, r.production_form_hist) > 1 ? "Getting hits at a higher rate than his season pace lately." : pick(r.production_form ?? 1, r.production_form_hist) < 1 ? "Below his hit pace recently." : "Around his season hit pace."}
+            />
+          )}
           <Factor
             icon="🔥"
             label="Recent form"
             mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)}
-            note={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) > 1 ? "Hot lately — making contact at a higher rate than his season norm." : pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
+            note="The blended net of hard-hit + production form."
           />
           {r.vs && (
             <Factor
@@ -319,6 +370,14 @@ export default function PlayerPage({
               label={`Pitcher · hit quality · ${r.vs.name}`}
               mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
               note="How hittable this pitcher is, plus the L/R platoon."
+            />
+          )}
+          {r.vs && r.vs.bvp && r.vs.bvp.pa > 0 && typeof r.bvp_hit_mult === "number" && (
+            <Factor
+              icon="📜"
+              label={`History · vs ${r.vs.name}`}
+              mult={r.bvp_hit_mult}
+              note={`${r.vs.bvp.hits}-for-${r.vs.bvp.ab} career — his contact history vs this pitcher.`}
             />
           )}
         </div>
@@ -400,11 +459,27 @@ export default function PlayerPage({
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
             How much each factor raises (green) or lowers (red) his normal probability.
           </p>
+          {typeof (r.hard_hit_form ?? r.hard_hit_form_hist) === "number" && (
+            <Factor
+              icon="💥"
+              label="Hard-hit form"
+              mult={pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist)}
+              note={pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist) > 1 ? "Squaring the ball up harder than his season norm lately." : pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist) < 1 ? "Softer contact than usual recently." : "Contact quality around his season norm."}
+            />
+          )}
+          {typeof (r.production_form ?? r.production_form_hist) === "number" && (
+            <Factor
+              icon="📈"
+              label="Production form"
+              mult={pick(r.production_form ?? 1, r.production_form_hist)}
+              note={pick(r.production_form ?? 1, r.production_form_hist) > 1 ? "Racking up bases at a higher rate than his season pace lately." : pick(r.production_form ?? 1, r.production_form_hist) < 1 ? "Below his bases pace recently." : "Around his season bases pace."}
+            />
+          )}
           <Factor
             icon="🔥"
             label="Recent form"
             mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)}
-            note={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) > 1 ? "Hot lately — making contact and driving the ball at a higher rate than his season norm." : pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist) < 1 ? "Cooled off — below his season norm recently." : "Right around his season norm."}
+            note="The blended net of hard-hit + production form."
           />
           {r.vs && (
             <Factor
@@ -414,10 +489,26 @@ export default function PlayerPage({
               note="Combines how hittable he is with his power (extra-base/HR) suppression, plus platoon."
             />
           )}
+          {r.vs && r.vs.bvp && r.vs.bvp.pa > 0 && typeof r.bvp_hit_mult === "number" && (
+            <Factor
+              icon="📜"
+              label={`History · vs ${r.vs.name}`}
+              mult={r.bvp_hit_mult}
+              note={`${r.vs.bvp.hits}-for-${r.vs.bvp.ab} career — his contact history vs this pitcher.`}
+            />
+          )}
+          {typeof r.spray_mult === "number" && Math.round((r.spray_mult - 1) * 100) !== 0 && (
+            <Factor
+              icon="🎯"
+              label="Spray"
+              mult={r.spray_mult}
+              note={sprayNote(r.spray_pull, r.spray_mult, r.bats)}
+            />
+          )}
           <Factor
             icon="🌦️"
             label="Park & weather"
-            mult={pick(r.park_weather_factor ?? 1, r.park_weather_factor_hist)}
+            mult={r.spray_mult ? pick(r.park_weather_factor ?? 1, r.park_weather_factor_hist) / r.spray_mult : pick(r.park_weather_factor ?? 1, r.park_weather_factor_hist)}
             note="The ballpark and conditions' net effect on his extra-base power (doubles, triples, homers). Singles barely move with the park, so the nudge stays modest."
           />
         </div>
@@ -503,6 +594,14 @@ export default function PlayerPage({
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
             How much each factor raises (green) or lowers (red) his normal probability.
           </p>
+          {typeof (r.lineup_mult ?? r.lineup_mult_hist) === "number" && (
+            <Factor
+              icon="📋"
+              label="Lineup"
+              mult={pick(r.lineup_mult ?? 1, r.lineup_mult_hist)}
+              note={prop === "runs" ? "The hitters batting behind him — better bats behind raise his chance to be driven in." : "The hitters batting ahead of him — more men on base raise his RBI chances."}
+            />
+          )}
           <Factor
             icon="💥"
             label="Hard-hit form"
@@ -608,6 +707,14 @@ export default function PlayerPage({
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
             How much each factor raises (green) or lowers (red) his normal probability.
           </p>
+          {typeof (r.lineup_mult ?? r.lineup_mult_hist) === "number" && (
+            <Factor
+              icon="📋"
+              label="Lineup"
+              mult={pick(r.lineup_mult ?? 1, r.lineup_mult_hist)}
+              note="The hitters around him in the order — affects his combined hits, runs, and RBI chances (dampened, since the hits portion is lineup-neutral)."
+            />
+          )}
           <Factor
             icon="💥"
             label="Hard-hit form"
