@@ -88,6 +88,13 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                 wod = wind_out_directional(w["wx"]["wind_speed_mph"], w["wx"]["wind_from_deg"],
                                            w["park"]["cf_bearing_deg"], sp, hand)
                 weather_mult = weather_hr_multiplier(wod, w["temp_f"], w["park"]["dome"])
+                # neutral-spray counterpart, so the card can show Weather (neutral)
+                # and Spray (this batter's tilt) separately without double-counting.
+                sp_neutral = _spray.final_distribution({}, hand)
+                wod_neutral = wind_out_directional(w["wx"]["wind_speed_mph"], w["wx"]["wind_from_deg"],
+                                                   w["park"]["cf_bearing_deg"], sp_neutral, hand)
+                weather_neutral = weather_hr_multiplier(wod_neutral, w["temp_f"], w["park"]["dome"])
+                spray_mult = (weather_mult / weather_neutral) if weather_neutral else 1.0
                 hard = b.get("recent_form_mult", 1.0)
                 prod = b.get("production_form_hr", 1.0)
                 form = _run_props.blend_forms(hard, prod, w_hard=0.80)
@@ -115,6 +122,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     "player": b["name"], "team": team, "park": game["park_team"],
                     "probability": prob, "wind_out_mph": wod,
                     "weather_mult": weather_mult, "park_mult": eff_park, "spray_pull": sp["pull"],
+                    "spray_mult": spray_mult,
                     "matchup_mult": platoon, "pitcher_mult": p_mult, "bvp_mult": b_mult,
                     "recent_form_mult": form, "hard_hit_form": hard, "production_form": prod,
                     "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
@@ -324,6 +332,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                 park_weather_factor = 1.0
                 park_factor = 1.0
                 weather_factor = 1.0
+                spray_mult = None
                 if units == "bases":
                     nenv_vec, _ = _batter_outcome_vector(
                         b, opp, 1.0, 1.0, slot, bvp,
@@ -332,6 +341,19 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     )
                     nenv_ev = nenv_vec[1] + 2 * nenv_vec[2] + 3 * nenv_vec[3] + 4 * nenv_vec[4]
                     park_weather_factor = (actual_ev / nenv_ev) if nenv_ev > 0 else 1.0
+                    # neutral-spray park&weather, so the card can split out a Spray row
+                    # exactly: park_weather_factor / spray_mult == neutral park&weather.
+                    sp_neutral = _spray.final_distribution({}, hand)
+                    wod_neutral = wind_out_directional(w["wx"]["wind_speed_mph"], w["wx"]["wind_from_deg"],
+                                                       w["park"]["cf_bearing_deg"], sp_neutral, hand)
+                    weather_neutral = weather_hr_multiplier(wod_neutral, w["temp_f"], w["park"]["dome"])
+                    nspr_vec, _ = _batter_outcome_vector(
+                        b, opp, eff_park, weather_neutral, slot, bvp,
+                        apply_xbh_park=True, park_1b=p1f, park_2b=p2f, park_3b=p3f, form_mult=form,
+                    )
+                    nspr_ev = nspr_vec[1] + 2 * nspr_vec[2] + 3 * nspr_vec[3] + 4 * nspr_vec[4]
+                    pwf_neutral = (nspr_ev / nenv_ev) if nenv_ev > 0 else 1.0
+                    spray_mult = (park_weather_factor / pwf_neutral) if pwf_neutral else 1.0
                     # split: park-only (weather neutral) and weather-only (park neutral)
                     pk_vec, _ = _batter_outcome_vector(
                         b, opp, eff_park, 1.0, slot, bvp,
@@ -365,6 +387,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     "recent_form_mult": form, "hard_hit_form": hard, "production_form": prod,
                     "bvp_hit_mult": bvp_hit_mult(bvp.get("hits", 0), bvp["pa"]) if (bvp and bvp.get("pa")) else 1.0,
                     "spray_pull": _sp["pull"],
+                    **({"spray_mult": spray_mult} if spray_mult is not None else {}),
                     "pitcher_factor": pitcher_factor,
                     "park_weather_factor": park_weather_factor,
                     "park_factor": park_factor,

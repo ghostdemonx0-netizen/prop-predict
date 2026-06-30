@@ -38,6 +38,10 @@ export type HrRow = {
   matchup_mult?: number; // platoon adjustment vs this starter
   pitcher_mult?: number; // opposing starter's HR quality
   bvp_mult?: number; // career batter-vs-pitcher history dial (capped ±10%)
+  hard_hit_form?: number; // contact-quality recent-form component
+  production_form?: number; // results-based recent-form component
+  spray_mult?: number; // how this batter's pull tilt changes the wind effect (weather × spray = total)
+  spray_pull?: number; // share of balls pulled (0..1)
   lineup_status?: string;
   probability_hist?: number;
 };
@@ -101,6 +105,12 @@ export type HitsRow = {
   pitcher_factor?: number;
   recent_form_mult_hist?: number;
   pitcher_factor_hist?: number;
+  hard_hit_form?: number;
+  production_form?: number;
+  hard_hit_form_hist?: number;
+  production_form_hist?: number;
+  bvp_hit_mult?: number; // career batter-vs-pitcher hits dial (capped ±10%)
+  spray_pull?: number;
   p_ge1: number;
   p_ge2: number;
   p_ge3: number;
@@ -118,6 +128,7 @@ export type TbRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | "
   p_ge4_hist?: number;
   park_weather_factor?: number;
   park_weather_factor_hist?: number;
+  spray_mult?: number; // weather × spray = today's park&weather total (no double-count)
 };
 
 export type RunsRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | "p_ge2_hist" | "p_ge3_hist"> & {
@@ -131,6 +142,10 @@ export type RunsRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" |
   hard_hit_form_hist?: number;
   production_form?: number;
   production_form_hist?: number;
+  lineup_mult?: number; // hitters around him in the order
+  lineup_mult_hist?: number;
+  lineup_slot?: number | null;
+  lineup_teammate?: number | null;
 };
 
 export type RbiRow = RunsRow;
@@ -148,6 +163,10 @@ export type HrrRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | 
   hard_hit_form_hist?: number;
   production_form?: number;
   production_form_hist?: number;
+  lineup_mult?: number;
+  lineup_mult_hist?: number;
+  lineup_slot?: number | null;
+  lineup_teammate?: number | null;
 };
 
 export type Projections = {
