@@ -128,6 +128,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
                     "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
                     "bats": b.get("bats", "R"), "vs": vs,
+                    "bat_order": slot + 1,
                     "lineup_status": b.get("lineup_status", "confirmed"),
                 })
     rows.sort(key=lambda r: r["probability"], reverse=True)
@@ -383,6 +384,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     "player_id": b.get("player_id"), "player": b["name"], "team": team,
                     "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                     "bats": b.get("bats", "R"),
+                    "bat_order": slot + 1,
                     "lineup_status": b.get("lineup_status", "confirmed"),
                     "recent_form_mult": form, "hard_hit_form": hard, "production_form": prod,
                     "bvp_hit_mult": bvp_hit_mult(bvp.get("hits", 0), bvp["pa"]) if (bvp and bvp.get("pa")) else 1.0,
@@ -507,6 +509,7 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
                     "player_id": b.get("player_id"), "player": b["name"], "team": team,
                     "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                     "bats": b.get("bats", "R"),
+                    "bat_order": pos,
                     "lineup_status": b.get("lineup_status", "confirmed"),
                     "recent_form_mult": blended,
                     "hard_hit_form": hard_hit,

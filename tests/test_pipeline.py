@@ -301,3 +301,10 @@ def test_hr_row_has_spray_mult_and_invariant():
     neutral = r["weather_mult"] / r["spray_mult"]
     assert 0.5 < neutral < 1.6
     assert abs(neutral * r["spray_mult"] - r["weather_mult"]) < 1e-9
+
+
+def test_hr_rows_carry_bat_order():
+    rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    assert rows
+    assert all(isinstance(r.get("bat_order"), int) for r in rows)
+    assert min(r["bat_order"] for r in rows) == 1
