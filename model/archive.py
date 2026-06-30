@@ -79,6 +79,8 @@ _FACTOR_KEYS: tuple[str, ...] = (
     # Approach: corner-wind spray
     "spray_pull",
     "spray_pull_hist",
+    "spray_mult",  # net spray contribution (directional/neutral weather) on HR + TB — for grader-driven dial tuning
+    "bat_order",   # batting-order slot 1-9 (context for per-slot calibration)
     # BvP hit dial (Hits/TB contact components)
     "bvp_hit_mult",
     "bvp_hit_mult_hist",

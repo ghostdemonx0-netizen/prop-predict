@@ -36,11 +36,22 @@ function pitLabel(t?: string) {
 function pullField(bats?: string) {
   return bats === "L" ? "right field" : "left field";
 }
-/** Plain note for the Spray factor row. */
-function sprayNote(sprayPull?: number, sprayMult?: number, bats?: string) {
-  const pullPct = typeof sprayPull === "number" ? ` (${Math.round(sprayPull * 100)}% pull)` : "";
-  const helps = (sprayMult ?? 1) >= 1;
-  return `He pulls to ${pullField(bats)}${pullPct} — the wind is ${helps ? "working with" : "working against"} that.`;
+/** Always-informative note for the Spray factor row: his pull tendency + how the
+ *  wind's direction interacts with it. Spray only changes the number on corner
+ *  (RF/LF) winds; a straight out/in wind helps every field about equally, so the
+ *  row reads "neutral" but the note still explains what's going on. */
+function sprayNote(sprayPull?: number, sprayMult?: number, bats?: string, windMph?: number, windDir?: number) {
+  const pullPct = typeof sprayPull === "number" ? `${Math.round(sprayPull * 100)}% to ` : "";
+  const lead = `Pulls ${pullPct}${pullField(bats)}.`;
+  const mph = typeof windMph === "number" ? Math.round(windMph) : 0;
+  if (mph < 5) return `${lead} Calm wind tonight — little spray effect.`;
+  const dirTxt = typeof windDir === "number" ? windText(windDir) : "across the field";
+  const delta = Math.round(((sprayMult ?? 1) - 1) * 100);
+  const interaction =
+    delta > 0 ? "working with his pull"
+    : delta < 0 ? "working against his pull"
+    : "carrying all fields about equally";
+  return `${lead} ${mph}mph wind ${dirTxt} — ${interaction}.`;
 }
 
 function Back({ prop, date, source, threshold }: { prop?: string; date?: string; source?: string; threshold?: string }) {
@@ -215,12 +226,12 @@ export default function PlayerPage({
             mult={r.spray_mult ? r.weather_mult / r.spray_mult : r.weather_mult}
             note={`${typeof r.wind_mph === "number" ? Math.round(r.wind_mph) + "mph wind " : ""}${typeof r.wind_dir === "number" ? windText(r.wind_dir) : ""}${typeof r.temp_f === "number" ? `, ${Math.round(r.temp_f)}°` : ""}.`}
           />
-          {typeof r.spray_mult === "number" && Math.round((r.spray_mult - 1) * 100) !== 0 && (
+          {typeof r.spray_mult === "number" && (
             <Factor
               icon="🎯"
               label="Spray"
               mult={r.spray_mult}
-              note={sprayNote(r.spray_pull, r.spray_mult, r.bats)}
+              note={sprayNote(r.spray_pull, r.spray_mult, r.bats, r.wind_mph, r.wind_dir)}
             />
           )}
           {typeof r.hard_hit_form === "number" && (
@@ -497,12 +508,12 @@ export default function PlayerPage({
               note={`${r.vs.bvp.hits}-for-${r.vs.bvp.ab} career — his contact history vs this pitcher.`}
             />
           )}
-          {typeof r.spray_mult === "number" && Math.round((r.spray_mult - 1) * 100) !== 0 && (
+          {typeof r.spray_mult === "number" && (
             <Factor
               icon="🎯"
               label="Spray"
               mult={r.spray_mult}
-              note={sprayNote(r.spray_pull, r.spray_mult, r.bats)}
+              note={sprayNote(r.spray_pull, r.spray_mult, r.bats, r.wind_mph, r.wind_dir)}
             />
           )}
           <Factor
