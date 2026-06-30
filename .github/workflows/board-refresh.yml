@@ -35,6 +35,10 @@ jobs:
           restore-keys: engine-cache-
       - name: Compute board
         id: job
+        env:
+          # force_deploy means "ship latest code" — that requires a real
+          # recompute, not just re-deploying the unchanged cached board.
+          FORCE_RECOMPUTE: ${{ inputs.force_deploy }}
         run: python -m model.jobs refresh
       - name: Publish to Vercel
         if: steps.job.outputs.changed == 'true' || inputs.force_deploy

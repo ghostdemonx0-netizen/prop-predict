@@ -51,7 +51,7 @@ def test_morning_runs_full_pipeline_in_order(monkeypatch):
 
 def test_main_emits_github_output(monkeypatch, tmp_path):
     from model import jobs
-    monkeypatch.setattr(jobs, "refresh", lambda: True)
+    monkeypatch.setattr(jobs, "refresh", lambda **kw: True)
     out = tmp_path / "out.txt"
     monkeypatch.setenv("GITHUB_OUTPUT", str(out))
     jobs.main(["refresh"])
@@ -149,3 +149,19 @@ def test_refresh_overnight_skips_stat_fold_but_rebuilds_board(monkeypatch):
     result = jobs.refresh("2026-06-13")
     assert result is True  # board still rebuilt
     assert update_called["called"] is False  # stat fold was skipped
+
+
+def test_refresh_force_bypasses_skip_gate(monkeypatch):
+    # force=True must recompute even when the lineup/pitcher signature is fresh
+    # (ships latest code with the robot's data).
+    from model import jobs, daily, fetch
+    monkeypatch.setattr(jobs, "_et_hour", lambda: 9)
+    monkeypatch.setattr(fetch, "get_schedule", lambda d: [])
+    monkeypatch.setattr(fetch, "get_lineups", lambda gid: {"home": [], "away": []})
+    monkeypatch.setattr(daily, "update_events", lambda d: [])
+    monkeypatch.setattr(daily, "should_skip", lambda sig: True)  # would normally skip
+    monkeypatch.setattr(daily, "record_run", lambda sig, published: None)
+    called = {"computed": False}
+    monkeypatch.setattr(daily, "refresh_today", lambda d: called.update(computed=True) or True)
+    assert jobs.refresh("2026-06-12", force=True) is True
+    assert called["computed"] is True

@@ -63,7 +63,7 @@ def morning(date_str: str | None = None) -> bool:
     return changed
 
 
-def refresh(date_str: str | None = None) -> bool:
+def refresh(date_str: str | None = None, *, force: bool = False) -> bool:
     date_str = date_str or today_et()
     # Self-healing daily stat update, gated to >=7am ET: overnight runs still
     # build the board (empty until lineups post) but must not fold in last
@@ -81,10 +81,12 @@ def refresh(date_str: str | None = None) -> bool:
     sig = _current_signature(date_str)
     # Skip only when nothing changed AND we didn't just refresh the stats
     # (new stats must reach the board even if the lineup signature matches).
-    if not stats_updated and daily.should_skip(sig):
+    if not force and not stats_updated and daily.should_skip(sig):
         print("no lineup/pitcher changes since last publish - skipping")
         daily.record_run(sig, published=False)
         return False
+    if force:
+        print("force recompute - bypassing the lineup/pitcher skip gate (ships latest code)")
     changed = daily.refresh_today(date_str)
     if parks.hit_factors_stale(date_str):
         print("[warn] park hit factors are >400 days old — refresh the FanGraphs anchor (model/parks.py HIT_FACTORS_LAST_PULLED). See spec.")
@@ -101,7 +103,8 @@ def main(argv: list[str]) -> None:
     mode = argv[0] if argv else "refresh"
     if mode not in ("morning", "refresh"):
         raise SystemExit(f"unknown mode: {mode!r} (expected morning|refresh)")
-    changed = morning() if mode == "morning" else refresh()
+    force = os.environ.get("FORCE_RECOMPUTE", "").lower() in ("1", "true", "yes")
+    changed = morning() if mode == "morning" else refresh(force=force)
     flag = "true" if changed else "false"
     print(f"changed={flag}")
     out = os.environ.get("GITHUB_OUTPUT")
