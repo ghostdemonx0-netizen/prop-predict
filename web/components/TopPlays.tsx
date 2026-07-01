@@ -6,6 +6,9 @@ import Link from "next/link";
 import { HeatSphere, MatchupSphere, ADV_CHIP, type BoardRow } from "./PropBoard";
 import { platoonAdvantage, type PropKind } from "../lib/format";
 import { ClockIcon } from "./Icons";
+import { LiveChip } from "./LiveChip";
+import { useLiveFor } from "./LiveProvider";
+import type { LiveKind, LiveState } from "../lib/live";
 
 const COUNTS = [10, 25, 50, "All"] as const;
 type Count = (typeof COUNTS)[number];
@@ -22,7 +25,7 @@ const rowlinkStyle = {
 
 /** A Top-Plays row: name + hand + (opposing pitcher) + game matchup + start time + a sphere on the right.
     showPitcher=false for the pitcher's own K prop (a pitcher doesn't face one pitcher). */
-function TopPlayRow({ r, sphere, showPitcher = true }: { r: BoardRow; sphere: React.ReactNode; showPitcher?: boolean }) {
+function TopPlayRow({ r, sphere, live, showPitcher = true }: { r: BoardRow; sphere: React.ReactNode; live?: React.ReactNode; showPitcher?: boolean }) {
   const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
   return (
     <Link href={r.href} className="rowlink" style={rowlinkStyle}>
@@ -48,7 +51,10 @@ function TopPlayRow({ r, sphere, showPitcher = true }: { r: BoardRow; sphere: Re
           )}
         </span>
       </span>
-      {sphere}
+      <span style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+        {live}
+        {sphere}
+      </span>
     </Link>
   );
 }
@@ -115,6 +121,9 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, h
   setThreshold: React.Dispatch<React.SetStateAction<{ hits: 1 | 2 | 3; tb: 2 | 3 | 4; runs: 1 | 2; rbi: 1 | 2; hrr: 2 | 3 | 4 }>>;
 }) {
   const [count, setCount] = useState<Count>(10);
+  const liveFor = useLiveFor();
+  const renderChip = (lv: { state: LiveState; have: number; need: number } | null) =>
+    lv ? <LiveChip state={lv.state} have={lv.have} need={lv.need} /> : null;
   const topContact = hrRows
     .filter((r) => typeof r.hitProb === "number")
     .slice()
@@ -149,7 +158,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, h
         tip="The batter's chance to hit at least one home run in this game."
         rows={hrRows}
         count={count}
-        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind="hr" />} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} live={renderChip(liveFor(r, "hr"))} sphere={<HeatSphere prob={r.prob} kind="hr" />} />}
       />
       <LeaderSection
         title="Top Pitcher Strikeouts"
@@ -157,7 +166,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, h
         tip="The starting pitcher's chance to finish above the model's strikeout line for the game."
         rows={kRows}
         count={count}
-        render={(r) => <TopPlayRow key={r.id} r={r} showPitcher={false} sphere={<HeatSphere prob={r.prob} kind="k" />} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} showPitcher={false} live={renderChip(liveFor(r, "k"))} sphere={<HeatSphere prob={r.prob} kind="k" />} />}
       />
       <LeaderSection
         title="Top Contact"
@@ -165,7 +174,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, h
         tip="The model's hit chance for a single at-bat vs this pitcher (matchup + handedness, history-nudged). NOT the upcoming '1+ hit' game prop."
         rows={topContact}
         count={count}
-        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<MatchupSphere lean="H" prob={r.hitProb ?? 0} />} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} live={renderChip(liveFor(r, "contact"))} sphere={<MatchupSphere lean="H" prob={r.hitProb ?? 0} />} />}
       />
       <LeaderSection
         title="Top Batter Strikeouts"
@@ -173,7 +182,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, h
         tip="The model's strikeout chance for a single at-bat vs this pitcher — the hitters most likely to strike out. Separate from the pitcher's strikeout prop above."
         rows={topBatterK}
         count={count}
-        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<MatchupSphere lean="K" prob={r.kProb ?? 0} />} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} live={renderChip(liveFor(r, "batterK"))} sphere={<MatchupSphere lean="K" prob={r.kProb ?? 0} />} />}
       />
       <LeaderSection
         title="Top Hits"
@@ -181,7 +190,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, h
         tip="Batters most likely to reach the selected hits threshold (1+, 2+, or 3+). Ranked by the threshold probability shown on the board."
         rows={hitsRows}
         count={count}
-        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind={hitsKind} />} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} live={renderChip(liveFor(r, hitsKind))} sphere={<HeatSphere prob={r.prob} kind={hitsKind} />} />}
         controls={
           <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
             {([1, 2, 3] as const).map((n) => (
@@ -208,7 +217,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, h
         tip="Batters most likely to reach the selected total bases threshold (2+, 3+, or 4+). Ranked by the threshold probability shown on the board."
         rows={tbRows}
         count={count}
-        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind={tbKind} />} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} live={renderChip(liveFor(r, tbKind))} sphere={<HeatSphere prob={r.prob} kind={tbKind} />} />}
         controls={
           <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
             {([2, 3, 4] as const).map((n) => (
@@ -235,7 +244,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, h
         tip="Batters most likely to score the selected number of runs."
         rows={runsRows}
         count={count}
-        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind={runsKind} />} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} live={renderChip(liveFor(r, runsKind))} sphere={<HeatSphere prob={r.prob} kind={runsKind} />} />}
         controls={
           <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
             {([1, 2] as const).map((n) => (
@@ -262,7 +271,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, h
         tip="Batters most likely to reach the selected RBI threshold."
         rows={rbiRows}
         count={count}
-        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind={rbiKind} />} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} live={renderChip(liveFor(r, rbiKind))} sphere={<HeatSphere prob={r.prob} kind={rbiKind} />} />}
         controls={
           <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
             {([1, 2] as const).map((n) => (
@@ -289,7 +298,7 @@ export function TopPlays({ hrRows, kRows, hitsRows, tbRows, runsRows, rbiRows, h
         tip="Batters most likely to reach the selected hits+runs+RBI combined threshold."
         rows={hrrRows}
         count={count}
-        render={(r) => <TopPlayRow key={r.id} r={r} sphere={<HeatSphere prob={r.prob} kind={hrrKind} />} />}
+        render={(r) => <TopPlayRow key={r.id} r={r} live={renderChip(liveFor(r, hrrKind))} sphere={<HeatSphere prob={r.prob} kind={hrrKind} />} />}
         controls={
           <div className="pillbar" onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
             {([2, 3, 4] as const).map((n) => (
