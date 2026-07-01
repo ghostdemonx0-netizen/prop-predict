@@ -11,7 +11,7 @@ const Ctx = createContext<LivePayload>(EMPTY);
 export function LiveProvider({ date, games, children }: { date: string; games: LiveGame[]; children: React.ReactNode }) {
   const [payload, setPayload] = useState<LivePayload>(EMPTY);
   const payloadRef = useRef(payload);
-  payloadRef.current = payload;
+  useEffect(() => { payloadRef.current = payload; }, [payload]);
   const gamesKey = games.map((g) => `${g.id}:${g.startMs ?? ""}`).join(",");
 
   useEffect(() => {
