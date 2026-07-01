@@ -6,6 +6,9 @@ import { useState } from "react";
 import type { ViewMode } from "./ViewSwitcher";
 import { pct, strengthLabel, strengthTier, heatColor, arrowColor, platoonAdvantage, type PropKind } from "../lib/format";
 import { StatusChip } from "./StatusChip";
+import { LiveChip } from "./LiveChip";
+import { useLiveFor } from "./LiveProvider";
+import type { LiveKind } from "../lib/live";
 import { ClockIcon, WindIcon, TempIcon, RainIcon } from "./Icons";
 
 export type BoardRow = {
@@ -35,6 +38,7 @@ export type BoardRow = {
   kProb?: number; // raw per-AB strikeout probability vs this pitcher — Top Plays "Top Batter Strikeouts"
   status?: string; // lineup_status (hitters) or pitcher_status (pitchers)
   bat_order?: number; // batting-order slot 1-9 (hitters only)
+  player_id?: number; // MLB person id — matches live box-score data
 };
 
 /** K/H/N matchup sphere (shared with the player pages). */
@@ -126,6 +130,7 @@ export function HeatSphere({ prob, kind, size }: { prob: number; kind: PropKind;
 }
 
 export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMode; kind: PropKind }) {
+  const liveFor = useLiveFor();
   if (rows.length === 0) {
     return (
       <div className="panel rise" style={{ textAlign: "center", color: "var(--muted)" }}>
@@ -145,15 +150,17 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
         <span className="display" style={{ fontWeight: 700, fontSize: "1.02rem" }}>
           {r.player}
         </span>
-        <span className="stat glow" style={{ fontSize: "1.35rem" }}>
-          {pct(r.prob)}
+        <span className="inline-flex items-center gap-2" style={{ flexShrink: 0 }}>
+          {(() => { const lv = liveFor(r, kind); return lv ? <LiveChip state={lv.state} have={lv.have} need={lv.need} /> : null; })()}
+          <span className="stat glow" style={{ fontSize: "1.35rem" }}>
+            {pct(r.prob)}
+          </span>
         </span>
       </div>
       <div className="mt-1.5 flex items-center gap-2" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
         <span className={`badge ${strengthTier(r.prob, kind)}`}>{strengthLabel(r.prob, kind)}</span>
         <span>{r.detail}</span>
         {r.time && <span className="inline-flex items-center gap-1" style={{ opacity: 0.75 }}><ClockIcon size={12} /> {r.time}</span>}
-        <StatusChip status={r.status} order={r.bat_order} />
       </div>
       {(r.playerHand || r.opponent || r.matchup) && (
         <div className="mt-1 flex flex-wrap items-center gap-2" style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
@@ -187,7 +194,12 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
           )}
         </div>
       )}
-      <WeatherChips r={r} />
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <WeatherChips r={r} />
+        <span style={{ marginLeft: "auto", flexShrink: 0 }}>
+          <StatusChip status={r.status} order={r.bat_order} />
+        </span>
+      </div>
     </Link>
   );
 
@@ -262,7 +274,8 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
             {kind === "k" && (
               <td className="num" style={{ textAlign: "right", whiteSpace: "nowrap" }}>{r.projection}</td>
             )}
-            <td style={{ textAlign: "right" }}>
+            <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+              {(() => { const lv = liveFor(r, kind); return lv ? <span style={{ marginRight: 8 }}><LiveChip state={lv.state} have={lv.have} need={lv.need} /></span> : null; })()}
               <HeatSphere prob={r.prob} kind={kind} />
             </td>
           </tr>
@@ -374,6 +387,9 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
 /** One player line: name + (advantage-lit) hand chip + probability sphere. */
 export function BoardRowLine({ r, kind, withLean = false }: { r: BoardRow; kind: PropKind; withLean?: boolean }) {
   const advantage = platoonAdvantage(r.playerHand, r.opponent?.hand);
+  const liveFor = useLiveFor();
+  const _lv = liveFor(r, kind);
+  const liveNode = _lv ? <LiveChip state={_lv.state} have={_lv.have} need={_lv.need} /> : null;
   return (
     <Link
       href={r.href}
@@ -402,6 +418,7 @@ export function BoardRowLine({ r, kind, withLean = false }: { r: BoardRow; kind:
       </span>
       {withLean ? (
         <span style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+          {liveNode}
           <span style={{ width: HUB_SLOT, display: "flex", justifyContent: "center" }}>
             {r.lean ? <MatchupSphere lean={r.lean.lean} prob={r.lean.prob} size={HUB_SPHERE} /> : null}
           </span>
@@ -410,7 +427,10 @@ export function BoardRowLine({ r, kind, withLean = false }: { r: BoardRow; kind:
           </span>
         </span>
       ) : (
-        <HeatSphere prob={r.prob} kind={kind} />
+        <span style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          {liveNode}
+          <HeatSphere prob={r.prob} kind={kind} />
+        </span>
       )}
     </Link>
   );
@@ -572,6 +592,7 @@ function ColBatterRow({
   hrrKind: PropKind;
 }) {
   const adv = platoonAdvantage(hrRow.playerHand, hrRow.opponent?.hand);
+  const liveFor = useLiveFor();
   // the matchup read can sit on any of the prop rows — use whichever has it so
   // the K/C/N sphere never goes missing when one prop's row lacks `lean`.
   const lean = hrRow.lean ?? hitsRow?.lean ?? tbRow?.lean ?? null;
@@ -585,9 +606,9 @@ function ColBatterRow({
     if (isNeutral) {
       // N sphere back, with BOTH K and C written on one line underneath it
       leanCell = (
-        <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+        <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
           <MatchupSphere lean="NEU" prob={0} size={COL_SPHERE} />
-          <span style={{ display: "flex", gap: "0.25rem", fontFamily: "var(--font-mono)", fontSize: "0.46rem", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
+          <span style={{ height: 13, display: "flex", alignItems: "center", gap: "0.25rem", fontFamily: "var(--font-mono)", fontSize: "0.46rem", fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>
             <span style={{ color: "#ffd9d6" }}>K{pct(kp)}</span>
             <span style={{ color: "#bff3d2" }}>C{pct(hp)}</span>
           </span>
@@ -596,9 +617,9 @@ function ColBatterRow({
     } else {
       const kDom = kp >= hp;
       leanCell = (
-        <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+        <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
           <MatchupSphere lean={kDom ? "K" : "H"} prob={kDom ? kp : hp} size={COL_SPHERE} />
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.5rem", fontWeight: 700, color: kDom ? "#bff3d2" : "#ffd9d6", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+          <span style={{ height: 13, display: "flex", alignItems: "center", fontFamily: "var(--font-mono)", fontSize: "0.5rem", fontWeight: 700, color: kDom ? "#bff3d2" : "#ffd9d6", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
             {kDom ? "C" : "K"} {pct(kDom ? hp : kp)}
           </span>
         </span>
@@ -608,6 +629,20 @@ function ColBatterRow({
   const sphereCell = (node: React.ReactNode, key: string) => (
     <span key={key} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>{node}</span>
   );
+  // Prop sphere + a small live chip stacked underneath (matches the K/C/N column's
+  // under-text, so every sphere aligns AND carries its own live tracker).
+  const propCell = (row: BoardRow | undefined, kind: PropKind, key: string) => {
+    if (!row) return sphereCell(null, key);
+    const lv = liveFor(row, kind as LiveKind);
+    return (
+      <span key={key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+        <HeatSphere prob={row.prob} kind={kind} size={COL_SPHERE} />
+        <span style={{ height: 13, display: "flex", alignItems: "center" }}>
+          {lv && <LiveChip sm state={lv.state} have={lv.have} need={lv.need} />}
+        </span>
+      </span>
+    );
+  };
   return (
     <Link
       href={hrRow.href}
@@ -637,12 +672,12 @@ function ColBatterRow({
         {hrRow.status && <StatusChip status={hrRow.status} order={hrRow.bat_order} />}
       </span>
       {sphereCell(leanCell, "kcn")}
-      {sphereCell(<HeatSphere prob={hrRow.prob} kind="hr" size={COL_SPHERE} />, "hr")}
-      {sphereCell(hitsRow ? <HeatSphere prob={hitsRow.prob} kind={hitsKind} size={COL_SPHERE} /> : null, "hits")}
-      {sphereCell(tbRow ? <HeatSphere prob={tbRow.prob} kind={tbKind} size={COL_SPHERE} /> : null, "tb")}
-      {sphereCell(runsRow ? <HeatSphere prob={runsRow.prob} kind={runsKind} size={COL_SPHERE} /> : null, "runs")}
-      {sphereCell(rbiRow ? <HeatSphere prob={rbiRow.prob} kind={rbiKind} size={COL_SPHERE} /> : null, "rbi")}
-      {sphereCell(hrrRow ? <HeatSphere prob={hrrRow.prob} kind={hrrKind} size={COL_SPHERE} /> : null, "hrr")}
+      {propCell(hrRow, "hr", "hr")}
+      {propCell(hitsRow, hitsKind, "hits")}
+      {propCell(tbRow, tbKind, "tb")}
+      {propCell(runsRow, runsKind, "runs")}
+      {propCell(rbiRow, rbiKind, "rbi")}
+      {propCell(hrrRow, hrrKind, "hrr")}
     </Link>
   );
 }
@@ -823,6 +858,7 @@ export function GameBreakdown({
 }) {
   // Match by game id when we have it (doubleheaders share a matchup name but not
   // a game id); fall back to the name only for older data without ids.
+  const liveFor = useLiveFor();
   const inGame = (r: BoardRow) => (gameId != null ? r.gameId === gameId : r.matchup === matchup);
   const hr = hrRows.filter(inGame);
   const ks = kRows.filter(inGame);
@@ -857,7 +893,10 @@ export function GameBreakdown({
                   line {r.line} · proj {r.projection}
                 </span>
               </span>
-              <HeatSphere prob={r.prob} kind="k" />
+              <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {(() => { const lv = liveFor(r, "k"); return lv ? <LiveChip state={lv.state} have={lv.have} need={lv.need} /> : null; })()}
+                <HeatSphere prob={r.prob} kind="k" />
+              </span>
             </Link>
           ))}
         </>

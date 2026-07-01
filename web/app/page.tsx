@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { loadProjections, loadIndex } from "../lib/data";
+import { LiveProvider } from "../components/LiveProvider";
+import type { LiveGame } from "../lib/live";
 import type { Projections, HitsRow, TbRow, RunsRow, RbiRow, HrrRow, Matchup } from "../lib/types";
 import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
 import { PropBoard, type BoardRow } from "../components/PropBoard";
@@ -153,6 +155,7 @@ export default function Home() {
     prob: pickN(r.probability, r.probability_hist),
     detail: gameLabel(r.matchup, r.team) ?? `@ ${r.park}`,
     href: `/player/hr/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
+    player_id: r.player_id,
     time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
@@ -181,6 +184,7 @@ export default function Home() {
     projection: pickN(r.expected_ks, r.expected_ks_hist).toFixed(1),
     line: r.line.toFixed(1),
     href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
+    player_id: r.player_id,
     time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
@@ -233,6 +237,7 @@ export default function Home() {
     prob: hitsProb(r, threshold.hits),
     detail: `${threshold.hits}+ hits`,
     href: `/player/hits/${r.player_id ?? encodeURIComponent(r.player)}${hitsDateQ}`,
+    player_id: r.player_id,
     time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
@@ -260,6 +265,7 @@ export default function Home() {
     prob: tbProb(r, threshold.tb),
     detail: `${threshold.tb}+ bases`,
     href: `/player/tb/${r.player_id ?? encodeURIComponent(r.player)}${tbDateQ}`,
+    player_id: r.player_id,
     time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
@@ -287,6 +293,7 @@ export default function Home() {
     prob: runsProb(r, threshold.runs),
     detail: `${threshold.runs}+ runs`,
     href: `/player/runs/${r.player_id ?? encodeURIComponent(r.player)}${runsDateQ}`,
+    player_id: r.player_id,
     time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
@@ -314,6 +321,7 @@ export default function Home() {
     prob: rbiProb(r, threshold.rbi),
     detail: `${threshold.rbi}+ RBI`,
     href: `/player/rbi/${r.player_id ?? encodeURIComponent(r.player)}${rbiDateQ}`,
+    player_id: r.player_id,
     time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
@@ -341,6 +349,7 @@ export default function Home() {
     prob: hrrProb(r, threshold.hrr),
     detail: `${threshold.hrr}+ H+R+RBI`,
     href: `/player/hrr/${r.player_id ?? encodeURIComponent(r.player)}${hrrDateQ}`,
+    player_id: r.player_id,
     time: gameTimeLabel(r.game_time),
     timeSort: r.game_time,
     matchup: r.matchup,
@@ -370,6 +379,13 @@ export default function Home() {
   runsRows.sort((a, b) => b.prob - a.prob);
   rbiRows.sort((a, b) => b.prob - a.prob);
   hrrRows.sort((a, b) => b.prob - a.prob);
+
+  // Unique games (id + first-pitch ms) for the live poller's active-window gate.
+  const liveGames: LiveGame[] = Array.from(new Map(
+    [...data.hr, ...data.strikeouts]
+      .filter((r) => r.game_id != null)
+      .map((r) => [String(r.game_id), { id: String(r.game_id), startMs: r.game_time ? Date.parse(r.game_time) : undefined }])
+  ).values());
 
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">
@@ -616,6 +632,7 @@ export default function Home() {
         </div>
       </div>
 
+      <LiveProvider date={selectedDate} games={liveGames}>
       {section === "parks" || section === "hub" ? (
         <ParksBoard
           games={data.games ?? []}
@@ -666,6 +683,7 @@ export default function Home() {
           }
         />
       )}
+      </LiveProvider>
 
       <footer className="mt-12" style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
         Projections are model estimates, not guarantees · Built on Historical and Current Data
