@@ -231,7 +231,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
       <tbody>
         {rows.map((r) => (
           <tr key={r.id}>
-            <td style={{ whiteSpace: "nowrap" }}>
+            <td style={{ maxWidth: 150 }}>
               <Link href={r.href} className="linklike">{r.player}</Link>
               {r.playerHand && (() => {
                 const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);

@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono, Chakra_Petch, Orbitron } from "next/font/google";
 import "./globals.css";
-import { FitViewport } from "../components/FitViewport";
 
 const display = Bricolage_Grotesque({
   variable: "--font-display",
@@ -31,12 +31,20 @@ export const metadata: Metadata = {
   description: "MLB player prop projections",
 };
 
-// Render at the phone's real width instead of a scaled-down ~980px desktop canvas.
-// (Fixes the mobile zoom-to-read / skewed pills / off-screen tables.)
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-};
+// Detect phones server-side (from the request user-agent) and render the
+// viewport meta STATICALLY in the HTML — so iOS applies it at first paint with
+// no JS-timing games. Phones render the whole app at one fixed logical width
+// (590px = the widest section, the board table) and the browser scales it to
+// fit the screen: uniform "zoom-to-fit", no skew, no manual pinch. Tablets and
+// desktop keep the normal device-width layout.
+const PHONE_FIT_WIDTH = 600;
+export async function generateViewport(): Promise<Viewport> {
+  const ua = (await headers()).get("user-agent") || "";
+  const isPhone = /iPhone|iPod|Android.*Mobile|Windows Phone/i.test(ua);
+  return isPhone
+    ? { width: PHONE_FIT_WIDTH }
+    : { width: "device-width", initialScale: 1 };
+}
 
 export default function RootLayout({
   children,
@@ -49,7 +57,7 @@ export default function RootLayout({
         lang="en"
         className={`${display.variable} ${body.variable} ${mono.variable} ${cp.variable} ${orb.variable} h-full antialiased`}
       >
-        <body className="min-h-full flex flex-col" suppressHydrationWarning><FitViewport />{children}</body>
+        <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>
       </html>
     </ClerkProvider>
   );
