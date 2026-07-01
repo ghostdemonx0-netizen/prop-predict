@@ -6,6 +6,7 @@ import { loadProjections } from "../../../../lib/data";
 import type { Projections } from "../../../../lib/types";
 import { pct, strengthLabel, windText, arrowColor, gameTimeLabel } from "../../../../lib/format";
 import type { PropKind } from "../../../../lib/format";
+import { paceText } from "../../../../lib/pace";
 import { MatchupSphere } from "../../../../components/PropBoard";
 
 /** Shows BOTH sides of a matchup, separated: the strikeout (K) and the hit/contact (C)
@@ -112,6 +113,27 @@ function Factor({ icon, label, mult, note }: { icon: string; label: string; mult
   );
 }
 
+/** His base level: a neutral-conditions Baseline chance (%) + a plain Season pace,
+ *  both source-aware (Current/Blend/History). Shown between the headline and the
+ *  factor rows so the card reads baseline → nudges → tonight. */
+function BaselineBlock({ baseline, baselineHist, pace, paceHist, kind, blend, hist }:
+  { baseline?: number; baselineHist?: number; pace?: number; paceHist?: number; kind: PropKind; blend: boolean; hist: boolean }) {
+  const b = blend && typeof baseline === "number" && typeof baselineHist === "number" ? (baseline + baselineHist) / 2 : (hist && baselineHist != null ? baselineHist : baseline);
+  const p = blend && typeof pace === "number" && typeof paceHist === "number" ? (pace + paceHist) / 2 : (hist && paceHist != null ? paceHist : pace);
+  if (typeof b !== "number" && typeof p !== "number") return null;
+  return (
+    <div className="panel rise" style={{ animationDelay: "100ms" }}>
+      <div className="eyebrow mb-1">His base level</div>
+      {typeof b === "number" && (
+        <div className="factor-head"><span>📊 Baseline chance</span><span className="delta flat">{pct(b)}</span></div>
+      )}
+      {typeof p === "number" && p > 0 && (
+        <div className="factor-note" style={{ marginTop: 4 }}>📈 Season pace · {paceText(kind, p)}</div>
+      )}
+    </div>
+  );
+}
+
 function WeatherStrip({
   tempF,
   windMph,
@@ -208,6 +230,8 @@ export default function PlayerPage({
           <Stat value={pct(pick(r.probability, r.probability_hist))} label="our HR probability" glow />
           <Stat value={strengthLabel(pick(r.probability, r.probability_hist))} label="our read" />
         </div>
+
+        <BaselineBlock baseline={r.baseline_prob} baselineHist={r.baseline_prob_hist} pace={r.pace} paceHist={r.pace_hist} kind="hr" blend={blend} hist={hist} />
 
         <div className="panel rise" style={{ animationDelay: "120ms" }}>
           <div className="eyebrow mb-1">What&apos;s driving it</div>
@@ -348,6 +372,8 @@ export default function PlayerPage({
           </p>
         </div>
 
+        <BaselineBlock baseline={(r as unknown as Record<string, number | undefined>)[`baseline_p_ge${hitsThreshold}`]} baselineHist={(r as unknown as Record<string, number | undefined>)[`baseline_p_ge${hitsThreshold}_hist`]} pace={r.pace} paceHist={r.pace_hist} kind={hitsKind} blend={blend} hist={hist} />
+
         <div className="panel rise" style={{ animationDelay: "180ms" }}>
           <div className="eyebrow mb-1">What&apos;s driving it</div>
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
@@ -464,6 +490,8 @@ export default function PlayerPage({
             {strengthLabel(activeProb, tbKind)}
           </p>
         </div>
+
+        <BaselineBlock baseline={(r as unknown as Record<string, number | undefined>)[`baseline_p_ge${tbThreshold}`]} baselineHist={(r as unknown as Record<string, number | undefined>)[`baseline_p_ge${tbThreshold}_hist`]} pace={r.pace} paceHist={r.pace_hist} kind={tbKind} blend={blend} hist={hist} />
 
         <div className="panel rise" style={{ animationDelay: "180ms" }}>
           <div className="eyebrow mb-1">What&apos;s driving it</div>
@@ -600,6 +628,8 @@ export default function PlayerPage({
           </p>
         </div>
 
+        <BaselineBlock baseline={(r as unknown as Record<string, number | undefined>)[`baseline_p_ge${n}`]} baselineHist={(r as unknown as Record<string, number | undefined>)[`baseline_p_ge${n}_hist`]} pace={r.pace} paceHist={r.pace_hist} kind={kind} blend={blend} hist={hist} />
+
         <div className="panel rise" style={{ animationDelay: "180ms" }}>
           <div className="eyebrow mb-1">What&apos;s driving it</div>
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
@@ -713,6 +743,8 @@ export default function PlayerPage({
           </p>
         </div>
 
+        <BaselineBlock baseline={(r as unknown as Record<string, number | undefined>)[`baseline_p_ge${hrrThreshold}`]} baselineHist={(r as unknown as Record<string, number | undefined>)[`baseline_p_ge${hrrThreshold}_hist`]} pace={r.pace} paceHist={r.pace_hist} kind={kind} blend={blend} hist={hist} />
+
         <div className="panel rise" style={{ animationDelay: "180ms" }}>
           <div className="eyebrow mb-1">What&apos;s driving it</div>
           <p className="factor-note" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
@@ -823,6 +855,8 @@ export default function PlayerPage({
           <strong style={{ color: over ? "var(--green)" : "var(--red)" }}>{over ? "OVER" : "UNDER"}</strong>.
         </p>
       </div>
+
+      <BaselineBlock baseline={r.baseline_over_prob} baselineHist={r.baseline_over_prob_hist} pace={r.pace} paceHist={r.pace_hist} kind="k" blend={blend} hist={hist} />
 
       <div className="panel rise" style={{ animationDelay: "180ms" }}>
         <div className="eyebrow mb-3">Conditions</div>
