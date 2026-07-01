@@ -204,6 +204,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
   );
 
   const Table = () => (
+    <div style={{ overflowX: "auto", maxWidth: "100%" }}>
     <table className="board">
       <thead>
         <tr>
@@ -282,6 +283,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
         ))}
       </tbody>
     </table>
+    </div>
   );
 
   const Row = (r: BoardRow) => <BoardRowLine key={r.id} r={r} kind={kind} />;
