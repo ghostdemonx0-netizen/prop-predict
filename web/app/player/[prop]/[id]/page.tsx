@@ -7,6 +7,7 @@ import type { Projections } from "../../../../lib/types";
 import { pct, strengthLabel, windText, arrowColor, gameTimeLabel } from "../../../../lib/format";
 import type { PropKind } from "../../../../lib/format";
 import { paceText } from "../../../../lib/pace";
+import { platoonEdge } from "../../../../lib/platoon";
 import { MatchupSphere } from "../../../../components/PropBoard";
 
 /** Shows BOTH sides of a matchup, separated: the strikeout (K) and the hit/contact (C)
@@ -280,14 +281,20 @@ export default function PlayerPage({
             mult={r.recent_form_mult}
             note="The blended net of hard-hit + production form."
           />
-          {r.vs && (r.pitcher_mult !== undefined || r.matchup_mult !== undefined) && (
+          {r.vs && r.pitcher_mult !== undefined && (
             <Factor
               icon="⚾"
               label={`Pitcher · ${r.vs.name}`}
-              mult={(r.pitcher_mult ?? 1) * (r.matchup_mult ?? 1)}
-              note={`Combines ${r.vs.name}'s home-run quality with the ${
-                (r.matchup_mult ?? 1) > 1 ? "favorable" : "unfavorable"
-              } ${batLabel(r.bats)}-vs-${pitLabel(r.vs.throws)} platoon matchup.`}
+              mult={r.pitcher_mult ?? 1}
+              note={`${r.vs.name}'s home-run quality (how many he gives up).`}
+            />
+          )}
+          {r.vs && r.matchup_mult !== undefined && (
+            <Factor
+              icon="🔄"
+              label={`Platoon · ${batLabel(r.bats)} vs ${pitLabel(r.vs.throws)}`}
+              mult={r.matchup_mult}
+              note={`${platoonEdge(r.bats, r.vs.throws) ? "Favorable" : "Tough"} handedness matchup for him.`}
             />
           )}
           {r.vs && r.vs.bvp && r.vs.bvp.pa > 0 && r.bvp_mult !== undefined && (
@@ -409,6 +416,11 @@ export default function PlayerPage({
               note="How hittable this pitcher is, plus the L/R platoon."
             />
           )}
+          {r.vs && (
+            <div className="factor-note" style={{ marginTop: "0.35rem" }}>
+              🔄 <strong style={{ color: "var(--text)" }}>Platoon</strong> · {batLabel(r.bats)} vs {pitLabel(r.vs.throws)} · {platoonEdge(r.bats, r.vs.throws) ? "favorable" : "tough"} — already reflected in the Pitcher factor above.
+            </div>
+          )}
           {r.vs && r.vs.bvp && r.vs.bvp.pa > 0 && typeof r.bvp_hit_mult === "number" && (
             <Factor
               icon="📜"
@@ -527,6 +539,11 @@ export default function PlayerPage({
               mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
               note="Combines how hittable he is with his power (extra-base/HR) suppression, plus platoon."
             />
+          )}
+          {r.vs && (
+            <div className="factor-note" style={{ marginTop: "0.35rem" }}>
+              🔄 <strong style={{ color: "var(--text)" }}>Platoon</strong> · {batLabel(r.bats)} vs {pitLabel(r.vs.throws)} · {platoonEdge(r.bats, r.vs.throws) ? "favorable" : "tough"} — already reflected in the Pitcher factor above.
+            </div>
           )}
           {r.vs && r.vs.bvp && r.vs.bvp.pa > 0 && typeof r.bvp_hit_mult === "number" && (
             <Factor
@@ -666,7 +683,15 @@ export default function PlayerPage({
               icon="⚾"
               label={`Pitcher · ${r.vs.name}`}
               mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
-              note="How hittable this pitcher is, factoring in on-base opportunity and the L/R platoon."
+              note="How hittable this pitcher is, factoring in on-base opportunity."
+            />
+          )}
+          {r.vs && r.platoon_mult !== undefined && (
+            <Factor
+              icon="🔄"
+              label={`Platoon · ${batLabel(r.bats)} vs ${pitLabel(r.vs.throws)}`}
+              mult={r.platoon_mult}
+              note={`${platoonEdge(r.bats, r.vs.throws) ? "Favorable" : "Tough"} handedness matchup for him.`}
             />
           )}
           <Factor
@@ -781,7 +806,15 @@ export default function PlayerPage({
               icon="⚾"
               label={`Pitcher · ${r.vs.name}`}
               mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
-              note="Combines how hittable this pitcher is with the L/R platoon — affects both contact and scoring opportunity."
+              note="How hittable this pitcher is — affects both contact and scoring opportunity."
+            />
+          )}
+          {r.vs && r.platoon_mult !== undefined && (
+            <Factor
+              icon="🔄"
+              label={`Platoon · ${batLabel(r.bats)} vs ${pitLabel(r.vs.throws)}`}
+              mult={r.platoon_mult}
+              note={`${platoonEdge(r.bats, r.vs.throws) ? "Favorable" : "Tough"} handedness matchup for him.`}
             />
           )}
           <Factor
