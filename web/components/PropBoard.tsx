@@ -231,7 +231,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
       <tbody>
         {rows.map((r) => (
           <tr key={r.id}>
-            <td style={{ maxWidth: 150 }}>
+            <td className="pl-cell">
               <Link href={r.href} className="linklike">{r.player}</Link>
               {r.playerHand && (() => {
                 const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
@@ -268,7 +268,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
                 </>
               )}
             </td>
-            <td className="num" style={{ textAlign: "center", color: "var(--muted)", maxWidth: 78 }}>{r.time}</td>
+            <td className="num board-time" style={{ textAlign: "center", whiteSpace: "nowrap", color: "var(--muted)" }}>{r.time}</td>
             {kind === "k" && (
               <td className="num" style={{ textAlign: "center", whiteSpace: "nowrap" }}>{r.line}</td>
             )}

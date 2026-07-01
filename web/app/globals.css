@@ -260,6 +260,19 @@ table.board { width: 100%; border-collapse: collapse; }
 .linklike { color: var(--text); text-decoration: none; font-weight: 600; }
 .linklike:hover { color: var(--green); }
 
+/* Narrow phone (portrait, ~600px viewport): the board table has less room, so
+   shrink the type a touch and let the player's name sit on its own line with
+   its chips tucked underneath — clean rows instead of mashed. Landscape (~844)
+   and desktop are wider than this breakpoint, so they keep full size. */
+@media (max-width: 700px) {
+  table.board { font-size: 0.8rem; }
+  .board th { font-size: 0.6rem; padding: 0.45rem 0.35rem; }
+  .board td { padding: 0.5rem 0.35rem; }
+  .board td.pl-cell, .board th:first-child { max-width: 118px; white-space: normal; line-height: 1.3; }
+  .board td.pl-cell .linklike { display: block; margin-bottom: 3px; }
+  .board-time { font-size: 0.72rem; }
+}
+
 /* ---- generic surface ---- */
 .panel {
   background: var(--bg-2);
