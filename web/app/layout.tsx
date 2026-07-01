@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono, Chakra_Petch, Orbitron } from "next/font/google";
 import "./globals.css";
@@ -28,6 +28,13 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Prop Predict",
   description: "MLB player prop projections",
+};
+
+// Render at the phone's real width instead of a scaled-down ~980px desktop canvas.
+// (Fixes the mobile zoom-to-read / skewed pills / off-screen tables.)
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
