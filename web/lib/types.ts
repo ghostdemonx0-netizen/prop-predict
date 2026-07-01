@@ -43,6 +43,10 @@ export type HrRow = {
   spray_mult?: number; // how this batter's pull tilt changes the wind effect (weather × spray = total)
   spray_pull?: number; // share of balls pulled (0..1)
   bat_order?: number; // batting-order slot 1-9
+  baseline_prob?: number; // neutral-conditions HR chance
+  baseline_prob_hist?: number;
+  pace?: number; // HR per game
+  pace_hist?: number;
   lineup_status?: string;
   probability_hist?: number;
 };
@@ -67,6 +71,10 @@ export type KRow = {
   pitcher_status?: string;
   over_prob_hist?: number;
   expected_ks_hist?: number;
+  baseline_over_prob?: number; // neutral over-prob (no lineup adjustment)
+  baseline_over_prob_hist?: number;
+  pace?: number; // neutral Ks/start
+  pace_hist?: number;
 };
 
 export type Game = {
@@ -98,6 +106,14 @@ export type HitsRow = {
   vs?: Matchup;
   lineup_status?: string;
   bat_order?: number; // batting-order slot 1-9 (inherited by TB/Runs/RBI/HRR)
+  pace?: number; // raw season average per game (inherited)
+  pace_hist?: number;
+  baseline_p_ge1?: number; // neutral-conditions threshold chances (inherited)
+  baseline_p_ge2?: number;
+  baseline_p_ge3?: number;
+  baseline_p_ge1_hist?: number;
+  baseline_p_ge2_hist?: number;
+  baseline_p_ge3_hist?: number;
   wind_out_mph?: number;
   wind_mph?: number;
   wind_dir?: number;
@@ -131,6 +147,8 @@ export type TbRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | "
   park_weather_factor?: number;
   park_weather_factor_hist?: number;
   spray_mult?: number; // weather × spray = today's park&weather total (no double-count)
+  baseline_p_ge4?: number;
+  baseline_p_ge4_hist?: number;
 };
 
 export type RunsRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | "p_ge2_hist" | "p_ge3_hist"> & {
@@ -169,6 +187,8 @@ export type HrrRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | 
   lineup_mult_hist?: number;
   lineup_slot?: number | null;
   lineup_teammate?: number | null;
+  baseline_p_ge4?: number;
+  baseline_p_ge4_hist?: number;
 };
 
 export type Projections = {
