@@ -270,7 +270,13 @@ table.board { width: 100%; border-collapse: collapse; }
   .board td { padding: 0.5rem 0.35rem; }
   .board td.pl-cell, .board th:first-child { max-width: 118px; white-space: normal; line-height: 1.3; }
   .board td.pl-cell .linklike { display: block; margin-bottom: 3px; }
+  /* chips sit flush-left under the name (no leading indent) */
+  .board td.pl-cell .hand { margin-left: 0 !important; }
   .board-time { font-size: 0.72rem; }
+  /* Game Hub batter: push the hand/status chips onto their own line under the
+     name (name takes the full width), aligned left like the full board. */
+  .hub-batter .rl-name { flex-basis: 100%; }
+  .hub-batter { align-items: flex-start !important; }
 }
 
 /* ---- generic surface ---- */

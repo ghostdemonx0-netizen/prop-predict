@@ -660,7 +660,7 @@ function ColBatterRow({
         textDecoration: "none",
       }}
     >
-      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap", minWidth: 0 }}>
+      <span className="hub-batter" style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, flexWrap: "wrap", minWidth: 0 }}>
         <span className="rl-name">{hrRow.player}</span>
         {hrRow.playerHand && (
           <span
