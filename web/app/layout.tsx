@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono, Chakra_Petch, Orbitron } from "next/font/google";
 import "./globals.css";
+import { FitViewport } from "../components/FitViewport";
 
 const display = Bricolage_Grotesque({
   variable: "--font-display",
@@ -48,7 +49,7 @@ export default function RootLayout({
         lang="en"
         className={`${display.variable} ${body.variable} ${mono.variable} ${cp.variable} ${orb.variable} h-full antialiased`}
       >
-        <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>
+        <body className="min-h-full flex flex-col" suppressHydrationWarning><FitViewport />{children}</body>
       </html>
     </ClerkProvider>
   );
