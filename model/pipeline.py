@@ -105,6 +105,12 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     park_mult=eff_park, weather_mult=weather_mult,
                     expected_pa=expected_pa_for_slot(slot),
                 )
+                baseline_prob = hr_probability(
+                    season_hr=b["season_hr"], season_pa=b["season_pa"],
+                    expected_pa=expected_pa_for_slot(slot),
+                )  # all multipliers default 1.0 → neutral base chance
+                _g = b.get("games", 0)
+                hr_pace = (b["season_hr"] / _g) if _g else 0.0
                 vs = None
                 if opp:
                     m = matchup(
@@ -123,6 +129,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     "probability": prob, "wind_out_mph": wod,
                     "weather_mult": weather_mult, "park_mult": eff_park, "spray_pull": sp["pull"],
                     "spray_mult": spray_mult,
+                    "baseline_prob": baseline_prob, "pace": hr_pace,
                     "matchup_mult": platoon, "pitcher_mult": p_mult, "bvp_mult": b_mult,
                     "recent_form_mult": form, "hard_hit_form": hard, "production_form": prod,
                     "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
@@ -166,6 +173,8 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn, 
             if lam is None:
                 lam = expected_strikeouts(p["k_per_bf"], p["expected_bf"], p.get("opponent_k_mult", 1.0))
             line = p.get("k_line", 5.5)
+            baseline_ks = p["k_per_bf"] * p["expected_bf"]  # neutral: no opposing-lineup adjustment
+            baseline_over = poisson_over_prob(baseline_ks, line)
             rows.append({
                 "prop": "K", "game_id": game["game_id"],
                 "game_time": game.get("game_time"),
@@ -173,6 +182,7 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn, 
                 "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                 "player": p["name"], "team": team,
                 "expected_ks": lam, "line": line, "over_prob": poisson_over_prob(lam, line),
+                "baseline_over_prob": baseline_over, "pace": baseline_ks,
                 "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"],
                 "wind_dir": w["wind_dir"], "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
                 "throws": p.get("throws", "R"), "matchups": matchups,
@@ -370,6 +380,18 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     weather_factor = (wx_ev / nenv_ev) if nenv_ev > 0 else 1.0
 
                 epa = expected_pa_for_slot(slot)
+                # Baseline: batter's own regressed season rates, ALL factors neutral
+                # (opp=None zeroes matchup/platoon/pitcher/bvp; eff_park=1, weather=1, form=1).
+                bvec, _ = _batter_outcome_vector(
+                    b, None, 1.0, 1.0, slot, None,
+                    apply_xbh_park=(units == "bases"), park_1b=1.0, park_2b=1.0, park_3b=1.0, form_mult=1.0,
+                )
+                boutcomes = [bvec[0], bvec[1] + bvec[2] + bvec[3] + bvec[4]] if units == "hits" else bvec
+                _g = b.get("games", 0)
+                if units == "bases":
+                    pace = ((b.get("season_1b", 0) + 2 * b.get("season_2b", 0) + 3 * b.get("season_3b", 0) + 4 * b.get("season_hr", 0)) / _g) if _g else 0.0
+                else:
+                    pace = ((b.get("season_1b", 0) + b.get("season_2b", 0) + b.get("season_3b", 0) + b.get("season_hr", 0)) / _g) if _g else 0.0
                 vs = None
                 if opp:
                     m = matchup(
@@ -389,6 +411,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     "recent_form_mult": form, "hard_hit_form": hard, "production_form": prod,
                     "bvp_hit_mult": bvp_hit_mult(bvp.get("hits", 0), bvp["pa"]) if (bvp and bvp.get("pa")) else 1.0,
                     "spray_pull": _sp["pull"],
+                    "pace": pace,
                     **({"spray_mult": spray_mult} if spray_mult is not None else {}),
                     "pitcher_factor": pitcher_factor,
                     "park_weather_factor": park_weather_factor,
@@ -400,6 +423,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                 }
                 for label, nthresh in thresholds:
                     row[label] = count_ge_prob(outcomes, epa, nthresh)
+                    row[f"baseline_{label}"] = count_ge_prob(boutcomes, epa, nthresh)
                 rows.append(row)
     rows.sort(key=lambda r: r[thresholds[0][0]], reverse=True)
     return rows
@@ -522,6 +546,10 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
                     "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"],
                     "wind_dir": w["wind_dir"], "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
                 }
+                row["pace"] = season_rate  # raw season average per game
+                _base = _run_props.ge_probs(rate, cfg["thresholds"], nb_size=cfg.get("nb_size"))
+                for _k, _v in _base.items():
+                    row[f"baseline_{_k}"] = _v
                 row.update(_run_props.ge_probs(lam, cfg["thresholds"], nb_size=cfg.get("nb_size")))
                 rows.append(row)
     rows.sort(key=lambda r: r[cfg["thresholds"][0][0]], reverse=True)

@@ -1,3 +1,4 @@
+import math
 # tests/test_threshold_pipeline.py
 from model.pipeline import build_hits_rows, build_total_bases_rows
 
@@ -593,3 +594,17 @@ def test_threshold_rows_carry_bat_order():
     tb = build_total_bases_rows(_slate(), lf, pf, _w, bvp_fn=None)
     assert {r["bat_order"] for r in hits} == {1, 2}
     assert all(isinstance(r.get("bat_order"), int) for r in tb)
+
+
+def test_threshold_rows_carry_baseline_and_pace():
+    b1 = dict(_bat(1, 400, 90, 25, 3, 20), games=100)
+    lf = lambda g: {"home": [b1], "away": [dict(_bat(2, 400, 90, 25, 3, 20), games=100)]}
+    pf = lambda pid: _pit(pid)
+    hits = build_hits_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    tb = build_total_bases_rows(_slate(), lf, pf, _w, bvp_fn=None)
+    hr = next(x for x in hits if x["player_id"] == 1)
+    assert "baseline_p_ge1" in hr and "baseline_p_ge2" in hr and "baseline_p_ge3" in hr
+    assert math.isclose(hr["pace"], (90 + 25 + 3 + 20) / 100)
+    tbr = next(x for x in tb if x["player_id"] == 1)
+    assert "baseline_p_ge2" in tbr and "baseline_p_ge4" in tbr
+    assert math.isclose(tbr["pace"], (90 + 2 * 25 + 3 * 3 + 4 * 20) / 100)

@@ -215,3 +215,14 @@ def test_run_prop_rows_carry_bat_order():
         assert all(isinstance(r.get("bat_order"), int) for r in rows)
         assert min(r["bat_order"] for r in rows) == 1
         assert max(r["bat_order"] for r in rows) == 2
+
+
+def test_run_rows_carry_baseline_and_pace():
+    L = lambda g: {"home": [_bat(1, 100, 60, 70, 200)], "away": [_bat(2, 100, 50, 50, 180)]}
+    rows = build_runs_rows(_SLATE, L, lambda p: _pit(p), _W)
+    r = next(x for x in rows if x["player_id"] == 1)
+    assert "baseline_p_ge1" in r and "baseline_p_ge2" in r
+    assert math.isclose(r["pace"], 60 / 100)
+    _rate = run_props.regressed_per_game(60, 100, run_props.LEAGUE_R_PER_GAME, run_props.REG_GAMES)
+    assert math.isclose(r["baseline_p_ge1"], run_props.ge_probs(_rate, [("p_ge1", 1)])["p_ge1"])
+    assert 0.0 <= r["baseline_p_ge1"] <= 1.0
