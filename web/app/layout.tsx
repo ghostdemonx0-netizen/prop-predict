@@ -1,14 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
-
-// The server sets a static width=600 for phones (below), which is right for
-// PORTRAIT. In LANDSCAPE a phone screen is ~844px wide, so forcing 600 blows it
-// up. This refines the viewport by orientation on the client: portrait phones
-// keep the 600 fit; landscape (and tablets/desktop) use device-width. Runs
-// before paint and on every rotation.
-const ORIENT_VIEWPORT = `(function(){function set(){try{var phone=Math.min(screen.width,screen.height)<=540;if(!phone)return;var land=window.matchMedia('(orientation: landscape)').matches;var c=land?'width=device-width, initial-scale=1':'width=600';var m=document.querySelector('meta[name="viewport"]');if(m)m.setAttribute('content',c);else{m=document.createElement('meta');m.name='viewport';m.content=c;document.head.appendChild(m);}}catch(e){}}set();window.addEventListener('orientationchange',function(){setTimeout(set,120);});window.addEventListener('resize',function(){setTimeout(set,150);});})();`;
 import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono, Chakra_Petch, Orbitron } from "next/font/google";
 import "./globals.css";
 
@@ -40,17 +32,23 @@ export const metadata: Metadata = {
 };
 
 // Detect phones server-side (from the request user-agent) and render the
-// viewport meta STATICALLY in the HTML — so iOS applies it at first paint with
-// no JS-timing games. Phones render the whole app at one fixed logical width
-// (590px = the widest section, the board table) and the browser scales it to
-// fit the screen: uniform "zoom-to-fit", no skew, no manual pinch. Tablets and
-// desktop keep the normal device-width layout.
+// viewport meta STATICALLY in the HTML — the only mechanism iOS honors (it
+// ignores JS viewport changes). Phones get `width=600, maximum-scale=1`:
+//  - PORTRAIT (~390px screen): scales the 600 layout DOWN to fit → uniform
+//    "zoom-to-fit", no skew, no manual pinch.
+//  - LANDSCAPE (~844px screen): fitting 600 would require zooming IN, but
+//    maximum-scale=1 caps zoom at 1.0, so the browser falls back to the wider
+//    device-width (844) → native, untouched. This is how ONE static meta stays
+//    orientation-aware (portrait fits, landscape native) without JS.
+// Do NOT add initial-scale (Next adds it by default → forces 100% zoom → lands
+// zoomed-in with the right edge cut off). Return initialScale: undefined.
+// Tablets/desktop keep device-width.
 const PHONE_FIT_WIDTH = 600;
 export async function generateViewport(): Promise<Viewport> {
   const ua = (await headers()).get("user-agent") || "";
   const isPhone = /iPhone|iPod|Android.*Mobile|Windows Phone/i.test(ua);
   return isPhone
-    ? { width: PHONE_FIT_WIDTH, initialScale: undefined }
+    ? { width: PHONE_FIT_WIDTH, initialScale: undefined, maximumScale: 1 }
     : { width: "device-width", initialScale: 1 };
 }
 
@@ -65,7 +63,6 @@ export default function RootLayout({
         lang="en"
         className={`${display.variable} ${body.variable} ${mono.variable} ${cp.variable} ${orb.variable} h-full antialiased`}
       >
-        <Script id="orient-viewport" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: ORIENT_VIEWPORT }} />
         <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>
       </html>
     </ClerkProvider>
