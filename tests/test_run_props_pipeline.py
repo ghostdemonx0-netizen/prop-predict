@@ -226,3 +226,10 @@ def test_run_rows_carry_baseline_and_pace():
     _rate = run_props.regressed_per_game(60, 100, run_props.LEAGUE_R_PER_GAME, run_props.REG_GAMES)
     assert math.isclose(r["baseline_p_ge1"], run_props.ge_probs(_rate, [("p_ge1", 1)])["p_ge1"])
     assert 0.0 <= r["baseline_p_ge1"] <= 1.0
+
+
+def test_run_rows_carry_platoon_mult():
+    rows = build_runs_rows(_SLATE, _L, lambda p: _pit(p), _W)
+    r = next(x for x in rows if x["player_id"] == 1)
+    assert "platoon_mult" in r
+    assert math.isclose(r["platoon_mult"], 0.95)  # RHB vs RHP = same-hand

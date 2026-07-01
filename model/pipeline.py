@@ -539,6 +539,7 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
                     "hard_hit_form": hard_hit,
                     "production_form": production,
                     "pitcher_factor": psupp,
+                    "platoon_mult": platoon,
                     "park_weather_factor": park,
                     "lineup_mult": lmult,
                     **({"lineup_slot": lslot, "lineup_teammate": lteam} if lslot is not None else {}),
