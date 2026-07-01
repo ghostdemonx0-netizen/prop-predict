@@ -268,7 +268,7 @@ export function PropBoard({ rows, mode, kind }: { rows: BoardRow[]; mode: ViewMo
                 </>
               )}
             </td>
-            <td className="num" style={{ textAlign: "center", whiteSpace: "nowrap", color: "var(--muted)" }}>{r.time}</td>
+            <td className="num" style={{ textAlign: "center", color: "var(--muted)", maxWidth: 78 }}>{r.time}</td>
             {kind === "k" && (
               <td className="num" style={{ textAlign: "center", whiteSpace: "nowrap" }}>{r.line}</td>
             )}
