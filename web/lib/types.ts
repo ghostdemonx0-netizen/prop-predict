@@ -166,6 +166,7 @@ export type RunsRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" |
   lineup_mult_hist?: number;
   lineup_slot?: number | null;
   lineup_teammate?: number | null;
+  platoon_mult?: number; // handedness (platoon) edge
 };
 
 export type RbiRow = RunsRow;
@@ -187,6 +188,7 @@ export type HrrRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | 
   lineup_mult_hist?: number;
   lineup_slot?: number | null;
   lineup_teammate?: number | null;
+  platoon_mult?: number; // handedness (platoon) edge
   baseline_p_ge4?: number;
   baseline_p_ge4_hist?: number;
 };
