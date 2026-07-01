@@ -18,6 +18,14 @@
 
 * { box-sizing: border-box; }
 
+/* iOS Safari: overflow-x:hidden on <body> alone doesn't contain horizontal
+   scroll — the page still pans past the screen edge (empty gap + zoom-out
+   needed). Containing it on <html> too locks the page to the phone's width. */
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
