@@ -1,6 +1,10 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isPublicRoute = createRouteMatcher(["/sign-in(.*)"]);
+// /api/live is public ON PURPOSE: it returns only live MLB box scores (no
+// predictions, no board data), so the CDN can share one cached copy across all
+// viewers instead of running the function per member. Everything else — pages,
+// /data board files, predictions — stays gated below.
+const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/api/live(.*)"]);
 
 // Everything else - pages AND /data/*.json - requires a session.
 const proxy = clerkMiddleware(async (auth, req) => {
