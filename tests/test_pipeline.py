@@ -308,3 +308,19 @@ def test_hr_rows_carry_bat_order():
     assert rows
     assert all(isinstance(r.get("bat_order"), int) for r in rows)
     assert min(r["bat_order"] for r in rows) == 1
+
+
+def test_hr_rows_carry_baseline_and_pace():
+    rows = build_hr_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    r = rows[0]
+    assert "baseline_prob" in r and "pace" in r
+    assert 0.0 <= r["baseline_prob"] <= 1.0
+    assert r["pace"] >= 0.0
+
+
+def test_k_rows_carry_baseline_and_pace():
+    rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_lineups_fn, fake_weather_fn)
+    r = rows[0]
+    assert "baseline_over_prob" in r and "pace" in r
+    assert r["pace"] > 0
+    assert 0.0 <= r["baseline_over_prob"] <= 1.0
