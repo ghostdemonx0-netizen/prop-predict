@@ -1,8 +1,18 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono, Chakra_Petch, Orbitron } from "next/font/google";
 import "./globals.css";
+
+// Landscape lock. The server sends a static phone viewport (width=600) that's
+// right for portrait but wrong for landscape, where we want plain device-width
+// (native, "gets bigger" — like ballparkpal). iOS ignores meta CHANGES made via
+// setAttribute, but it does re-read the viewport when the <meta> element is
+// REMOVED and a fresh one is appended — so do that on load and on every
+// rotation. Portrait phones keep width=600; landscape phones + tablets/desktop
+// get device-width.
+const ORIENT_VIEWPORT = `(function(){function apply(){try{var s=window.screen;var phone=Math.min(s.width,s.height)<=540;if(!phone)return;var land=window.matchMedia('(orientation: landscape)').matches;var c=land?'width=device-width, initial-scale=1':'width=600';var olds=document.querySelectorAll('meta[name="viewport"]');for(var i=0;i<olds.length;i++){if(olds[i].parentNode)olds[i].parentNode.removeChild(olds[i]);}var m=document.createElement('meta');m.name='viewport';m.setAttribute('content',c);document.head.appendChild(m);}catch(e){}}apply();window.addEventListener('orientationchange',function(){setTimeout(apply,60);setTimeout(apply,300);});window.addEventListener('pageshow',apply);})();`;
 
 const display = Bricolage_Grotesque({
   variable: "--font-display",
@@ -63,6 +73,7 @@ export default function RootLayout({
         lang="en"
         className={`${display.variable} ${body.variable} ${mono.variable} ${cp.variable} ${orb.variable} h-full antialiased`}
       >
+        <Script id="orient-viewport" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: ORIENT_VIEWPORT }} />
         <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>
       </html>
     </ClerkProvider>
