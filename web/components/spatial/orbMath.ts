@@ -44,10 +44,10 @@ export interface OrbParams {
 
   /**
    * Halo blur *coefficient* — multiply by size to get px.
-   * Formula: 0.1 + heat×0.34
+   * Formula: 0.065 + heat×0.21  (reduced ~37% from original to tighten bloom)
    */
   halo: number;
-  /** Halo radial opacity: 0.08 + heat×0.62 */
+  /** Halo radial opacity: 0.05 + heat×0.38  (reduced ~39% to clean up muddy fill) */
   haloOpacity: number;
 
   /** SVG ring drop-shadow blur (px, *not* size-relative): 2 + heat×5 */
@@ -83,9 +83,9 @@ export function orbParams(rawProb: number, heat: number): OrbParams {
   const elevation     = 0.07 + t * 0.16;     // × size → syPx
   const shadowOpacity = 0.2  + t * 0.5;
 
-  // ── halo ─────────────────────────────────────────────────────────────────
-  const halo        = 0.1  + t * 0.34;       // × size → haloBlurPx
-  const haloOpacity = 0.08 + t * 0.62;
+  // ── halo (reduced ~37-39% from original to tighten bloom / clean fill) ──────
+  const halo        = 0.065 + t * 0.21;      // × size → haloBlurPx  (was 0.1+t×0.34)
+  const haloOpacity = 0.05  + t * 0.38;      // (was 0.08+t×0.62)
 
   // ── glow / inner highlight ───────────────────────────────────────────────
   const glow           = 2   + t * 5;        // fixed px, not size-relative

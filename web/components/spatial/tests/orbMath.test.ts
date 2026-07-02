@@ -70,13 +70,13 @@ describe("orbParams → blur & halo monotonically increase with heat", () => {
   });
 
   it("halo at heat=1 > halo at heat=0", () => {
-    // heat=0: 0.10; heat=1: 0.44
+    // heat=0: 0.065; heat=1: 0.275  (reduced ~37% from original to tighten bloom)
     expect(orbParams(0.5, 1).halo).toBeGreaterThan(orbParams(0.5, 0).halo);
   });
 
-  it("halo exact values: 0.10 at heat=0, 0.44 at heat=1", () => {
-    expect(orbParams(0.5, 0).halo).toBeCloseTo(0.10, 10);
-    expect(orbParams(0.5, 1).halo).toBeCloseTo(0.44, 10);
+  it("halo exact values: 0.065 at heat=0, 0.275 at heat=1  (0.065+heat×0.21)", () => {
+    expect(orbParams(0.5, 0).halo).toBeCloseTo(0.065, 10);
+    expect(orbParams(0.5, 1).halo).toBeCloseTo(0.275, 10);
   });
 
   it("glow: 2 at heat=0, 7 at heat=1", () => {
@@ -100,9 +100,9 @@ describe("orbParams → shadow opacity & elevation", () => {
 
 // ── halo opacity ─────────────────────────────────────────────────────────────
 describe("orbParams → haloOpacity", () => {
-  it("0.08 at heat=0, 0.70 at heat=1  (0.08+heat×0.62)", () => {
-    expect(orbParams(0.5, 0).haloOpacity).toBeCloseTo(0.08, 10);
-    expect(orbParams(0.5, 1).haloOpacity).toBeCloseTo(0.70, 10);
+  it("0.05 at heat=0, 0.43 at heat=1  (0.05+heat×0.38 — reduced ~39% to clean fill)", () => {
+    expect(orbParams(0.5, 0).haloOpacity).toBeCloseTo(0.05, 10);
+    expect(orbParams(0.5, 1).haloOpacity).toBeCloseTo(0.43, 10);
   });
 });
 

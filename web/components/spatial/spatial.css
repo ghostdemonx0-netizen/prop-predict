@@ -209,10 +209,10 @@
   z-index:       0;
 }
 
-/* Coloured glow halo — extends beyond sphere boundary */
+/* Coloured glow halo — extends beyond sphere boundary (reduced from -12% to -7% to tighten bloom) */
 .sp-root .orbHalo {
   position:      absolute;
-  inset:        -12%;
+  inset:        -7%;
   border-radius: 50%;
   z-index:       0;
 }
@@ -933,13 +933,38 @@
   letter-spacing: .14em;
 }
 
-/* ── Weighting segmented wrap ────────────────────────────── */
+/* ── Weighting segmented wrap (desktop in-bar) ───────────── */
 
 .sp-root .sp-wseg-wrap {
   display:        flex;
   flex-direction: column;
   align-items:    flex-end;
   gap:            4px;
+}
+
+/* Eyebrow inside wseg-wrap — slightly bolder than default eyebrow */
+.sp-root .sp-wseg-label {
+  font-weight:    600;
+  letter-spacing: .18em;
+}
+
+/* ── Weighting mobile row (≤880px) — full-width row below bar ── */
+
+.sp-root .sp-wseg-mobile-row {
+  display:                 none;
+  background:              var(--glass-2);
+  border-bottom:           1px solid var(--line);
+  backdrop-filter:         blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+}
+
+.sp-root .sp-wseg-mobile-inner {
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+  padding:     10px 0 12px;
+  max-width:   1180px;
+  margin:      0 auto;
 }
 
 /* ── Eyebrow label ───────────────────────────────────────── */
@@ -1096,6 +1121,13 @@
   color:      var(--ink);
 }
 
+/* Compact variant for placement inside the command bar */
+.sp-root .sp-datepick--cmd {
+  padding:       .32rem .62rem;
+  border-radius: 12px;
+  font-size:     .68rem;
+}
+
 /* ── KPI tiles grid ──────────────────────────────────────── */
 
 .sp-root .sp-tiles {
@@ -1138,8 +1170,10 @@
 /* ── Responsive ──────────────────────────────────────────── */
 
 @media (max-width: 880px) {
-  .sp-root .sp-wseg-wrap { display: none; }
-  .sp-root .sp-tiles     { grid-template-columns: repeat(2, 1fr); }
+  /* Hide weighting in the bar; show the full-width row below instead */
+  .sp-root .sp-wseg-wrap        { display: none; }
+  .sp-root .sp-wseg-mobile-row  { display: block; }
+  .sp-root .sp-tiles            { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 600px) {

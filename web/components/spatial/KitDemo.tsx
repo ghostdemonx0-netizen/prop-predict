@@ -57,18 +57,19 @@ export function KitDemo() {
 
   return (
     <>
-      {/* ── Sticky command bar ──────────────────────────────────── */}
-      <CommandBar source={source} onSourceChange={setSource} />
+      {/* ── Sticky command bar (now owns the date picker) ───────── */}
+      <CommandBar
+        source={source}
+        onSourceChange={setSource}
+        dates={DEMO_DATES}
+        selectedDate={date}
+        onDate={setDate}
+      />
 
       <main className="sp-wrap" style={{ paddingBottom: 80 }}>
 
-        {/* ── Hero section ──────────────────────────────────────── */}
-        <HeroTiles
-          dates={DEMO_DATES}
-          selectedDate={date}
-          onDate={setDate}
-          tiles={DEMO_TILES}
-        />
+        {/* ── KPI tiles (no headline, no date picker) ───────────── */}
+        <HeroTiles tiles={DEMO_TILES} />
 
         {/* ── Nav dock ──────────────────────────────────────────── */}
         <NavDock section={section} onSection={setSection} />
