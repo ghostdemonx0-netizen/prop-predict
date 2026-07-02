@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono, Chakra_Petch, Orbitron } from "next/font/google";
+import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono, Chakra_Petch, Orbitron, Familjen_Grotesk, Spline_Sans_Mono } from "next/font/google";
 import "./globals.css";
 
 // Landscape lock. The server sends a static phone viewport (width=600) that's
@@ -49,6 +49,28 @@ const mono = JetBrains_Mono({
   weight: ["500", "700"],
 });
 
+// ── Spatial-skin fonts (Mock 7 / /next route) ──────────────────────────────
+// Three separate declarations so the live site at / is unaffected.
+// CSS vars --sp-disp / --sp-body / --sp-mono land on <html> alongside the
+// existing --font-* vars and are consumed by spatial.css via var(--sp-*).
+const spDisp = Bricolage_Grotesque({
+  variable: "--sp-disp",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+});
+
+const spBody = Familjen_Grotesk({
+  variable: "--sp-body",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const spMono = Spline_Sans_Mono({
+  variable: "--sp-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Prop Predict",
   description: "MLB player prop projections",
@@ -84,7 +106,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${display.variable} ${body.variable} ${mono.variable} ${cp.variable} ${orb.variable} h-full antialiased`}
+        className={`${display.variable} ${body.variable} ${mono.variable} ${cp.variable} ${orb.variable} ${spDisp.variable} ${spBody.variable} ${spMono.variable} h-full antialiased`}
       >
         <Script id="orient-viewport" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: ORIENT_VIEWPORT }} />
         <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>

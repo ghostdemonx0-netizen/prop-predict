@@ -1,0 +1,187 @@
+/*
+ * spatial.css — Design tokens + base layers for the Mock 7 "Spatial Depth" skin.
+ *
+ * All tokens and structural rules are scoped under .sp-root so they coexist
+ * with the live site's globals.css without collisions.  The /next layout wraps
+ * its children in <div class="sp-root"> so every spatial component inherits
+ * these values automatically.
+ *
+ * Font vars (--sp-disp / --sp-body / --sp-mono) are injected by app/layout.tsx
+ * via next/font/google and land on <html>.  The --f-disp/body/mono aliases here
+ * let all spatial components reference the mock-7 naming convention unchanged.
+ */
+
+/* =========================================================
+   1. Design tokens — scoped to .sp-root
+   ========================================================= */
+
+.sp-root {
+  /* backgrounds */
+  --bg:       hsl(243 34% 4.5%);
+  --bg-2:     hsl(248 36% 7%);
+
+  /* ink / text */
+  --ink:      hsl(228 34% 96%);
+  --ink-dim:  hsl(230 16% 66%);
+  --ink-faint:hsl(230 12% 48%);
+
+  /* lines / borders */
+  --line:     hsl(230 60% 78% / .11);
+  --line-2:   hsl(230 60% 80% / .2);
+  --line-3:   hsl(230 70% 84% / .34);
+
+  /* glass surfaces */
+  --glass:    hsl(238 40% 13% / .5);
+  --glass-2:  hsl(240 42% 9%  / .62);
+  --glass-3:  hsl(242 44% 7%  / .82);
+
+  /* highlight */
+  --hi:       hsl(0 0% 100% / .07);
+
+  /* iris accent palette */
+  --iris-cyan:   hsl(188 92% 62%);
+  --iris-violet: hsl(264 88% 70%);
+  --iris-mint:   hsl(150 82% 60%);
+  --iris-mag:    hsl(322 86% 68%);
+
+  /* semantic colours */
+  --good: hsl(152 74% 52%);
+  --warn: hsl( 40 96% 60%);
+  --bad:  hsl(  2 82% 66%);
+
+  /* shape */
+  --rad: 20px;
+
+  /* shadows */
+  --sh-amb: 0 30px 70px -30px hsl(248 70% 2% / .9);
+  --sh-con: 0 4px  14px  -6px hsl(248 80% 1% / .7);
+
+  /* motion */
+  --ease:   cubic-bezier(.2, .8, .2, 1);
+  --spring: cubic-bezier(.34, 1.56, .5, 1);
+
+  /* font aliases — point at the CSS vars injected by next/font/google  */
+  --f-disp: var(--sp-disp, 'Bricolage Grotesque');
+  --f-body: var(--sp-body, 'Familjen Grotesk');
+  --f-mono: var(--sp-mono, 'Spline Sans Mono');
+}
+
+/* =========================================================
+   2. Base surface / typography for the skin root
+   ========================================================= */
+
+.sp-root {
+  background:              var(--bg);
+  color:                   var(--ink);
+  min-height:              100vh;
+  overflow-x:              hidden;
+  font-family:             var(--f-body), system-ui, sans-serif;
+  letter-spacing:          .004em;
+  line-height:             1.5;
+  -webkit-font-smoothing:  antialiased;
+  position:                relative;
+}
+
+/* =========================================================
+   3. Volumetric / iridescent depth-field layers
+      Scoped so they only fire inside .sp-root.
+   ========================================================= */
+
+/* Primary gradient field (violet + cyan + magenta blobs) */
+.sp-root .field {
+  position:       fixed;
+  inset:         -12%;
+  z-index:       -4;
+  pointer-events: none;
+  will-change:    transform;
+  background:
+    radial-gradient(46% 38% at 22%   8%, hsl(264 86% 40% / .42), transparent 62%),
+    radial-gradient(40% 34% at 84%   4%, hsl(188 90% 44% / .30), transparent 60%),
+    radial-gradient(54% 46% at 60% 104%, hsl(322 80% 40% / .20), transparent 64%),
+    radial-gradient(60% 50% at 50% -10%, hsl(150 80% 40% / .12), transparent 60%);
+  filter: saturate(1.15);
+}
+
+/* Secondary softer blobs */
+.sp-root .field2 {
+  position:       fixed;
+  inset:         -20%;
+  z-index:       -3;
+  pointer-events: none;
+  will-change:    transform;
+  opacity:        .6;
+  background:
+    radial-gradient(28% 22% at 12%  64%, hsl(264 90% 56% / .22), transparent 70%),
+    radial-gradient(26% 20% at 92%  50%, hsl(188 92% 56% / .18), transparent 70%);
+}
+
+/* Top-edge spotlight vignette */
+.sp-root .spot {
+  position:       fixed;
+  inset:          0;
+  z-index:       -2;
+  pointer-events: none;
+  background:    radial-gradient(120% 80% at 50% -16%, hsl(230 60% 80% / .10), transparent 52%);
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, hsl(0 0% 0%) 30%, transparent 78%);
+          mask-image: radial-gradient(120% 90% at 50% 0%, hsl(0 0% 0%) 30%, transparent 78%);
+}
+
+/* Subtle grid mesh */
+.sp-root .mesh {
+  position:       fixed;
+  inset:          0;
+  z-index:       -2;
+  pointer-events: none;
+  opacity:        .4;
+  background-image:
+    linear-gradient(     hsl(230 60% 78% / .05) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(230 60% 78% / .05) 1px, transparent 1px);
+  background-size: 62px 62px;
+  -webkit-mask-image: radial-gradient(130% 85% at 50% 0%, hsl(0 0% 0%) 28%, transparent 76%);
+          mask-image: radial-gradient(130% 85% at 50% 0%, hsl(0 0% 0%) 28%, transparent 76%);
+}
+
+/* Film-grain overlay */
+.sp-root .grain {
+  position:        fixed;
+  inset:           0;
+  z-index:        -1;
+  pointer-events:  none;
+  opacity:         .05;
+  mix-blend-mode:  overlay;
+  /* Inline SVG noise — no external fetch */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* =========================================================
+   4. Keyframes — intentionally global (no scope needed)
+   ========================================================= */
+
+/* Iris gradient shimmer for text / backgrounds */
+@keyframes irisflow {
+  0%,100% { background-position: 0%   50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* Live-indicator pulse */
+@keyframes beat {
+  0%,100% { opacity: 1;  transform: scale(1);   }
+  50%      { opacity: .4; transform: scale(.78); }
+}
+
+/* Card entrance — translates up from below */
+@keyframes rise {
+  to { opacity: 1; transform: none; }
+}
+
+/* Modal pop-in */
+@keyframes popin {
+  from { opacity: 0; transform: translateY(30px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Overlay fade */
+@keyframes fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
