@@ -1,5 +1,6 @@
 import type { Viewport } from "next";
 import "../../components/spatial/spatial.css";
+import { DepthField } from "../../components/spatial/DepthField";
 
 // Override the root layout's phone-fit viewport for the /next segment.
 // Nested segment viewport exports take precedence over parent segments.
@@ -9,12 +10,8 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 export default function NextLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="sp-root">
-      {/* Volumetric depth-field layers — spatial background */}
-      <div className="field" aria-hidden="true" />
-      <div className="field2" aria-hidden="true" />
-      <div className="spot" aria-hidden="true" />
-      <div className="mesh" aria-hidden="true" />
-      <div className="grain" aria-hidden="true" />
+      {/* Volumetric depth-field layers + parallax — handled by DepthField */}
+      <DepthField />
       {children}
     </div>
   );
