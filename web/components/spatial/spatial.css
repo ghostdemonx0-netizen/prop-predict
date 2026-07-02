@@ -185,3 +185,100 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* =========================================================
+   5. Depth-halo probability orb  (task 0.4)
+      Transcribed from mock7.html's CSS exactly.
+      All classes scoped to .sp-root.
+   ========================================================= */
+
+/* Outer wrapper — inline-flex, sized via style prop */
+.sp-root .orb {
+  position:        relative;
+  display:         inline-flex;
+  flex:            0 0 auto;
+  align-items:     center;
+  justify-content: center;
+}
+
+/* Cast shadow layer — blurred radial behind the sphere */
+.sp-root .orbShadow {
+  position:      absolute;
+  inset:         8%;
+  border-radius: 50%;
+  z-index:       0;
+}
+
+/* Coloured glow halo — extends beyond sphere boundary */
+.sp-root .orbHalo {
+  position:      absolute;
+  inset:        -12%;
+  border-radius: 50%;
+  z-index:       0;
+}
+
+/* Sphere body — radial-gradient fakes lighting; inset shadows add depth */
+.sp-root .orbCore {
+  position:      absolute;
+  inset:         14%;
+  border-radius: 50%;
+  z-index:       1;
+  overflow:      hidden;
+}
+
+/* Top-left specular highlight — blurred white ellipse */
+.sp-root .orbSpec {
+  position:      absolute;
+  top:           11%;
+  left:          15%;
+  width:         44%;
+  height:        36%;
+  border-radius: 50%;
+  background:    radial-gradient(
+    closest-side,
+    hsl(0 0% 100% / .8),
+    hsl(0 0% 100% / 0) 72%
+  );
+  filter:        blur(.5px);
+}
+
+/* SVG progress ring — sits above the core */
+.sp-root .orbRing {
+  position:  absolute;
+  inset:     0;
+  z-index:   2;
+  transform: translateZ(0);
+}
+
+/* Centred numeric label (NN%) */
+.sp-root .orbNum {
+  position:        relative;
+  z-index:         3;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  font-family:     var(--f-mono);
+  font-weight:     700;
+  color:           hsl(0 0% 100% / .96);
+  text-shadow:     0 1px 4px hsl(248 80% 2% / .8);
+  line-height:     .98;
+}
+
+/* Superscript percent sign */
+.sp-root .orbNum i {
+  font-style:  normal;
+  font-size:   .58em;
+  opacity:     .72;
+  margin-top:  0;
+}
+
+/* Optional secondary label below the number */
+.sp-root .orbNum b {
+  font-style:     normal;
+  font-weight:    700;
+  font-size:      .46em;
+  letter-spacing: .06em;
+  opacity:        .86;
+  margin-top:     1px;
+}
