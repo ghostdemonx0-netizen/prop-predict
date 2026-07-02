@@ -8,6 +8,7 @@ import type { Projections } from "../../lib/types";
 // toBoardRows is imported here so later tasks can call it without re-importing.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { toBoardRows } from "../../lib/weighting";
+import { KitDemo } from "../../components/spatial/KitDemo";
 
 export default function NextPage() {
   const [data, setData] = useState<Projections | null>(null);
@@ -104,9 +105,7 @@ export default function NextPage() {
 
   return (
     <LiveProvider date={selectedDate} games={liveGames}>
-      <div className="sp-scaffold">
-        next skin — data loaded: {data ? "yes" : "no"}
-      </div>
+      <KitDemo />
     </LiveProvider>
   );
 }
