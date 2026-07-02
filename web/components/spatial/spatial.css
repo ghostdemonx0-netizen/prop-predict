@@ -891,6 +891,15 @@
   text-transform: uppercase;
 }
 
+.sp-root .sp-wm span.sp-iristext {
+  font-family:    var(--f-disp);
+  font-weight:    800;
+  font-size:      1.16rem;
+  letter-spacing: -.025em;
+  line-height:    1;
+  white-space:    nowrap;
+}
+
 /* ── Spacer ──────────────────────────────────────────────── */
 
 .sp-root .sp-grow { flex: 1; }
@@ -915,7 +924,7 @@
   height:       7px;
   border-radius: 50%;
   background:   var(--iris-mint);
-  box-shadow:   0 0 8px var(--iris-mint);
+  box-shadow:   0 0 12px var(--iris-mint);
   flex:         0 0 auto;
   animation:    beat 2.4s ease-in-out infinite;
 }
@@ -1067,6 +1076,9 @@
   padding:     .5rem .8rem;
   border-radius: 12px;
   flex-shrink: 0;
+  font-family: var(--f-mono);
+  font-size:   .72rem;
+  color:       var(--ink-dim);
 }
 
 .sp-root .sp-datepick select {
