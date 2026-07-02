@@ -1,0 +1,1157 @@
+/*
+ * spatial.css — Design tokens + base layers for the Mock 7 "Spatial Depth" skin.
+ *
+ * All tokens and structural rules are scoped under .sp-root so they coexist
+ * with the live site's globals.css without collisions.  The /next layout wraps
+ * its children in <div class="sp-root"> so every spatial component inherits
+ * these values automatically.
+ *
+ * Font vars (--sp-disp / --sp-body / --sp-mono) are injected by app/layout.tsx
+ * via next/font/google and land on <html>.  The --f-disp/body/mono aliases here
+ * let all spatial components reference the mock-7 naming convention unchanged.
+ */
+
+/* =========================================================
+   1. Design tokens — scoped to .sp-root
+   ========================================================= */
+
+.sp-root {
+  /* backgrounds */
+  --bg:       hsl(243 34% 4.5%);
+  --bg-2:     hsl(248 36% 7%);
+
+  /* ink / text */
+  --ink:      hsl(228 34% 96%);
+  --ink-dim:  hsl(230 16% 66%);
+  --ink-faint:hsl(230 12% 48%);
+
+  /* lines / borders */
+  --line:     hsl(230 60% 78% / .11);
+  --line-2:   hsl(230 60% 80% / .2);
+  --line-3:   hsl(230 70% 84% / .34);
+
+  /* glass surfaces */
+  --glass:    hsl(238 40% 13% / .5);
+  --glass-2:  hsl(240 42% 9%  / .62);
+  --glass-3:  hsl(242 44% 7%  / .82);
+
+  /* highlight */
+  --hi:       hsl(0 0% 100% / .07);
+
+  /* iris accent palette */
+  --iris-cyan:   hsl(188 92% 62%);
+  --iris-violet: hsl(264 88% 70%);
+  --iris-mint:   hsl(150 82% 60%);
+  --iris-mag:    hsl(322 86% 68%);
+
+  /* semantic colours */
+  --good: hsl(152 74% 52%);
+  --warn: hsl( 40 96% 60%);
+  --bad:  hsl(  2 82% 66%);
+
+  /* shape */
+  --rad: 20px;
+
+  /* shadows */
+  --sh-amb: 0 30px 70px -30px hsl(248 70% 2% / .9);
+  --sh-con: 0 4px  14px  -6px hsl(248 80% 1% / .7);
+
+  /* motion */
+  --ease:   cubic-bezier(.2, .8, .2, 1);
+  --spring: cubic-bezier(.34, 1.56, .5, 1);
+
+  /* font aliases — point at the CSS vars injected by next/font/google  */
+  --f-disp: var(--sp-disp, 'Bricolage Grotesque');
+  --f-body: var(--sp-body, 'Familjen Grotesk');
+  --f-mono: var(--sp-mono, 'Spline Sans Mono');
+}
+
+/* =========================================================
+   2. Base surface / typography for the skin root
+   ========================================================= */
+
+.sp-root {
+  background:              var(--bg);
+  color:                   var(--ink);
+  min-height:              100vh;
+  overflow-x:              hidden;
+  font-family:             var(--f-body), system-ui, sans-serif;
+  letter-spacing:          .004em;
+  line-height:             1.5;
+  -webkit-font-smoothing:  antialiased;
+  position:                relative;
+}
+
+/* =========================================================
+   3. Volumetric / iridescent depth-field layers
+      Scoped so they only fire inside .sp-root.
+   ========================================================= */
+
+/* Primary gradient field (violet + cyan + magenta blobs) */
+.sp-root .sp-field {
+  position:       fixed;
+  inset:         -12%;
+  z-index:       -4;
+  pointer-events: none;
+  will-change:    transform;
+  background:
+    radial-gradient(46% 38% at 22%   8%, hsl(264 86% 40% / .42), transparent 62%),
+    radial-gradient(40% 34% at 84%   4%, hsl(188 90% 44% / .30), transparent 60%),
+    radial-gradient(54% 46% at 60% 104%, hsl(322 80% 40% / .20), transparent 64%),
+    radial-gradient(60% 50% at 50% -10%, hsl(150 80% 40% / .12), transparent 60%);
+  filter: saturate(1.15);
+}
+
+/* Secondary softer blobs */
+.sp-root .sp-field2 {
+  position:       fixed;
+  inset:         -20%;
+  z-index:       -3;
+  pointer-events: none;
+  will-change:    transform;
+  opacity:        .6;
+  background:
+    radial-gradient(28% 22% at 12%  64%, hsl(264 90% 56% / .22), transparent 70%),
+    radial-gradient(26% 20% at 92%  50%, hsl(188 92% 56% / .18), transparent 70%);
+}
+
+/* Top-edge spotlight vignette */
+.sp-root .sp-spot {
+  position:       fixed;
+  inset:          0;
+  z-index:       -2;
+  pointer-events: none;
+  background:    radial-gradient(120% 80% at 50% -16%, hsl(230 60% 80% / .10), transparent 52%);
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, hsl(0 0% 0%) 30%, transparent 78%);
+          mask-image: radial-gradient(120% 90% at 50% 0%, hsl(0 0% 0%) 30%, transparent 78%);
+}
+
+/* Subtle grid mesh */
+.sp-root .sp-mesh {
+  position:       fixed;
+  inset:          0;
+  z-index:       -2;
+  pointer-events: none;
+  opacity:        .4;
+  background-image:
+    linear-gradient(     hsl(230 60% 78% / .05) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(230 60% 78% / .05) 1px, transparent 1px);
+  background-size: 62px 62px;
+  -webkit-mask-image: radial-gradient(130% 85% at 50% 0%, hsl(0 0% 0%) 28%, transparent 76%);
+          mask-image: radial-gradient(130% 85% at 50% 0%, hsl(0 0% 0%) 28%, transparent 76%);
+}
+
+/* Film-grain overlay */
+.sp-root .sp-grain {
+  position:        fixed;
+  inset:           0;
+  z-index:        -1;
+  pointer-events:  none;
+  opacity:         .05;
+  mix-blend-mode:  overlay;
+  /* Inline SVG noise — no external fetch */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* =========================================================
+   4. Keyframes — intentionally global (no scope needed)
+   ========================================================= */
+
+/* Iris gradient shimmer for text / backgrounds */
+@keyframes irisflow {
+  0%,100% { background-position: 0%   50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* Live-indicator pulse */
+@keyframes beat {
+  0%,100% { opacity: 1;  transform: scale(1);   }
+  50%      { opacity: .4; transform: scale(.78); }
+}
+
+/* Card entrance — translates up from below */
+@keyframes rise {
+  to { opacity: 1; transform: none; }
+}
+
+/* Modal pop-in */
+@keyframes popin {
+  from { opacity: 0; transform: translateY(30px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Overlay fade */
+@keyframes fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* =========================================================
+   5. Depth-halo probability orb  (task 0.4)
+      Transcribed from mock7.html's CSS exactly.
+      All classes scoped to .sp-root.
+   ========================================================= */
+
+/* Outer wrapper — inline-flex, sized via style prop */
+.sp-root .orb {
+  position:        relative;
+  display:         inline-flex;
+  flex:            0 0 auto;
+  align-items:     center;
+  justify-content: center;
+}
+
+/* Cast shadow layer — blurred radial behind the sphere */
+.sp-root .orbShadow {
+  position:      absolute;
+  inset:         8%;
+  border-radius: 50%;
+  z-index:       0;
+}
+
+/* Coloured glow halo — extends beyond sphere boundary */
+.sp-root .orbHalo {
+  position:      absolute;
+  inset:        -12%;
+  border-radius: 50%;
+  z-index:       0;
+}
+
+/* Sphere body — radial-gradient fakes lighting; inset shadows add depth */
+.sp-root .orbCore {
+  position:      absolute;
+  inset:         14%;
+  border-radius: 50%;
+  z-index:       1;
+  overflow:      hidden;
+}
+
+/* Top-left specular highlight — blurred white ellipse */
+.sp-root .orbSpec {
+  position:      absolute;
+  top:           11%;
+  left:          15%;
+  width:         44%;
+  height:        36%;
+  border-radius: 50%;
+  background:    radial-gradient(
+    closest-side,
+    hsl(0 0% 100% / .8),
+    hsl(0 0% 100% / 0) 72%
+  );
+  filter:        blur(.5px);
+}
+
+/* SVG progress ring — sits above the core */
+.sp-root .orbRing {
+  position:  absolute;
+  inset:     0;
+  z-index:   2;
+  transform: translateZ(0);
+}
+
+/* Centred numeric label (NN%) */
+.sp-root .orbNum {
+  position:        relative;
+  z-index:         3;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  font-family:     var(--f-mono);
+  font-weight:     700;
+  color:           hsl(0 0% 100% / .96);
+  text-shadow:     0 1px 4px hsl(248 80% 2% / .8);
+  line-height:     .98;
+}
+
+/* Superscript percent sign */
+.sp-root .orbNum i {
+  font-style:  normal;
+  font-size:   .58em;
+  opacity:     .72;
+  margin-top:  0;
+}
+
+/* Optional secondary label below the number */
+.sp-root .orbNum b {
+  font-style:     normal;
+  font-weight:    700;
+  font-size:      .46em;
+  letter-spacing: .06em;
+  opacity:        .86;
+  margin-top:     1px;
+}
+
+/* =========================================================
+   6. Glass primitive — .sp-float  (task 0.5)
+      Transcribed from mock7.html's .float class.
+   ========================================================= */
+
+/* Main glass surface */
+.sp-root .sp-float {
+  background:              linear-gradient(168deg, var(--glass), var(--glass-2));
+  border:                  1px solid var(--line-2);
+  border-radius:           var(--rad);
+  box-shadow:              var(--sh-amb), var(--sh-con), inset 0 1px 0 var(--hi);
+  backdrop-filter:         blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  position:                relative;
+}
+
+/* Top gloss highlight — a subtle white fade over the top edge */
+.sp-root .sp-float::after {
+  content:        "";
+  position:       absolute;
+  inset:          0;
+  border-radius:  inherit;
+  pointer-events: none;
+  background:     linear-gradient(180deg, hsl(0 0% 100% / .05), transparent 22%);
+  opacity:        .7;
+}
+
+/* =========================================================
+   7. Tilt card — .sp-tilt / .sp-sheen / .sp-lift-layer  (task 0.5)
+      Transcribed from mock7.html's .tilt / .tilt.lift / .sheen / .lift-layer.
+   ========================================================= */
+
+/* Tilt wrapper — reads --rx/--ry CSS vars set by useTilt */
+.sp-root .sp-tilt {
+  transition:       transform .5s var(--ease), box-shadow .5s var(--ease);
+  transform:        perspective(1000px) rotateX(var(--rx, 0)) rotateY(var(--ry, 0));
+  transform-style:  preserve-3d;
+}
+
+/* Active (lifted) state — faster snap, deeper shadow */
+.sp-root .sp-tilt.sp-lift {
+  transition: transform .1s var(--ease), box-shadow .3s var(--ease);
+  box-shadow:
+    var(--sh-amb),
+    0 24px 50px -22px hsl(264 90% 40% / .55),
+    inset 0 1px 0 var(--hi);
+}
+
+/* Radial sheen — pointer-tracking gloss, invisible until lifted */
+.sp-root .sp-sheen {
+  position:       absolute;
+  inset:          0;
+  border-radius:  inherit;
+  pointer-events: none;
+  opacity:        0;
+  transition:     opacity .4s;
+  z-index:        4;
+  background:     radial-gradient(
+    40% 50% at var(--mx, 50%) var(--my, 0%),
+    hsl(0 0% 100% / .1),
+    transparent 70%
+  );
+}
+
+.sp-root .sp-tilt.sp-lift .sp-sheen {
+  opacity: 1;
+}
+
+/* Content elevation layer — translateZ pops content forward in 3D */
+.sp-root .sp-lift-layer {
+  transform: translateZ(34px);
+}
+
+/* Reduced-motion: disable all tilt/parallax transitions */
+@media (prefers-reduced-motion: reduce) {
+  .sp-root .sp-tilt,
+  .sp-root .sp-tilt.sp-lift {
+    transition: none !important;
+    transform:  none !important;
+  }
+  .sp-root .sp-sheen {
+    display: none;
+  }
+}
+
+/* =========================================================
+   8. Segmented control — .sp-seg / .sp-seg-pill / .sp-seg-btn  (task 0.6)
+      Transcribed from mock7.html's .seg / .props / movePill().
+      All selectors scoped to .sp-root.
+   ========================================================= */
+
+/* Track — rounded inset dark container */
+.sp-root .sp-seg {
+  display:      inline-flex;
+  gap:          3px;
+  padding:      4px;
+  border-radius: 13px;
+  position:     relative;
+  background:   hsl(242 44% 6% / .7);
+  border:       1px solid var(--line);
+  box-shadow:   inset 0 1px 4px hsl(248 60% 1% / .5);
+}
+
+/* Button — sits above the pill in z-order */
+.sp-root .sp-seg-btn {
+  position:       relative;
+  z-index:        1;
+  border:         0;
+  background:     transparent;
+  cursor:         pointer;
+  color:          var(--ink-dim);
+  font-family:    var(--f-mono);
+  font-weight:    600;
+  font-size:      .7rem;
+  letter-spacing: .02em;
+  padding:        .42rem .72rem;
+  border-radius:  9px;
+  white-space:    nowrap;
+  transition:     color .25s var(--ease), transform .12s var(--spring);
+}
+.sp-root .sp-seg-btn:hover  { color: var(--ink); }
+.sp-root .sp-seg-btn:active { transform: scale(.93); }
+
+/* Active button text — darkens to sit on the bright pill */
+.sp-root .sp-seg-btn--on { color: hsl(245 50% 8%); }
+
+/* Sliding pill — left + width animated with --spring easing */
+.sp-root .sp-seg-pill {
+  position:       absolute;
+  z-index:        0;
+  top:            4px;
+  bottom:         4px;
+  border-radius:  9px;
+  pointer-events: none;
+  background:     linear-gradient(120deg, var(--iris-cyan), var(--iris-violet));
+  box-shadow:     0 4px 18px hsl(264 90% 50% / .5);
+  transition:
+    left  .42s var(--spring),
+    width .42s var(--spring);
+}
+
+/* Ghost variant — translucent pill with inset border */
+.sp-root .sp-seg--ghost .sp-seg-btn--on {
+  color: var(--ink);
+}
+.sp-root .sp-seg--ghost .sp-seg-pill {
+  background: hsl(230 60% 80% / .12);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+
+/* Small variant — compact sizing (threshold rows) */
+.sp-root .sp-seg--sm .sp-seg-btn {
+  font-size: .66rem;
+  padding:   .34rem .6rem;
+}
+
+/* Props / scroll variant — mint → cyan pill, display-font, larger radii */
+.sp-root .sp-seg--props {
+  border-radius: 15px;
+}
+.sp-root .sp-seg--props .sp-seg-btn {
+  font-family:   var(--f-disp);
+  font-weight:   600;
+  font-size:     .82rem;
+  padding:       .5rem .82rem;
+  border-radius: 10px;
+}
+.sp-root .sp-seg--props .sp-seg-pill {
+  top:           5px;
+  bottom:        5px;
+  border-radius: 10px;
+  background:    linear-gradient(120deg, var(--iris-mint), var(--iris-cyan));
+  box-shadow:    0 5px 20px hsl(168 90% 45% / .5);
+}
+.sp-root .sp-seg--props .sp-seg-btn--on { color: hsl(245 50% 8%); }
+
+/* Horizontal-scroll wrapper (for the 7-prop selector) */
+.sp-root .sp-seg-scroll {
+  max-width:                  100%;
+  overflow-x:                 auto;
+  scrollbar-width:            none;
+  -webkit-overflow-scrolling: touch;
+  padding:                    3px;
+}
+.sp-root .sp-seg-scroll::-webkit-scrollbar { display: none; }
+
+/* Reduced-motion: disable pill slide animation */
+@media (prefers-reduced-motion: reduce) {
+  .sp-root .sp-seg-pill {
+    transition: none !important;
+  }
+}
+
+/* =========================================================
+   9. Chips — Badge, TagChip, HandChip, FormChip, FBox, Bvp
+      Transcribed from mock7.html badge / tagchip / hand /
+      formchip / fbox / bvp rules.  All scoped to .sp-root.
+   ========================================================= */
+
+/* ---- Badge ---- */
+.sp-root .sp-badge {
+  font-family:    var(--f-mono);
+  font-weight:    600;
+  font-size:      .56rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  padding:        .24rem .5rem;
+  border-radius:  7px;
+  display:        inline-block;
+}
+.sp-root .sp-badge--strong {
+  color:      hsl(150 60% 8%);
+  background: linear-gradient(120deg, var(--iris-mint), var(--iris-cyan));
+  box-shadow: 0 4px 14px hsl(160 80% 45% / .35);
+}
+.sp-root .sp-badge--lean {
+  color:      var(--iris-mint);
+  background: hsl(150 70% 50% / .12);
+  box-shadow: inset 0 0 0 1px hsl(150 70% 55% / .4);
+}
+.sp-root .sp-badge--pass {
+  color:      var(--ink-faint);
+  background: hsl(230 30% 60% / .1);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* ---- TagChip — conf (mint) / proj (amber) ---- */
+.sp-root .sp-tagchip {
+  font-family:    var(--f-mono);
+  font-size:      .54rem;
+  font-weight:    600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding:        .18rem .44rem;
+  border-radius:  6px;
+}
+.sp-root .sp-tagchip--conf {
+  color:  var(--iris-mint);
+  border: 1px solid hsl(150 70% 55% / .45);
+}
+.sp-root .sp-tagchip--proj {
+  color:  var(--warn);
+  border: 1px solid hsl(40 90% 60% / .45);
+}
+
+/* ---- HandChip — R / L / SW ---- */
+/*   Base: grey outline (like mock7 .hand)
+     .adv: CYAN glow — visually distinct from green conf TagChip  */
+.sp-root .sp-hand {
+  font-family:  var(--f-mono);
+  font-size:    .58rem;
+  font-weight:  700;
+  padding:      .12rem .34rem;
+  border-radius: 5px;
+  border:       1px solid var(--line-3);
+  color:        var(--ink-dim);
+}
+.sp-root .sp-hand--adv {
+  color:        var(--iris-cyan);
+  border-color: hsl(188 80% 60% / .5);
+  background:   hsl(188 80% 55% / .12);
+  box-shadow:   0 0 10px hsl(188 90% 55% / .3);
+}
+
+/* ---- FormChip — hot / cold / steady ---- */
+.sp-root .sp-formchip {
+  display:        inline-flex;
+  align-items:    center;
+  gap:            5px;
+  font-family:    var(--f-mono);
+  font-size:      .6rem;
+  font-weight:    700;
+  letter-spacing: .04em;
+  padding:        .2rem .5rem;
+  border-radius:  7px;
+}
+.sp-root .sp-formchip--hot {
+  color:      var(--bad);
+  background: hsl(8 80% 60% / .12);
+  box-shadow: inset 0 0 0 1px hsl(8 80% 62% / .4);
+}
+.sp-root .sp-formchip--cold {
+  color:      var(--iris-cyan);
+  background: hsl(200 80% 55% / .12);
+  box-shadow: inset 0 0 0 1px hsl(200 80% 60% / .4);
+}
+.sp-root .sp-formchip--steady {
+  color:      var(--ink-faint);
+  background: hsl(230 30% 60% / .08);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* ---- FBox — condition / stat pill ---- */
+.sp-root .sp-fbox {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           5px;
+  padding:       .3rem .55rem;
+  border:        1px solid var(--line-2);
+  border-radius: 9px;
+  background:    hsl(242 44% 6% / .5);
+  font-size:     .7rem;
+  color:         var(--ink-dim);
+}
+.sp-root .sp-fbox b    { color: var(--ink); font-weight: 700; }
+.sp-root .sp-fbox-lbl  { color: var(--ink-faint); }
+
+/* ---- Bvp — career batter-vs-pitcher mini-chip ---- */
+.sp-root .sp-bvp {
+  font-family:  var(--f-mono);
+  font-size:    .6rem;
+  color:        var(--iris-mint);
+  border:       1px solid var(--line-3);
+  border-radius: 6px;
+  padding:      .1rem .34rem;
+}
+
+/* =========================================================
+   10. Glass Dot — sp-dot
+       Ringless sphere: no orbShadow, no orbRing.
+       Reuses orbHalo / orbCore / orbSpec / orbNum from §5.
+       Overrides inset:0 on orbCore and row→col on orbNum.
+   ========================================================= */
+
+.sp-root .sp-dot {
+  position:        relative;
+  display:         inline-flex;
+  flex:            0 0 auto;
+  align-items:     center;
+  justify-content: center;
+}
+
+/* Fill the full dot area (orb has inset:14%; dot fills inset:0) */
+.sp-root .sp-dot .orbCore {
+  inset: 0;
+}
+
+/* Default inner label: row (letter + %) side-by-side */
+.sp-root .sp-dot .orbNum {
+  flex-direction: row;
+  gap:            0;
+}
+
+/* Column layout for catDot (%) over (K/C) label */
+.sp-root .sp-dot .orbNum.col {
+  flex-direction: column;
+}
+
+/* ---- LeanPair wrappers ---- */
+.sp-root .sp-lean-pair {
+  display:     inline-flex;
+  align-items: center;
+  gap:         9px;
+}
+.sp-root .sp-lean-tag {
+  font-family: var(--f-mono);
+  font-size:   .64rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Compact variant (hub cell: dominant dot + sub caption) */
+.sp-root .sp-lean-cell {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            3px;
+}
+.sp-root .sp-lean-cell-sub {
+  font-family: var(--f-mono);
+  font-size:   .5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.sp-root .sp-lean-cell-sub-k { color: hsl(8 90% 76%);   }
+.sp-root .sp-lean-cell-sub-c { color: hsl(150 70% 72%); }
+
+/* =========================================================
+   11. Factor Bar — sp-drv / sp-track / sp-delta
+       Center-anchored deviation meter; transcribed from
+       mock7.html's factorBar() + .drv/.track/.delta rules.
+   ========================================================= */
+
+.sp-root .sp-drv {
+  padding:       13px 0;
+  border-bottom: 1px solid var(--line);
+}
+.sp-root .sp-drv:last-child { border-bottom: 0; }
+
+.sp-root .sp-drv-top {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             8px;
+  font-size:       .9rem;
+}
+.sp-root .sp-drv-l {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  color:       var(--ink);
+}
+
+/* Delta chip */
+.sp-root .sp-delta {
+  font-family:  var(--f-mono);
+  font-weight:  700;
+  font-size:    .76rem;
+  padding:      .14rem .52rem;
+  border-radius: 8px;
+}
+.sp-root .sp-delta--up   { color: hsl(150 60% 8%);      background: var(--good); }
+.sp-root .sp-delta--down { color: hsl(0 0% 100%);       background: var(--bad);  }
+.sp-root .sp-delta--flat { color: var(--ink-faint);      background: hsl(230 30% 60% / .12); }
+
+/* Track */
+.sp-root .sp-track {
+  position:      relative;
+  height:        9px;
+  margin-top:    11px;
+  background:    hsl(230 50% 60% / .08);
+  border-radius: 999px;
+  overflow:      visible;
+}
+/* Center midline */
+.sp-root .sp-track-mid {
+  position:      absolute;
+  left:          50%;
+  top:           -3px;
+  bottom:        -3px;
+  width:         2px;
+  background:    hsl(0 0% 100% / .32);
+  border-radius: 2px;
+}
+/* Colored fill bar */
+.sp-root .sp-track-fill {
+  position:      absolute;
+  top:           0;
+  bottom:        0;
+  border-radius: 999px;
+}
+/* Glowing end node */
+.sp-root .sp-track-node {
+  position:      absolute;
+  top:           50%;
+  width:         13px;
+  height:        13px;
+  border-radius: 50%;
+  transform:     translate(-50%, -50%);
+  box-shadow:    0 0 10px currentColor, inset 0 0 0 2px hsl(245 50% 6%);
+}
+/* Note text */
+.sp-root .sp-drv-note {
+  font-size:  .74rem;
+  color:      var(--ink-dim);
+  margin-top: 9px;
+}
+
+/* =========================================================
+   12. Live Chip Spatial — glass reskin of LiveChip
+       4 states: pregame (grey) / live (amber) / cleared (green) / missed (red)
+       HandChip's cyan .sp-hand--adv is visually distinct from
+       cleared's green — amber beats grey, green beats amber,
+       cyan (hand adv) is a different hue entirely.
+   ========================================================= */
+
+.sp-root .sp-live-chip {
+  display:                 inline-flex;
+  align-items:             center;
+  gap:                     6px;
+  font-family:             var(--f-mono);
+  font-weight:             700;
+  font-size:               .62rem;
+  letter-spacing:          .06em;
+  line-height:             1;
+  padding:                 .3rem .62rem;
+  border-radius:           999px;
+  border:                  1px solid transparent;
+  backdrop-filter:         blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  white-space:             nowrap;
+  vertical-align:          middle;
+}
+
+/* pregame — neutral glass */
+.sp-root .sp-live-chip--pregame {
+  color:        hsl(230 14% 52%);
+  border-color: hsl(230 30% 60% / .18);
+  background:   hsl(240 40% 9% / .45);
+}
+
+/* live — amber, pulsing dot */
+.sp-root .sp-live-chip--live {
+  color:        var(--warn);
+  border-color: hsl(40 80% 55% / .38);
+  background:   hsl(40 60% 10% / .5);
+}
+
+/* cleared — green glass */
+.sp-root .sp-live-chip--cleared {
+  color:        var(--iris-mint);
+  border-color: hsl(150 70% 55% / .45);
+  background:   hsl(150 60% 10% / .4);
+  box-shadow:   0 0 12px hsl(150 70% 50% / .2);
+}
+
+/* missed — red glass */
+.sp-root .sp-live-chip--missed {
+  color:        hsl(2 82% 70%);
+  border-color: hsl(2 60% 40% / .45);
+  background:   hsl(2 60% 10% / .4);
+}
+
+/* Amber pulsing dot (live state only) */
+.sp-root .sp-live-chip-dot {
+  width:         7px;
+  height:        7px;
+  border-radius: 50%;
+  background:    var(--warn);
+  box-shadow:    0 0 8px var(--warn);
+  flex:          0 0 auto;
+  animation:     beat 2.4s ease-in-out infinite;
+}
+
+/* Small variant — compact sizing */
+.sp-root .sp-live-chip--sm {
+  font-size: .5rem;
+  padding:   .18rem .44rem;
+  gap:       4px;
+}
+.sp-root .sp-live-chip--sm .sp-live-chip-dot {
+  width:  5px;
+  height: 5px;
+}
+
+/* Reduced-motion: stop the live dot pulse */
+@media (prefers-reduced-motion: reduce) {
+  .sp-root .sp-live-chip-dot { animation: none !important; }
+}
+
+/* =========================================================
+   13. Command bar, nav dock, hero / tiles  (task 0.8)
+       Transcribed from mock7.html header / dockrow / hero.
+       All selectors scoped to .sp-root.
+   ========================================================= */
+
+/* ── Layout primitives ───────────────────────────────────── */
+
+.sp-root .sp-wrap {
+  max-width: 1180px;
+  margin:    0 auto;
+  padding:   0 22px;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+
+.sp-root .sp-header {
+  position:   sticky;
+  top:        0;
+  z-index:    60;
+  padding-top: 14px;
+}
+
+/* ── Command bar ─────────────────────────────────────────── */
+
+.sp-root .sp-cmd {
+  height:      62px;
+  display:     flex;
+  align-items: center;
+  gap:         16px;
+  padding:     0 16px 0 14px;
+}
+
+/* ── Brand / logo ────────────────────────────────────────── */
+
+.sp-root .sp-brand {
+  display:     flex;
+  align-items: center;
+  gap:         11px;
+}
+
+.sp-root .sp-mark {
+  width:  40px;
+  height: 40px;
+  flex:   0 0 auto;
+  filter: drop-shadow(0 6px 14px hsl(264 90% 50% / .4));
+}
+
+.sp-root .sp-bcol {
+  display:        flex;
+  flex-direction: column;
+  gap:            2px;
+}
+
+.sp-root .sp-wm {
+  display:        flex;
+  flex-direction: column;
+  gap:            1px;
+}
+
+.sp-root .sp-wm small {
+  font-family:    var(--f-mono);
+  font-size:      .58rem;
+  letter-spacing: .14em;
+  color:          var(--ink-faint);
+  text-transform: uppercase;
+}
+
+.sp-root .sp-wm span.sp-iristext {
+  font-family:    var(--f-disp);
+  font-weight:    800;
+  font-size:      1.16rem;
+  letter-spacing: -.025em;
+  line-height:    1;
+  white-space:    nowrap;
+}
+
+/* ── Spacer ──────────────────────────────────────────────── */
+
+.sp-root .sp-grow { flex: 1; }
+
+/* ── Live pill ───────────────────────────────────────────── */
+
+.sp-root .sp-live {
+  display:        inline-flex;
+  align-items:    center;
+  gap:            7px;
+  font-family:    var(--f-mono);
+  font-size:      .62rem;
+  letter-spacing: .14em;
+  border:         1px solid var(--line-2);
+  border-radius:  999px;
+  padding:        .32rem .62rem;
+  background:     hsl(240 40% 9% / .5);
+}
+
+.sp-root .sp-dot-live {
+  width:        7px;
+  height:       7px;
+  border-radius: 50%;
+  background:   var(--iris-mint);
+  box-shadow:   0 0 12px var(--iris-mint);
+  flex:         0 0 auto;
+  animation:    beat 2.4s ease-in-out infinite;
+}
+
+.sp-root .sp-lt {
+  letter-spacing: .14em;
+}
+
+/* ── Weighting segmented wrap ────────────────────────────── */
+
+.sp-root .sp-wseg-wrap {
+  display:        flex;
+  flex-direction: column;
+  align-items:    flex-end;
+  gap:            4px;
+}
+
+/* ── Eyebrow label ───────────────────────────────────────── */
+
+.sp-root .sp-eyebrow {
+  font-family:    var(--f-mono);
+  font-size:      .58rem;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color:          var(--ink-faint);
+  font-weight:    500;
+}
+
+/* ── Iris gradient text ──────────────────────────────────── */
+
+.sp-root .sp-iristext {
+  background:             linear-gradient(104deg,
+    var(--iris-cyan)  0%,
+    var(--iris-violet) 34%,
+    var(--iris-mag)   64%,
+    var(--iris-mint)  100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color:                  transparent;
+  background-size:        200% 100%;
+  animation:              irisflow 9s ease-in-out infinite;
+}
+
+/* ── Mono utility ────────────────────────────────────────── */
+
+.sp-root .sp-mono { font-family: var(--f-mono); }
+
+/* ── Nav dock row ────────────────────────────────────────── */
+
+.sp-root .sp-dockrow {
+  display:         flex;
+  justify-content: center;
+  margin:          26px 0 6px;
+}
+
+.sp-root .sp-dock {
+  display:       inline-flex;
+  gap:           2px;
+  padding:       5px;
+  border-radius: 16px;
+  position:      relative;
+}
+
+/* Animated glow pill behind active button */
+.sp-root .sp-dock-glow {
+  position:    absolute;
+  z-index:     0;
+  top:         5px;
+  bottom:      5px;
+  border-radius: 11px;
+  background:  linear-gradient(150deg, hsl(264 80% 30% / .8), hsl(188 80% 30% / .55));
+  border:      1px solid var(--line-3);
+  box-shadow:
+    inset 0 1px 0 var(--hi),
+    0 8px 24px -10px hsl(264 90% 50% / .7);
+  transition:
+    left  .46s var(--spring),
+    width .46s var(--spring);
+  pointer-events: none;
+}
+
+/* Dock button */
+.sp-root .sp-dock-btn {
+  position:       relative;
+  z-index:        1;
+  border:         0;
+  background:     transparent;
+  cursor:         pointer;
+  color:          var(--ink-dim);
+  font-family:    var(--f-disp);
+  font-weight:    600;
+  font-size:      .92rem;
+  letter-spacing: -.01em;
+  padding:        .6rem 1.1rem;
+  border-radius:  11px;
+  display:        inline-flex;
+  align-items:    center;
+  gap:            7px;
+  transition:     color .22s var(--ease);
+}
+.sp-root .sp-dock-btn:hover  { color: var(--ink); }
+.sp-root .sp-dock-btn--on    { color: var(--ink); }
+
+/* Dock icon SVGs */
+.sp-root .sp-dock-btn svg {
+  width:  15px;
+  height: 15px;
+  flex:   0 0 auto;
+}
+
+/* ── Hero section ────────────────────────────────────────── */
+
+.sp-root .sp-hero {
+  margin-top:     22px;
+  display:        flex;
+  flex-direction: column;
+  gap:            18px;
+}
+
+.sp-root .sp-heroline {
+  display:         flex;
+  align-items:     flex-end;
+  justify-content: space-between;
+  gap:             18px;
+  flex-wrap:       wrap;
+}
+
+.sp-root .sp-htitle {
+  font-family:    var(--f-disp);
+  font-weight:    700;
+  font-size:      clamp(2rem, 5vw, 3.1rem);
+  letter-spacing: -.035em;
+  line-height:    .96;
+  margin:         6px 0 0;
+}
+
+.sp-root .sp-hsub {
+  font-size:  .86rem;
+  color:      var(--ink-dim);
+  max-width:  42ch;
+  margin-top: 8px;
+}
+
+/* Date picker glass pill */
+.sp-root .sp-datepick {
+  display:     inline-flex;
+  align-items: center;
+  gap:         8px;
+  padding:     .5rem .8rem;
+  border-radius: 12px;
+  flex-shrink: 0;
+  font-family: var(--f-mono);
+  font-size:   .72rem;
+  color:       var(--ink-dim);
+}
+
+.sp-root .sp-datepick select {
+  background:   transparent;
+  color:        var(--ink);
+  border:       0;
+  cursor:       pointer;
+  font-family:  var(--f-mono);
+  font-size:    .72rem;
+  outline:      none;
+}
+
+.sp-root .sp-datepick option {
+  background: hsl(243 34% 7%);
+  color:      var(--ink);
+}
+
+/* ── KPI tiles grid ──────────────────────────────────────── */
+
+.sp-root .sp-tiles {
+  display:               grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:                   14px;
+}
+
+.sp-root .sp-tile {
+  padding: 16px 18px;
+}
+
+.sp-root .sp-tile-k {
+  font-family:    var(--f-mono);
+  font-size:      .58rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color:          var(--ink-faint);
+}
+
+.sp-root .sp-tile-v {
+  font-family:    var(--f-disp);
+  font-weight:    700;
+  font-size:      1.7rem;
+  letter-spacing: -.02em;
+  margin-top:     7px;
+  display:        flex;
+  align-items:    baseline;
+  gap:            7px;
+  line-height:    1;
+}
+
+.sp-root .sp-tile-v small {
+  font-family:    var(--f-mono);
+  font-size:      .66rem;
+  color:          var(--ink-dim);
+  font-weight:    400;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+
+@media (max-width: 880px) {
+  .sp-root .sp-wseg-wrap { display: none; }
+  .sp-root .sp-tiles     { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .sp-root .sp-cmd    { gap: 10px; padding: 0 10px; }
+  .sp-root .sp-lt     { display: none; }
+  .sp-root .sp-htitle { font-size: clamp(1.6rem, 7vw, 2.4rem); }
+}
+
+/* ── Reduced-motion ──────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-root .sp-dot-live    { animation: none !important; }
+  .sp-root .sp-dock-glow   { transition: none !important; }
+  .sp-root .sp-iristext    { animation: none !important; }
+}
