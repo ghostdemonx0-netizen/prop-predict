@@ -12,7 +12,20 @@ import "./globals.css";
 // REMOVED and a fresh one is appended — so do that on load and on every
 // rotation. Portrait phones keep width=600; landscape phones + tablets/desktop
 // get device-width.
-const ORIENT_VIEWPORT = `(function(){function apply(){try{var s=window.screen;var phone=Math.min(s.width,s.height)<=540;if(!phone)return;var land=window.matchMedia('(orientation: landscape)').matches;var c=land?'width=device-width, initial-scale=1':'width=600';var olds=document.querySelectorAll('meta[name="viewport"]');for(var i=0;i<olds.length;i++){if(olds[i].parentNode)olds[i].parentNode.removeChild(olds[i]);}var m=document.createElement('meta');m.name='viewport';m.setAttribute('content',c);document.head.appendChild(m);}catch(e){}}apply();window.addEventListener('orientationchange',function(){setTimeout(apply,60);setTimeout(apply,300);});window.addEventListener('pageshow',apply);})();`;
+const ORIENT_VIEWPORT = `(function(){
+  function phone(){return Math.min(window.screen.width,window.screen.height)<=540;}
+  function landscape(){return window.matchMedia('(orientation: landscape)').matches;}
+  function set(c){var olds=document.querySelectorAll('meta[name="viewport"]');for(var i=0;i<olds.length;i++){if(olds[i].parentNode)olds[i].parentNode.removeChild(olds[i]);}var m=document.createElement('meta');m.name='viewport';m.setAttribute('content',c);document.head.appendChild(m);}
+  function target(){return landscape()?'width=device-width, initial-scale=1':'width=600';}
+  function apply(){try{if(!phone())return;set(target());}catch(e){}}
+  /* On rotation iOS keeps the old zoom until you pinch. Pulse a slightly-off
+     width first so iOS recomputes the fit scale, then set the real target —
+     auto-snaps to the fitted view both portrait<->landscape. */
+  function snap(){try{if(!phone())return;set(landscape()?'width=812':'width=590');setTimeout(function(){set(target());},50);}catch(e){}}
+  apply();
+  window.addEventListener('orientationchange',function(){setTimeout(snap,60);setTimeout(snap,350);});
+  window.addEventListener('pageshow',apply);
+})();`;
 
 const display = Bricolage_Grotesque({
   variable: "--font-display",
