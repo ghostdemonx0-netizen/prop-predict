@@ -475,3 +475,350 @@
     transition: none !important;
   }
 }
+
+/* =========================================================
+   9. Chips — Badge, TagChip, HandChip, FormChip, FBox, Bvp
+      Transcribed from mock7.html badge / tagchip / hand /
+      formchip / fbox / bvp rules.  All scoped to .sp-root.
+   ========================================================= */
+
+/* ---- Badge ---- */
+.sp-root .sp-badge {
+  font-family:    var(--f-mono);
+  font-weight:    600;
+  font-size:      .56rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  padding:        .24rem .5rem;
+  border-radius:  7px;
+  display:        inline-block;
+}
+.sp-root .sp-badge--strong {
+  color:      hsl(150 60% 8%);
+  background: linear-gradient(120deg, var(--iris-mint), var(--iris-cyan));
+  box-shadow: 0 4px 14px hsl(160 80% 45% / .35);
+}
+.sp-root .sp-badge--lean {
+  color:      var(--iris-mint);
+  background: hsl(150 70% 50% / .12);
+  box-shadow: inset 0 0 0 1px hsl(150 70% 55% / .4);
+}
+.sp-root .sp-badge--pass {
+  color:      var(--ink-faint);
+  background: hsl(230 30% 60% / .1);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* ---- TagChip — conf (mint) / proj (amber) ---- */
+.sp-root .sp-tagchip {
+  font-family:    var(--f-mono);
+  font-size:      .54rem;
+  font-weight:    600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding:        .18rem .44rem;
+  border-radius:  6px;
+}
+.sp-root .sp-tagchip--conf {
+  color:  var(--iris-mint);
+  border: 1px solid hsl(150 70% 55% / .45);
+}
+.sp-root .sp-tagchip--proj {
+  color:  var(--warn);
+  border: 1px solid hsl(40 90% 60% / .45);
+}
+
+/* ---- HandChip — R / L / SW ---- */
+/*   Base: grey outline (like mock7 .hand)
+     .adv: CYAN glow — visually distinct from green conf TagChip  */
+.sp-root .sp-hand {
+  font-family:  var(--f-mono);
+  font-size:    .58rem;
+  font-weight:  700;
+  padding:      .12rem .34rem;
+  border-radius: 5px;
+  border:       1px solid var(--line-3);
+  color:        var(--ink-dim);
+}
+.sp-root .sp-hand--adv {
+  color:        var(--iris-cyan);
+  border-color: hsl(188 80% 60% / .5);
+  background:   hsl(188 80% 55% / .12);
+  box-shadow:   0 0 10px hsl(188 90% 55% / .3);
+}
+
+/* ---- FormChip — hot / cold / steady ---- */
+.sp-root .sp-formchip {
+  display:        inline-flex;
+  align-items:    center;
+  gap:            5px;
+  font-family:    var(--f-mono);
+  font-size:      .6rem;
+  font-weight:    700;
+  letter-spacing: .04em;
+  padding:        .2rem .5rem;
+  border-radius:  7px;
+}
+.sp-root .sp-formchip--hot {
+  color:      var(--bad);
+  background: hsl(8 80% 60% / .12);
+  box-shadow: inset 0 0 0 1px hsl(8 80% 62% / .4);
+}
+.sp-root .sp-formchip--cold {
+  color:      var(--iris-cyan);
+  background: hsl(200 80% 55% / .12);
+  box-shadow: inset 0 0 0 1px hsl(200 80% 60% / .4);
+}
+.sp-root .sp-formchip--steady {
+  color:      var(--ink-faint);
+  background: hsl(230 30% 60% / .08);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* ---- FBox — condition / stat pill ---- */
+.sp-root .sp-fbox {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           5px;
+  padding:       .3rem .55rem;
+  border:        1px solid var(--line-2);
+  border-radius: 9px;
+  background:    hsl(242 44% 6% / .5);
+  font-size:     .7rem;
+  color:         var(--ink-dim);
+}
+.sp-root .sp-fbox b    { color: var(--ink); font-weight: 700; }
+.sp-root .sp-fbox-lbl  { color: var(--ink-faint); }
+
+/* ---- Bvp — career batter-vs-pitcher mini-chip ---- */
+.sp-root .sp-bvp {
+  font-family:  var(--f-mono);
+  font-size:    .6rem;
+  color:        var(--iris-mint);
+  border:       1px solid var(--line-3);
+  border-radius: 6px;
+  padding:      .1rem .34rem;
+}
+
+/* =========================================================
+   10. Glass Dot — sp-dot
+       Ringless sphere: no orbShadow, no orbRing.
+       Reuses orbHalo / orbCore / orbSpec / orbNum from §5.
+       Overrides inset:0 on orbCore and row→col on orbNum.
+   ========================================================= */
+
+.sp-root .sp-dot {
+  position:        relative;
+  display:         inline-flex;
+  flex:            0 0 auto;
+  align-items:     center;
+  justify-content: center;
+}
+
+/* Fill the full dot area (orb has inset:14%; dot fills inset:0) */
+.sp-root .sp-dot .orbCore {
+  inset: 0;
+}
+
+/* Default inner label: row (letter + %) side-by-side */
+.sp-root .sp-dot .orbNum {
+  flex-direction: row;
+  gap:            0;
+}
+
+/* Column layout for catDot (%) over (K/C) label */
+.sp-root .sp-dot .orbNum.col {
+  flex-direction: column;
+}
+
+/* ---- LeanPair wrappers ---- */
+.sp-root .sp-lean-pair {
+  display:     inline-flex;
+  align-items: center;
+  gap:         9px;
+}
+.sp-root .sp-lean-tag {
+  font-family: var(--f-mono);
+  font-size:   .64rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Compact variant (hub cell: dominant dot + sub caption) */
+.sp-root .sp-lean-cell {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            3px;
+}
+.sp-root .sp-lean-cell-sub {
+  font-family: var(--f-mono);
+  font-size:   .5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.sp-root .sp-lean-cell-sub-k { color: hsl(8 90% 76%);   }
+.sp-root .sp-lean-cell-sub-c { color: hsl(150 70% 72%); }
+
+/* =========================================================
+   11. Factor Bar — sp-drv / sp-track / sp-delta
+       Center-anchored deviation meter; transcribed from
+       mock7.html's factorBar() + .drv/.track/.delta rules.
+   ========================================================= */
+
+.sp-root .sp-drv {
+  padding:       13px 0;
+  border-bottom: 1px solid var(--line);
+}
+.sp-root .sp-drv:last-child { border-bottom: 0; }
+
+.sp-root .sp-drv-top {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             8px;
+  font-size:       .9rem;
+}
+.sp-root .sp-drv-l {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  color:       var(--ink);
+}
+
+/* Delta chip */
+.sp-root .sp-delta {
+  font-family:  var(--f-mono);
+  font-weight:  700;
+  font-size:    .76rem;
+  padding:      .14rem .52rem;
+  border-radius: 8px;
+}
+.sp-root .sp-delta--up   { color: hsl(150 60% 8%);      background: var(--good); }
+.sp-root .sp-delta--down { color: hsl(0 0% 100%);       background: var(--bad);  }
+.sp-root .sp-delta--flat { color: var(--ink-faint);      background: hsl(230 30% 60% / .12); }
+
+/* Track */
+.sp-root .sp-track {
+  position:      relative;
+  height:        9px;
+  margin-top:    11px;
+  background:    hsl(230 50% 60% / .08);
+  border-radius: 999px;
+  overflow:      visible;
+}
+/* Center midline */
+.sp-root .sp-track-mid {
+  position:      absolute;
+  left:          50%;
+  top:           -3px;
+  bottom:        -3px;
+  width:         2px;
+  background:    hsl(0 0% 100% / .32);
+  border-radius: 2px;
+}
+/* Colored fill bar */
+.sp-root .sp-track-fill {
+  position:      absolute;
+  top:           0;
+  bottom:        0;
+  border-radius: 999px;
+}
+/* Glowing end node */
+.sp-root .sp-track-node {
+  position:      absolute;
+  top:           50%;
+  width:         13px;
+  height:        13px;
+  border-radius: 50%;
+  transform:     translate(-50%, -50%);
+  box-shadow:    0 0 10px currentColor, inset 0 0 0 2px hsl(245 50% 6%);
+}
+/* Note text */
+.sp-root .sp-drv-note {
+  font-size:  .74rem;
+  color:      var(--ink-dim);
+  margin-top: 9px;
+}
+
+/* =========================================================
+   12. Live Chip Spatial — glass reskin of LiveChip
+       4 states: pregame (grey) / live (amber) / cleared (green) / missed (red)
+       HandChip's cyan .sp-hand--adv is visually distinct from
+       cleared's green — amber beats grey, green beats amber,
+       cyan (hand adv) is a different hue entirely.
+   ========================================================= */
+
+.sp-root .sp-live-chip {
+  display:                 inline-flex;
+  align-items:             center;
+  gap:                     6px;
+  font-family:             var(--f-mono);
+  font-weight:             700;
+  font-size:               .62rem;
+  letter-spacing:          .06em;
+  line-height:             1;
+  padding:                 .3rem .62rem;
+  border-radius:           999px;
+  border:                  1px solid transparent;
+  backdrop-filter:         blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  white-space:             nowrap;
+  vertical-align:          middle;
+}
+
+/* pregame — neutral glass */
+.sp-root .sp-live-chip--pregame {
+  color:        hsl(230 14% 52%);
+  border-color: hsl(230 30% 60% / .18);
+  background:   hsl(240 40% 9% / .45);
+}
+
+/* live — amber, pulsing dot */
+.sp-root .sp-live-chip--live {
+  color:        var(--warn);
+  border-color: hsl(40 80% 55% / .38);
+  background:   hsl(40 60% 10% / .5);
+}
+
+/* cleared — green glass */
+.sp-root .sp-live-chip--cleared {
+  color:        var(--iris-mint);
+  border-color: hsl(150 70% 55% / .45);
+  background:   hsl(150 60% 10% / .4);
+  box-shadow:   0 0 12px hsl(150 70% 50% / .2);
+}
+
+/* missed — red glass */
+.sp-root .sp-live-chip--missed {
+  color:        hsl(2 82% 70%);
+  border-color: hsl(2 60% 40% / .45);
+  background:   hsl(2 60% 10% / .4);
+}
+
+/* Amber pulsing dot (live state only) */
+.sp-root .sp-live-chip-dot {
+  width:         7px;
+  height:        7px;
+  border-radius: 50%;
+  background:    var(--warn);
+  box-shadow:    0 0 8px var(--warn);
+  flex:          0 0 auto;
+  animation:     beat 2.4s ease-in-out infinite;
+}
+
+/* Small variant — compact sizing */
+.sp-root .sp-live-chip--sm {
+  font-size: .5rem;
+  padding:   .18rem .44rem;
+  gap:       4px;
+}
+.sp-root .sp-live-chip--sm .sp-live-chip-dot {
+  width:  5px;
+  height: 5px;
+}
+
+/* Reduced-motion: stop the live dot pulse */
+@media (prefers-reduced-motion: reduce) {
+  .sp-root .sp-live-chip-dot { animation: none !important; }
+}
