@@ -1,7 +1,7 @@
 /**
  * app/next/page.tsx — The real Mock 7 "Spatial Depth" app shell.
  *
- * This replaces the KitDemo gallery on /next with a fully-navigable app wired to
+ * The fully-navigable /next app shell wired to
  * live data.  It mirrors the state model + URL-sync of app/page.tsx (the current
  * production shell) exactly:
  *

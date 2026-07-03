@@ -73,7 +73,7 @@ export interface PlayerModalProps {
   onClose: () => void;
   /** Cross-navigation: clicking a linked player opens their modal. */
   onOpenPlayer?: (playerId: string, prop: ModalProp) => void;
-  /** Optional pre-loaded payload (used by KitDemo so it works without a fetch). */
+  /** Optional pre-loaded projections payload; when omitted the modal fetches its own. */
   projections?: Projections;
 }
 
@@ -902,7 +902,7 @@ export function PlayerModal({
   onOpenPlayer,
   projections,
 }: PlayerModalProps) {
-  // When a payload is injected (KitDemo) use it directly; otherwise fetch it.
+  // When a payload is injected use it directly; otherwise fetch it.
   const [fetched, setFetched] = useState<Projections | null>(null);
   const data = projections ?? fetched;
 
