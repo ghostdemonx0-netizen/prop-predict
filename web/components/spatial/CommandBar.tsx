@@ -5,8 +5,8 @@
  * SVG ids use "sp-mk", "sp-mkb", "sp-mkg" to avoid global ID collisions.
  *
  * Changes vs original:
- *  - Accepts optional `dates` / `selectedDate` / `onDate` for the date picker
- *    (moved here from HeroTiles).
+ *  - The date picker lives on its own row in page.tsx (between the KPI tiles and
+ *    the NavDock), NOT in the bar — the LIVE pill has also been removed.
  *  - Weighting SegmentedControl is visible on all viewports: in-bar on desktop
  *    (≥881px) and in a full-width row just below the bar on mobile (≤880px).
  */
@@ -19,12 +19,6 @@ import { SegmentedControl } from "./SegmentedControl";
 export interface CommandBarProps {
   source: "current" | "blend" | "hist";
   onSourceChange: (v: "current" | "blend" | "hist") => void;
-  /** Ordered list of date strings for the date picker (e.g. "2026-07-02"). */
-  dates?: string[];
-  /** Currently selected date. */
-  selectedDate?: string;
-  /** Called when the user picks a different date. */
-  onDate?: (d: string) => void;
 }
 
 const SOURCE_OPTIONS = [
@@ -36,9 +30,6 @@ const SOURCE_OPTIONS = [
 export function CommandBar({
   source,
   onSourceChange,
-  dates,
-  selectedDate,
-  onDate,
 }: CommandBarProps) {
   const weightingControl = (
     <SegmentedControl
@@ -110,34 +101,13 @@ export function CommandBar({
               <div className="sp-bcol">
                 <div className="sp-wm">
                   <span className="sp-iristext">Prop Predict</span>
-                  <small>Spatial · MLB intel</small>
+                  <small>MLB PLAYER PROPS · MODEL-DRIVEN</small>
                 </div>
               </div>
             </div>
 
             {/* ── Spacer ──────────────────────────────────────────────── */}
             <div className="sp-grow" />
-
-            {/* ── Live pill ───────────────────────────────────────────── */}
-            <div className="sp-live">
-              <span className="sp-dot-live" />
-              <span className="sp-lt">LIVE</span>
-            </div>
-
-            {/* ── Date picker (compact glass pill) ────────────────────── */}
-            {dates && dates.length > 0 && (
-              <div className="sp-datepick sp-float sp-datepick--cmd">
-                <select
-                  value={selectedDate}
-                  onChange={(e) => onDate?.(e.target.value)}
-                  aria-label="Select date"
-                >
-                  {dates.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             {/* ── Weighting segmented control — desktop (≥881px) ──────── */}
             <div className="sp-wseg-wrap">

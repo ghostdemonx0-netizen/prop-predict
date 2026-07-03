@@ -15,6 +15,20 @@ import type { BoardRow } from "../components/PropBoard";
 
 export type Source = "current" | "blend" | "hist";
 
+/**
+ * Spatial-side row: BoardRow (from PropBoard, which we must not edit) plus a
+ * derived recent-form indicator the mock-7 cards render as a FormChip.
+ * Batter props carry it (from recent_form_mult); pitcher (K) rows leave it
+ * undefined so no chip renders.
+ */
+export type SpatialRow = BoardRow & { form?: "hot" | "cold" | "steady" };
+
+/** Map a recent-form multiplier to a hot/cold/steady chip value. */
+function formFromMult(m?: number): "hot" | "cold" | "steady" | undefined {
+  if (typeof m !== "number") return undefined;
+  return m > 1.03 ? "hot" : m < 0.97 ? "cold" : "steady";
+}
+
 // ---------------------------------------------------------------------------
 // Private display helpers (copied verbatim from app/page.tsx top-level fns)
 // ---------------------------------------------------------------------------
@@ -100,13 +114,13 @@ export function toBoardRows(
   prop: PropKind,
   threshold: number,
   source: Source,
-): BoardRow[] {
+): SpatialRow[] {
   // Convenience wrappers bound to the requested source.
   const pN = (cur?: number, hist?: number): number =>
     pickN(cur, hist, source) ?? 0;
   const lF = (vs: Matchup | undefined) => leanFor(vs, source);
 
-  let rows: BoardRow[];
+  let rows: SpatialRow[];
 
   if (prop === "hr") {
     rows = data.hr.map((r) => ({
@@ -134,6 +148,7 @@ export function toBoardRows(
       kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
       status: r.lineup_status,
       bat_order: r.bat_order,
+      form: formFromMult(r.recent_form_mult),
       windOut: r.wind_out_mph,
       windMph: r.wind_mph,
       windDir: r.wind_dir,
@@ -197,6 +212,7 @@ export function toBoardRows(
         kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
         status: r.lineup_status,
         bat_order: r.bat_order,
+        form: formFromMult(r.recent_form_mult),
         windOut: r.wind_out_mph,
         windMph: r.wind_mph,
         windDir: r.wind_dir,
@@ -234,6 +250,7 @@ export function toBoardRows(
         kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
         status: r.lineup_status,
         bat_order: r.bat_order,
+        form: formFromMult(r.recent_form_mult),
         windOut: r.wind_out_mph,
         windMph: r.wind_mph,
         windDir: r.wind_dir,
@@ -271,6 +288,7 @@ export function toBoardRows(
         kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
         status: r.lineup_status,
         bat_order: r.bat_order,
+        form: formFromMult(r.recent_form_mult),
         windOut: r.wind_out_mph,
         windMph: r.wind_mph,
         windDir: r.wind_dir,
@@ -308,6 +326,7 @@ export function toBoardRows(
         kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
         status: r.lineup_status,
         bat_order: r.bat_order,
+        form: formFromMult(r.recent_form_mult),
         windOut: r.wind_out_mph,
         windMph: r.wind_mph,
         windDir: r.wind_dir,
@@ -346,6 +365,7 @@ export function toBoardRows(
         kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
         status: r.lineup_status,
         bat_order: r.bat_order,
+        form: formFromMult(r.recent_form_mult),
         windOut: r.wind_out_mph,
         windMph: r.wind_mph,
         windDir: r.wind_dir,

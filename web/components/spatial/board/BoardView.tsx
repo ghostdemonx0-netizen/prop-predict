@@ -24,7 +24,7 @@ import {
 } from "react";
 import type { PropKind } from "../../../lib/format";
 import { strengthTier, strengthLabel, platoonAdvantage, arrowColor } from "../../../lib/format";
-import type { Source } from "../../../lib/weighting";
+import type { Source, SpatialRow } from "../../../lib/weighting";
 import type { BoardRow } from "../../PropBoard";
 import { useLiveFor } from "../../LiveProvider";
 import type { LiveKind } from "../../../lib/live";
@@ -32,7 +32,7 @@ import { WindIcon, TempIcon, RainIcon, ClockIcon } from "../../Icons";
 
 import { GlassCard } from "../GlassCard";
 import { ProbabilityOrb } from "../ProbabilityOrb";
-import { Badge, TagChip, HandChip, FBox, Bvp } from "../chips";
+import { Badge, TagChip, HandChip, FormChip, FBox, Bvp } from "../chips";
 import { LiveChip } from "../LiveChipSpatial";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ import { LiveChip } from "../LiveChipSpatial";
 export type BoardViewMode = "cards" | "split" | "table" | "matchups";
 
 export interface BoardViewProps {
-  rows: BoardRow[];
+  rows: SpatialRow[];
   view: BoardViewMode;
   prop: PropKind;
   /** Numeric threshold (encoded already in `prop`); kept for API symmetry. */
@@ -70,8 +70,17 @@ function handGlyph(h?: string): "R" | "L" | "SW" | null {
   return null;
 }
 
+/** Progressive weather-heat colour for the temperature pill.
+ *  cold (<60°) = blue · mild (60–78°) = green · warm (79–88°) = amber · hot (>88°) = red. */
+function tempColor(t: number): string {
+  if (t < 60) return "var(--iris-cyan)";
+  if (t <= 78) return "var(--green)";
+  if (t <= 88) return "var(--amber)";
+  return "var(--red)";
+}
+
 /** Weather condition pills (ported from PropBoard.WeatherChips). */
-function ConditionPills({ r }: { r: BoardRow }) {
+function ConditionPills({ r }: { r: SpatialRow }) {
   const dir =
     typeof r.windDir === "number"
       ? r.windDir
@@ -101,7 +110,15 @@ function ConditionPills({ r }: { r: BoardRow }) {
           value={`${Math.round(mph as number)}mph`}
         />
       )}
-      {hasTemp && <FBox icon={<TempIcon size={13} />} value={`${Math.round(r.tempF as number)}°`} />}
+      {hasTemp && (() => {
+        const tc = tempColor(r.tempF as number);
+        return (
+          <FBox
+            icon={<TempIcon size={13} style={{ color: tc }} />}
+            value={<span style={{ color: tc }}>{Math.round(r.tempF as number)}°</span>}
+          />
+        );
+      })()}
       {showRain && (
         <FBox
           icon={<RainIcon size={13} style={{ color: "var(--iris-cyan)" }} />}
@@ -161,7 +178,7 @@ function PropCard({
   index,
   onOpenPlayer,
 }: {
-  r: BoardRow;
+  r: SpatialRow;
   prop: PropKind;
   index: number;
   onOpenPlayer: (id: number, prop: PropKind) => void;
@@ -192,6 +209,7 @@ function PropCard({
         <div className="sp-prow">
           <Badge kind={tier}>{strengthLabel(r.prob, prop)}</Badge>
           {r.status && <TagChip status={tagStatus(r.status)} order={r.bat_order} />}
+          {!isK && r.form && <FormChip kind={r.form} />}
         </div>
 
         <div className="sp-prow">
@@ -225,7 +243,7 @@ function CardsGrid({
   prop,
   onOpenPlayer,
 }: {
-  rows: BoardRow[];
+  rows: SpatialRow[];
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
 }) {
@@ -285,16 +303,14 @@ function BoardTable({
                 key={r.id}
                 onClick={() => r.player_id != null && onOpenPlayer(r.player_id, prop)}
               >
-                <td>
+                <td className="sp-pl-cell">
                   <span className="sp-tp">{r.player}</span>
-                  {pHand && (
-                    <span style={{ marginLeft: 6 }}>
-                      <HandChip hand={pHand} adv={adv} />
-                    </span>
-                  )}
-                  {r.status && (
-                    <span style={{ marginLeft: 6 }}>
-                      <TagChip status={tagStatus(r.status)} order={r.bat_order} />
+                  {(pHand || r.status) && (
+                    <span className="sp-pl-chips">
+                      {pHand && <HandChip hand={pHand} adv={adv} />}
+                      {r.status && (
+                        <TagChip status={tagStatus(r.status)} order={r.bat_order} />
+                      )}
                     </span>
                   )}
                 </td>
@@ -356,7 +372,7 @@ function SplitView({
   prop,
   onOpenPlayer,
 }: {
-  rows: BoardRow[];
+  rows: SpatialRow[];
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
 }) {

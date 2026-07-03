@@ -223,6 +223,26 @@ export default function NextPage() {
     if (src === "hist") setSource("hist");
     else if (src === "blend") setSource("blend");
 
+    const sectionParam = params.get("section");
+    if (
+      sectionParam === "board" ||
+      sectionParam === "hub" ||
+      sectionParam === "top" ||
+      sectionParam === "parks"
+    ) {
+      setSection(sectionParam);
+    }
+
+    const viewParam = params.get("view");
+    if (
+      viewParam === "cards" ||
+      viewParam === "split" ||
+      viewParam === "table" ||
+      viewParam === "matchups"
+    ) {
+      setView(viewParam);
+    }
+
     loadIndex().then((ds) => {
       setDates(ds);
       setSelectedDate(want && ds.includes(want) ? want : ds[0] ?? "");
@@ -252,8 +272,10 @@ export default function NextPage() {
     else params.delete("threshold");
     if (source === "current") params.delete("source");
     else params.set("source", source);
+    params.set("section", section);
+    params.set("view", view);
     window.history.replaceState(null, "", `?${params.toString()}`);
-  }, [selectedDate, prop, threshold, source, selection]);
+  }, [selectedDate, prop, threshold, source, section, view, selection]);
 
   // ── Handlers ──
   const handleOpenPlayer = (playerId: number, kind: PropKind) => {
@@ -310,27 +332,41 @@ export default function NextPage() {
     data.hr.filter((r) => r.lineup_status === "confirmed").length +
     data.strikeouts.filter((r) => r.pitcher_status === "confirmed").length;
 
+  // Highest displayed probability on the current board (rows are sorted desc).
+  const topEdge = boardRows.length ? Math.round(boardRows[0].prob * 100) : 0;
+
   const tiles: KpiTile[] = [
     { label: "Slate", value: String(gameCount), sub: "games" },
     { label: "Plays scored", value: String(totalPlays), sub: "props" },
     { label: "Lineups", value: String(confirmedLineups), sub: "confirmed" },
-    { label: "Model", value: "v7", sub: "spatial" },
+    { label: "Top edge", value: `${topEdge}%`, sub: "best play" },
   ];
 
   return (
     <>
-      {/* ── Sticky command bar (owns the date picker + weighting toggle) ── */}
-      <CommandBar
-        source={source}
-        onSourceChange={setSource}
-        dates={dates}
-        selectedDate={selectedDate}
-        onDate={setSelectedDate}
-      />
+      {/* ── Sticky command bar (owns the weighting toggle) ── */}
+      <CommandBar source={source} onSourceChange={setSource} />
 
       <main className="sp-wrap" style={{ paddingBottom: 80 }}>
         {/* ── KPI tiles ── */}
         <HeroTiles tiles={tiles} />
+
+        {/* ── Date selector — own row between the tiles and the nav dock ── */}
+        {dates.length > 0 && (
+          <div className="sp-daterow">
+            <div className="sp-datepick sp-float">
+              <select
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                aria-label="Select date"
+              >
+                {dates.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* ── Nav dock ── */}
         <NavDock section={section} onSection={setSection} />

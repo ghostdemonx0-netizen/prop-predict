@@ -11,6 +11,7 @@
 
 import "./spatial.css";
 import type { PropKind } from "../../lib/format";
+import { heatColor } from "../../lib/format";
 import { orbParams, ORB_RING_C } from "./orbMath";
 
 // ── heat map (transcribed from mock7.html HEAT table) ────────────────────────
@@ -36,6 +37,19 @@ const HEAT_ORB: Record<PropKind, readonly [number, number]> = {
 function heatT(prob: number, kind: PropKind): number {
   const [lo, sp] = HEAT_ORB[kind] ?? HEAT_ORB.hr;
   return Math.max(0, Math.min(1, (prob - lo) / sp));
+}
+
+// ── sphere base colour, derived from the live site's heatColor() scale ───────
+// heatColor(prob, kind) returns an `hsl(H, S%, L%)` string that sweeps
+// blue → cyan → green → amber → red across each prop's realistic range, so two
+// different probabilities read as visibly different hues (the mock7 indigo→mint
+// ramp made most orbs look uniformly blue). We parse that HSL and let it drive
+// the sphere's hue/sat/light; the ring math, glow, halo, shadow and specular
+// structure still come from orbParams(prob, heat).
+function parseHsl(str: string): { h: number; s: number; l: number } {
+  const m = str.match(/hsl\(\s*([\d.]+)[,\s]+([\d.]+)%[,\s]+([\d.]+)%/);
+  if (!m) return { h: 255, s: 80, l: 46 };
+  return { h: Number(m[1]), s: Number(m[2]), l: Number(m[3]) };
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -72,11 +86,17 @@ export function ProbabilityOrb({
   const sh2Y  = (size * 0.05).toFixed(1);
   const sh2B  = (size * 0.12).toFixed(1);
 
-  // ── colour strings ─────────────────────────────────────────────────────────
-  const H   = p.hue, S = p.sat;
-  const col    = `hsl(${H} ${S}% ${p.light}%)`;
-  const bright = `hsl(${H} ${S}% ${p.brightL}%)`;
-  const dark   = `hsl(${H} ${S}% ${p.darkL}%)`;
+  // ── colour strings (hue/sat/light from heatColor; variants keep sphere depth) ─
+  const base   = parseHsl(heatColor(prob, kind));
+  const H = Math.round(base.h);
+  // Lift saturation a touch so the glass sphere stays vivid at heatColor's 52%.
+  const S = Math.min(Math.round(base.s) + 16, 92);
+  const light   = Math.round(base.l);
+  const brightL = Math.min(light + 24, 88);
+  const darkL   = Math.max(light - 26, 8);
+  const col    = `hsl(${H} ${S}% ${light}%)`;
+  const bright = `hsl(${H} ${S}% ${brightL}%)`;
+  const dark   = `hsl(${H} ${S}% ${darkL}%)`;
 
   // ── SVG ring ───────────────────────────────────────────────────────────────
   const C   = ORB_RING_C;
@@ -115,7 +135,7 @@ export function ProbabilityOrb({
           boxShadow: [
             `inset 0 ${sh1Y}px ${sh1B}px hsla(${H} 80% 10% / .55)`,
             `inset 0 -${sh2Y}px ${sh2B}px hsla(${H} 90% 72% / ${p.innerHiOpacity.toFixed(2)})`,
-            `inset 0 0 0 1px hsla(${H} ${S}% ${Math.max(p.darkL + 4, 10)}% / .35)`,
+            `inset 0 0 0 1px hsla(${H} ${S}% ${Math.max(darkL + 4, 10)}% / .35)`,
           ].join(", "),
         }}
       >
