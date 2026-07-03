@@ -91,6 +91,13 @@ const COLUMN_PICKERS: { key: ThresholdKey; label: string }[] = [
   { key: "hrr", label: "HRR column" },
 ];
 
+/** Weighting options (mirrors CommandBar's previous SOURCE_OPTIONS). */
+const SOURCE_OPTIONS = [
+  { value: "current", label: "Current szn" },
+  { value: "blend",   label: "Blend" },
+  { value: "hist",    label: "History 3yr" },
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  Threshold reconciliation helpers
 //
@@ -344,29 +351,23 @@ export default function NextPage() {
 
   return (
     <>
-      {/* ── Sticky command bar (owns the weighting toggle) ── */}
-      <CommandBar source={source} onSourceChange={setSource} />
+      {/* ── Sticky command bar (owns the date selector) ── */}
+      <CommandBar dates={dates} selectedDate={selectedDate} onDate={setSelectedDate} />
 
       <main className="sp-wrap" style={{ paddingBottom: 80 }}>
         {/* ── KPI tiles ── */}
         <HeroTiles tiles={tiles} />
 
-        {/* ── Date selector — own row between the tiles and the nav dock ── */}
-        {dates.length > 0 && (
-          <div className="sp-daterow">
-            <div className="sp-datepick sp-float">
-              <select
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                aria-label="Select date"
-              >
-                {dates.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
+        {/* ── Weighting row — centered between KPI tiles and NavDock ── */}
+        <div className="sp-weighting-row">
+          <span className="sp-eyebrow">WEIGHTING</span>
+          <SegmentedControl
+            options={SOURCE_OPTIONS}
+            value={source}
+            onChange={(v) => setSource(v as Source)}
+            variant="ghost"
+          />
+        </div>
 
         {/* ── Nav dock ── */}
         <NavDock section={section} onSection={setSection} />
