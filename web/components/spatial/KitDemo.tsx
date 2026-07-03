@@ -22,9 +22,10 @@ import { GlassCard }        from "./GlassCard";
 import { LiveChip }         from "./LiveChipSpatial";
 import { BoardView, type BoardViewMode } from "./board/BoardView";
 import { TopPlays, type TopPlaysThresholds } from "./TopPlays";
+import { Parks } from "./Parks";
 import type { NavSection }  from "./NavDock";
 import type { BoardRow }    from "../PropBoard";
-import type { Projections } from "../../lib/types";
+import type { Game, Projections } from "../../lib/types";
 
 // ── Section heading ──────────────────────────────────────────────────────────
 
@@ -140,6 +141,26 @@ const DEMO_PROJECTIONS: Projections = {
 };
 
 const DEMO_THRESHOLDS: TopPlaysThresholds = { hits: 1, tb: 2, runs: 1, rbi: 1, hrr: 2 };
+
+// ── Demo games for Parks ledger (sorted best-env-first, as the API delivers) ──
+const DEMO_GAMES: Game[] = [
+  { game_id: 1, game_time: "2026-07-02T19:05", matchup: "BOS @ NYY",
+    park: "yankee_stadium", park_name: "Yankee Stadium",
+    park_mult: 1.08, weather_mult: 1.05, env: 1.134,
+    wind_dir: 30, wind_mph: 11, temp_f: 78, precip_pct: 0 },
+  { game_id: 3, game_time: "2026-07-02T20:10", matchup: "ATL @ PHI",
+    park: "citizens_bank", park_name: "Citizens Bank Park",
+    park_mult: 1.05, weather_mult: 1.02, env: 1.071,
+    wind_dir: 0, wind_mph: 14, temp_f: 81, precip_pct: 10 },
+  { game_id: 4, game_time: "2026-07-02T20:40", matchup: "NYM @ MIA",
+    park: "loandepot", park_name: "loanDepot park",
+    park_mult: 0.96, weather_mult: 1.01, env: 0.970,
+    wind_dir: 180, wind_mph: 5, temp_f: 86, precip_pct: 40 },
+  { game_id: 2, game_time: "2026-07-02T21:45", matchup: "LAD @ SF",
+    park: "oracle_park", park_name: "Oracle Park",
+    park_mult: 0.92, weather_mult: 0.94, env: 0.865,
+    wind_dir: 200, wind_mph: 8, temp_f: 64, precip_pct: 0 },
+];
 
 // ── Main component ───────────────────────────────────────────────────────────
 
@@ -326,6 +347,10 @@ export function KitDemo() {
           onThreshold={(prop, n) => setTopThr((t) => ({ ...t, [prop]: n }))}
           onOpenPlayer={(id, prop) => console.log("open player", id, prop)}
         />
+
+        {/* ── Parks ledger (task 1.4) ────────────────────────────── */}
+        <QaHeading>Parks — ranked env ledger · best hitting environments first</QaHeading>
+        <Parks games={DEMO_GAMES} />
 
       </main>
     </>

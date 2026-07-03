@@ -1864,3 +1864,110 @@
   gap:         10px;
   flex-shrink: 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   15. Parks ledger — sp-parks-ledger / sp-parks-row / sp-parks-rk / sp-parks-stats  (task 1.4)
+   Compact ranked environment ledger (best-env-first). Deliberately distinct
+   from the hub's expandable cards: a flat glass panel, numbered rows, no expand.
+   Ported from mock7.html's .ledger / .lrow2 / .pwstats / .rk CSS.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Explainer row under the eyebrow ──────────────────────────────────────── */
+.sp-root .sp-parks-intro {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     baseline;
+  gap:             1rem;
+  margin-bottom:   0.8rem;
+  flex-wrap:       wrap;
+}
+
+.sp-root .sp-parks-note {
+  font-size:  0.82rem;
+  color:      var(--ink-dim);
+  margin:     0;
+  max-width:  62ch;
+}
+
+.sp-root .sp-parks-hint {
+  font-family: var(--f-mono);
+  font-size:   0.62rem;
+  color:       var(--ink-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Glass ledger panel (GlassCard .sp-float + this padding) ──────────────── */
+.sp-root .sp-parks-ledger {
+  padding:    6px 18px;
+  margin-top: 16px;
+}
+
+/* ── Individual ledger row ─────────────────────────────────────────────────── */
+.sp-root .sp-parks-row {
+  display:       flex;
+  align-items:   center;
+  gap:           14px;
+  padding:       13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sp-root .sp-parks-row:last-child {
+  border-bottom: 0;
+}
+
+/* ── Rank numeral ──────────────────────────────────────────────────────────── */
+.sp-root .sp-parks-rk {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size:   1rem;
+  color:       var(--ink-faint);
+  width:       26px;
+  flex:        0 0 auto;
+  text-align:  center;
+}
+
+/* #1 gets the iris gradient (mint → cyan) */
+.sp-root .sp-parks-row:first-child .sp-parks-rk {
+  color:                   transparent;
+  background:              linear-gradient(120deg, var(--iris-mint), var(--iris-cyan));
+  -webkit-background-clip: text;
+  background-clip:         text;
+}
+
+/* ── Matchup + park name block ─────────────────────────────────────────────── */
+.sp-root .sp-parks-info {
+  flex:      1;
+  min-width: 0;
+}
+
+.sp-root .sp-parks-name {
+  font-family:    var(--f-disp);
+  font-weight:    700;
+  font-size:      0.96rem;
+  letter-spacing: -0.01em;
+  line-height:    1.1;
+}
+
+.sp-root .sp-parks-sub {
+  font-family: var(--f-mono);
+  font-size:   0.66rem;
+  color:       var(--ink-faint);
+  margin-top:  3px;
+}
+
+/* ── Condition pills cluster ───────────────────────────────────────────────── */
+.sp-root .sp-parks-stats {
+  display:         flex;
+  gap:             8px;
+  flex-wrap:       wrap;
+  justify-content: flex-end;
+  align-items:     center;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .sp-root .sp-parks-intro  { flex-direction: column; gap: 0.4rem; }
+  .sp-root .sp-parks-stats  { justify-content: flex-start; }
+  .sp-root .sp-parks-row    { flex-wrap: wrap; }
+}
