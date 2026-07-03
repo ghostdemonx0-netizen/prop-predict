@@ -1971,3 +1971,143 @@
   .sp-root .sp-parks-stats  { justify-content: flex-start; }
   .sp-root .sp-parks-row    { flex-wrap: wrap; }
 }
+
+/* =========================================================
+   Player / Pitcher detail modal  (task 1.5)
+   Transcribed from mock7.html .overlay / .modal / .mtop /
+   .mpanel / .mhead / .stat + factor-driver + matchup rules.
+   ========================================================= */
+
+.sp-root .sp-overlay {
+  position: fixed; inset: 0; z-index: 120;
+  background: hsl(245 50% 2% / .68);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 16px; overflow: auto;
+  animation: fade .3s ease;
+}
+.sp-root .sp-modal {
+  max-width: 680px; width: 100%; overflow: hidden;
+  animation: popin .5s var(--spring);
+  box-shadow: 0 50px 110px -30px hsl(245 80% 1% / .9), inset 0 1px 0 var(--hi);
+}
+
+/* ---- header ---- */
+.sp-root .sp-mtop {
+  position: relative; padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, hsl(264 60% 30% / .22), transparent);
+}
+.sp-root .sp-mback {
+  font-family: var(--f-mono); font-size: .66rem; color: var(--ink-dim);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  background: 0; border: 0; padding: 0;
+}
+.sp-root .sp-mback:hover { color: var(--iris-mint); }
+.sp-root .sp-mclose {
+  position: absolute; top: 18px; right: 20px;
+  background: 0; border: 1px solid var(--line-3); color: var(--ink-dim);
+  width: 30px; height: 30px; border-radius: 9px; cursor: pointer;
+  font-size: 1.05rem; line-height: 1; transition: .18s;
+}
+.sp-root .sp-mclose:hover { color: var(--ink); border-color: var(--iris-mint); }
+.sp-root .sp-meyebrow {
+  display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  margin-top: 9px;
+}
+.sp-root .sp-mname {
+  font-family: var(--f-disp); font-weight: 800; font-size: 1.8rem;
+  letter-spacing: -.03em; margin-top: 9px;
+}
+
+/* ---- body + panels ---- */
+.sp-root .sp-mbody {
+  padding: 18px 22px 26px; display: flex; flex-direction: column; gap: 15px;
+}
+.sp-root .sp-mpanel {
+  padding: 17px; border-radius: 15px;
+  background: hsl(242 44% 7% / .5);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 var(--hi);
+}
+
+/* ---- headline stats + orb ---- */
+.sp-root .sp-mhead-row { display: flex; align-items: center; gap: 12px; }
+.sp-root .sp-mstats { display: flex; gap: 26px; flex-wrap: wrap; flex: 1; }
+.sp-root .sp-mstat {
+  font-family: var(--f-mono); font-weight: 700; font-size: 2.2rem;
+  letter-spacing: -.03em; line-height: 1;
+}
+.sp-root .sp-mstat--glow {
+  color: transparent;
+  background: linear-gradient(120deg, var(--iris-mint), var(--iris-cyan));
+  -webkit-background-clip: text; background-clip: text;
+}
+.sp-root .sp-mstat--dim { color: var(--ink-faint); opacity: .6; }
+.sp-root .sp-mstat-lab {
+  font-family: var(--f-mono); font-size: .56rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-faint); margin-top: 7px;
+}
+
+/* ---- conditions strip ---- */
+.sp-root .sp-mconds {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+}
+
+/* ---- matchup legend + rows ---- */
+.sp-root .sp-mlegend {
+  font-family: var(--f-mono); font-size: .58rem; color: var(--ink-faint);
+  display: flex; gap: 10px; flex-wrap: wrap; margin: 2px 0 10px;
+}
+.sp-root .sp-mlegend .sp-lk { color: hsl(8 90% 76%); }
+.sp-root .sp-mlegend .sp-lc { color: hsl(150 70% 72%); }
+
+.sp-root .sp-mlineup { display: flex; flex-direction: column; }
+.sp-root .sp-mline {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+}
+.sp-root .sp-mline--num {
+  padding: 9px 0; border-bottom: 1px solid var(--line);
+}
+.sp-root .sp-mline--num:last-child { border-bottom: 0; }
+.sp-root .sp-ord {
+  font-family: var(--f-mono); font-size: .7rem; color: var(--ink-faint);
+  width: 18px; text-align: center; flex-shrink: 0;
+}
+.sp-root .sp-mline-name {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0;
+}
+.sp-root .sp-linklike {
+  background: 0; border: 0; padding: 0; cursor: pointer;
+  font: inherit; color: var(--ink); font-size: .9rem;
+  text-align: left;
+}
+.sp-root .sp-linklike:hover { color: var(--iris-mint); }
+
+/* ---- pitcher projection-vs-line bar ---- */
+.sp-root .sp-proj-track {
+  position: relative; height: 13px; margin-top: 13px;
+  background: hsl(150 40% 40% / .08); border-radius: 999px;
+}
+.sp-root .sp-proj-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px;
+}
+.sp-root .sp-proj-mid {
+  position: absolute; top: -4px; bottom: -4px; width: 2px;
+  background: var(--ink); border-radius: 2px;
+}
+
+.sp-root .sp-live-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--iris-mint); margin-right: 6px;
+  box-shadow: 0 0 8px var(--iris-mint);
+}
+
+@media (max-width: 600px) {
+  .sp-root .sp-overlay { padding: 16px 8px; }
+  .sp-root .sp-mbody   { padding: 16px 14px 22px; }
+  .sp-root .sp-mpanel  { padding: 14px; }
+  .sp-root .sp-mname   { font-size: 1.5rem; }
+  .sp-root .sp-mstat   { font-size: 1.8rem; }
+  .sp-root .sp-mstats  { gap: 18px; }
+}

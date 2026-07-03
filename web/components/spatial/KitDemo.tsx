@@ -23,6 +23,7 @@ import { LiveChip }         from "./LiveChipSpatial";
 import { BoardView, type BoardViewMode } from "./board/BoardView";
 import { TopPlays, type TopPlaysThresholds } from "./TopPlays";
 import { Parks } from "./Parks";
+import { PlayerModal, usePlayerModalUrl } from "./PlayerModal";
 import type { NavSection }  from "./NavDock";
 import type { BoardRow }    from "../PropBoard";
 import type { Game, Projections } from "../../lib/types";
@@ -110,7 +111,15 @@ const DEMO_PROJECTIONS: Projections = {
   ],
   strikeouts: [
     { player: "Gerrit Cole", team: "NYY", matchup: "BOS @ NYY", game_id: 1, game_time: "2026-07-02T19:05",
-      player_id: 543037, throws: "R", pitcher_status: "confirmed", expected_ks: 6.8, line: 5.5, over_prob: 0.62 },
+      player_id: 543037, throws: "R", pitcher_status: "confirmed", expected_ks: 6.8, line: 5.5, over_prob: 0.62,
+      temp_f: 78, wind_mph: 11, wind_dir: 30, precip_pct: 0,
+      matchups: [
+        { name: "Jarren Duran", bats: "L", lean: "H", prob: 0.30, k_prob: 0.22, hit_prob: 0.30, player_id: 680776,
+          bvp: { pa: 6, ab: 6, hits: 2, hr: 0, k: 1, avg: ".333" } },
+        { name: "Rafael Devers", bats: "L", lean: "NEU", prob: 0.27, k_prob: 0.26, hit_prob: 0.27, player_id: 646240,
+          bvp: { pa: 14, ab: 12, hits: 3, hr: 1, k: 4, avg: ".250" } },
+        { name: "Trevor Story", bats: "R", lean: "K", prob: 0.31, k_prob: 0.31, hit_prob: 0.21, player_id: 596115 },
+      ] },
     { player: "Logan Webb", team: "SF", matchup: "LAD @ SF", game_id: 2, game_time: "2026-07-02T21:45",
       player_id: 657277, throws: "R", pitcher_status: "confirmed", expected_ks: 5.4, line: 5.5, over_prob: 0.48 },
   ],
@@ -174,6 +183,9 @@ export function KitDemo() {
   const [segScroll, setSegScroll] = useState("hr");
   const [boardView, setBoardView] = useState<BoardViewMode>("cards");
   const [topThr, setTopThr]   = useState<TopPlaysThresholds>(DEMO_THRESHOLDS);
+
+  // URL-addressable player/pitcher modal (?player=&prop=&threshold=)
+  const { selection, openPlayer, closePlayer } = usePlayerModalUrl();
 
   return (
     <>
@@ -352,7 +364,32 @@ export function KitDemo() {
         <QaHeading>Parks — ranked env ledger · best hitting environments first</QaHeading>
         <Parks games={DEMO_GAMES} />
 
+        {/* ── Player / Pitcher modal (task 1.5) ──────────────────── */}
+        <QaHeading>PlayerModal — URL-addressable pop-up detail (?player=&prop=)</QaHeading>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button className="sp-mclose" style={{ width: "auto", padding: "0 14px", height: 34 }}
+            onClick={() => openPlayer("592450", "hr")}>Open batter (HR · Judge)</button>
+          <button className="sp-mclose" style={{ width: "auto", padding: "0 14px", height: 34 }}
+            onClick={() => openPlayer("592450", "hits", topThr.hits)}>Open batter (Hits · Judge)</button>
+          <button className="sp-mclose" style={{ width: "auto", padding: "0 14px", height: 34 }}
+            onClick={() => openPlayer("592450", "hrr", topThr.hrr)}>Open batter (H+R+RBI · Judge)</button>
+          <button className="sp-mclose" style={{ width: "auto", padding: "0 14px", height: 34 }}
+            onClick={() => openPlayer("543037", "k")}>Open pitcher (K · Cole)</button>
+        </div>
+
       </main>
+
+      {/* Modal lives outside <main> so its fixed overlay covers the viewport. */}
+      <PlayerModal
+        open={selection != null}
+        playerId={selection?.playerId ?? null}
+        prop={selection?.prop ?? "hr"}
+        threshold={selection?.threshold}
+        source={source}
+        onClose={closePlayer}
+        onOpenPlayer={(id, p) => openPlayer(id, p)}
+        projections={DEMO_PROJECTIONS}
+      />
     </>
   );
 }
