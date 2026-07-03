@@ -1,11 +1,10 @@
-import type { Viewport } from "next";
 import "../../components/spatial/spatial.css";
 import { DepthField } from "../../components/spatial/DepthField";
 
-// Override the root layout's phone-fit viewport for the /next segment.
-// Nested segment viewport exports take precedence over parent segments.
-// This gives the new skin a native device-width canvas on all form factors.
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+// No viewport override here on purpose: /next inherits the root layout's
+// phone-fit viewport (width=600, maximum-scale=1 + the orientation script), so
+// mobile shows the same consistent zoomed-out fit as the live site — instead of
+// flip-flopping between that and a device-width canvas on refresh.
 
 export default function NextLayout({ children }: { children: React.ReactNode }) {
   return (
