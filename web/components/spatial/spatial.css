@@ -1444,3 +1444,246 @@
   .sp-root .sp-mside--away { border-right: 0; padding-right: 0; }
   .sp-root .sp-mside--home { padding-left: 0; }
 }
+
+/* =========================================================
+   13. Game Hub — sp-hubcard / sp-bhead / sp-brow  (task 1.2)
+       Expandable game cards + the sortable batter grid.
+       Transcribed from mock7.html's .hubcard / .bhead / .brow.
+   ========================================================= */
+
+/* intro row under the eyebrow */
+.sp-root .sp-hub-intro {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     center;
+  gap:             1rem;
+  margin-bottom:   0.8rem;
+  flex-wrap:       wrap;
+}
+.sp-root .sp-hub-intro p {
+  margin:      0;
+  font-size:   0.8rem;
+  color:       var(--ink-dim);
+}
+.sp-root .sp-hub-intro span {
+  margin:      0;
+  font-family: var(--f-mono);
+  font-size:   0.62rem;
+  color:       var(--ink-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sp-root .sp-hub-cards {
+  display: grid;
+  gap:     10px;
+}
+
+/* the card shell (GlassCard .sp-float gets these extra rules) */
+.sp-root .sp-hubcard {
+  overflow:          hidden;
+  padding:           0;
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+
+.sp-root .sp-hub-summary {
+  list-style: none;
+  cursor:     pointer;
+  padding:    18px;
+}
+.sp-root .sp-hub-summary::-webkit-details-marker { display: none; }
+
+.sp-root .sp-hubtop {
+  display:         flex;
+  align-items:     flex-start;
+  justify-content: space-between;
+  gap:             14px;
+}
+.sp-root .sp-gtitle {
+  font-family:    var(--f-disp);
+  font-weight:    700;
+  font-size:      1.16rem;
+  letter-spacing: -0.02em;
+}
+.sp-root .sp-gtime {
+  font-family: var(--f-mono);
+  font-size:   0.62rem;
+  color:       var(--ink-faint);
+  display:     inline-flex;
+  align-items: center;
+  gap:         5px;
+  margin-top:  5px;
+}
+
+.sp-root .sp-hubchips {
+  display:     flex;
+  flex-wrap:   wrap;
+  gap:         8px;
+  margin-top:  13px;
+}
+
+.sp-root .sp-tap {
+  font-family:    var(--f-mono);
+  font-size:      0.6rem;
+  color:          var(--ink-faint);
+  letter-spacing: 0.06em;
+  margin-top:     13px;
+  display:        inline-flex;
+  align-items:    center;
+  gap:            6px;
+}
+.sp-root .sp-tap-chev {
+  color:      var(--iris-cyan);
+  display:    inline-flex;
+  transition: transform 0.3s var(--spring, ease);
+}
+.sp-root details[open] .sp-tap-chev { transform: rotate(180deg); }
+
+/* expanded body */
+.sp-root .sp-bd { padding: 0 16px 18px; }
+.sp-root .sp-bd-eye {
+  font-family:    var(--f-mono);
+  font-size:      0.56rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color:          var(--ink-faint);
+  margin:         16px 0 8px;
+}
+
+/* starting pitcher rows */
+.sp-root .sp-pitrow {
+  display:       flex;
+  align-items:   center;
+  gap:           10px;
+  padding:       11px 6px;
+  border-bottom: 1px solid var(--line);
+  cursor:        pointer;
+  transition:    background 0.18s;
+}
+.sp-root .sp-pitrow:hover { background: hsl(150 60% 50% / 0.05); }
+.sp-root .sp-pitrow:focus-visible { box-shadow: inset 0 0 0 2px var(--iris-cyan); }
+.sp-root .sp-pit-nm { font-weight: 600; transition: color 0.18s; }
+.sp-root .sp-pitrow:hover .sp-pit-nm { color: var(--iris-mint); }
+.sp-root .sp-pit-line {
+  font-family: var(--f-mono);
+  font-size:   0.7rem;
+  color:       var(--ink-dim);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.sp-root .sp-pit-right {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  flex-shrink: 0;
+}
+
+/* team header inside the breakdown */
+.sp-root .sp-teamhdr {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             8px;
+  font-family:     var(--f-mono);
+  font-size:       0.62rem;
+  letter-spacing:  0.06em;
+  color:           var(--ink-faint);
+  margin:          14px 0 5px;
+  flex-wrap:       wrap;
+}
+.sp-root .sp-teamhdr-opp {
+  color:          var(--ink);
+  font-size:      0.78rem;
+  letter-spacing: normal;
+}
+.sp-root .sp-teamhdr-gn { color: var(--iris-cyan); }
+
+/* the scrollable batter grid */
+.sp-root .sp-bgridwrap {
+  overflow-x:     auto;
+  scrollbar-width: thin;
+}
+.sp-root .sp-bhead,
+.sp-root .sp-brow {
+  display:               grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(7, 48px);
+  gap:                   6px;
+  align-items:           center;
+  min-width:             480px;
+}
+.sp-root .sp-bhead {
+  padding:       0 4px 8px;
+  border-bottom: 1px solid var(--line-2);
+}
+.sp-root .sp-bh {
+  font-family:    var(--f-mono);
+  font-size:      0.54rem;
+  letter-spacing: 0.04em;
+  font-weight:    600;
+  color:          var(--ink-faint);
+  text-align:     center;
+  background:     none;
+  border:         0;
+  padding:        0;
+}
+.sp-root .sp-bh--batters { text-align: left; }
+.sp-root .sp-bh--sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
+.sp-root .sp-bh--sortable:hover { color: var(--ink); }
+.sp-root .sp-bh--on { color: var(--ink); }
+.sp-root .sp-bh-ar { color: var(--iris-mint); margin-left: 1px; }
+.sp-root .sp-bh-kc .k { color: hsl(8 90% 76%); }
+.sp-root .sp-bh-kc .c { color: hsl(150 70% 72%); }
+.sp-root .sp-bh-kc .n { color: hsl(224 40% 76%); }
+
+.sp-root .sp-bnote {
+  font-family: var(--f-mono);
+  font-size:   0.62rem;
+  color:       var(--ink-faint);
+  padding:     6px 4px 0;
+}
+
+.sp-root .sp-brow {
+  padding:       9px 4px;
+  border-bottom: 1px solid var(--line);
+  cursor:        pointer;
+  transition:    background 0.18s;
+}
+.sp-root .sp-brow:hover { background: hsl(150 60% 50% / 0.05); }
+.sp-root .sp-brow:focus-visible { box-shadow: inset 0 0 0 2px var(--iris-cyan); }
+.sp-root .sp-bn {
+  display:     flex;
+  align-items: center;
+  gap:         7px;
+  flex-wrap:   wrap;
+  min-width:   0;
+}
+.sp-root .sp-bn-nm { font-size: 0.86rem; transition: color 0.18s; }
+.sp-root .sp-brow:hover .sp-bn-nm { color: var(--iris-mint); }
+
+.sp-root .sp-cell { display: flex; justify-content: center; align-items: center; }
+.sp-root .sp-bcell { flex-direction: column; gap: 3px; }
+.sp-root .sp-bcell-live { height: 13px; display: flex; align-items: center; }
+
+/* empty / no-games states */
+.sp-root .sp-hub-empty {
+  font-family: var(--f-mono);
+  font-size:   0.72rem;
+  color:       var(--ink-dim);
+  margin:      0;
+  padding:     0 16px 16px;
+}
+.sp-root .sp-hub-nogames {
+  color:      var(--ink-dim);
+  text-align: center;
+  padding:    26px 20px;
+}
+
+@media (max-width: 600px) {
+  .sp-root .sp-bhead,
+  .sp-root .sp-brow {
+    grid-template-columns: minmax(0, 1.3fr) repeat(7, 42px);
+    gap:                   4px;
+    min-width:             430px;
+  }
+}
