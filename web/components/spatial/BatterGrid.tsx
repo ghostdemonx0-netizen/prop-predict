@@ -27,12 +27,13 @@ import { useState, type ReactNode } from "react";
 import type { PropKind } from "../../lib/format";
 import { platoonAdvantage } from "../../lib/format";
 import type { BoardRow } from "../PropBoard";
+import type { SpatialRow } from "../../lib/weighting";
 import { useLiveFor } from "../LiveProvider";
 import type { LiveKind } from "../../lib/live";
 
 import { ProbabilityOrb } from "./ProbabilityOrb";
 import { CatDot, LeanPair } from "./GlassDot";
-import { HandChip, TagChip } from "./chips";
+import { HandChip, TagChip, FormChip } from "./chips";
 import { LiveChip } from "./LiveChipSpatial";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,6 +169,10 @@ function BatterRow({
   const liveFor = useLiveFor();
   const pHand = handGlyph(hrRow.playerHand);
   const adv = platoonAdvantage(hrRow.playerHand, hrRow.opponent?.hand);
+  // Rows arrive typed as BoardRow (GameHub annotates the toBoardRows output),
+  // so the derived recent-form indicator is type-erased here — read it back off
+  // the runtime SpatialRow. These are always batter rows, so a chip is apt.
+  const form = (hrRow as SpatialRow).form;
 
   // The matchup read can sit on any prop row — use whichever has it so the K/C/N
   // sphere never goes missing when one prop's row lacks `lean` (mirrors PropBoard).
@@ -219,6 +224,7 @@ function BatterRow({
       <span className="sp-bn">
         <span className="sp-bn-nm">{hrRow.player}</span>
         {pHand && <HandChip hand={pHand} adv={adv} />}
+        {form && <FormChip kind={form} />}
         {hrRow.status && <TagChip status={tagStatus(hrRow.status)} order={hrRow.bat_order} />}
       </span>
       <span className="sp-cell">{leanCell}</span>

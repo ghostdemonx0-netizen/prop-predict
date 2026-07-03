@@ -25,7 +25,6 @@ import {
 import type { PropKind } from "../../../lib/format";
 import { strengthTier, strengthLabel, platoonAdvantage, arrowColor } from "../../../lib/format";
 import type { Source, SpatialRow } from "../../../lib/weighting";
-import type { BoardRow } from "../../PropBoard";
 import { useLiveFor } from "../../LiveProvider";
 import type { LiveKind } from "../../../lib/live";
 import { WindIcon, TempIcon, RainIcon, ClockIcon } from "../../Icons";
@@ -265,7 +264,7 @@ function BoardTable({
   prop,
   onOpenPlayer,
 }: {
-  rows: BoardRow[];
+  rows: SpatialRow[];
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
 }) {
@@ -305,12 +304,13 @@ function BoardTable({
               >
                 <td className="sp-pl-cell">
                   <span className="sp-tp">{r.player}</span>
-                  {(pHand || r.status) && (
+                  {(pHand || r.status || (!isK && r.form)) && (
                     <span className="sp-pl-chips">
                       {pHand && <HandChip hand={pHand} adv={adv} />}
                       {r.status && (
                         <TagChip status={tagStatus(r.status)} order={r.bat_order} />
                       )}
+                      {!isK && r.form && <FormChip kind={r.form} />}
                     </span>
                   )}
                 </td>
@@ -408,7 +408,7 @@ function BoardRowLine({
   prop,
   onOpenPlayer,
 }: {
-  r: BoardRow;
+  r: SpatialRow;
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
 }) {
@@ -416,6 +416,7 @@ function BoardRowLine({
   const lv = liveFor(r, prop as LiveKind);
   const pHand = handGlyph(r.playerHand);
   const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
+  const isK = prop === "k";
   return (
     <div
       className="sp-mrow"
@@ -432,6 +433,7 @@ function BoardRowLine({
       <span className="sp-mrow-name">
         <span className="sp-mrow-nm">{r.player}</span>
         {pHand && <HandChip hand={pHand} adv={adv} />}
+        {!isK && r.form && <FormChip kind={r.form} />}
       </span>
       <span className="sp-mrow-right">
         {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
@@ -449,7 +451,7 @@ function TeamSplit({
   onOpenPlayer,
 }: {
   matchup: string;
-  rows: BoardRow[];
+  rows: SpatialRow[];
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
 }) {
@@ -468,7 +470,7 @@ function TeamSplit({
     );
   }
 
-  const sides: { label: string; rs: BoardRow[]; cls: string }[] = [
+  const sides: { label: string; rs: SpatialRow[]; cls: string }[] = [
     { label: `${away} · away`, rs: awayRows, cls: "sp-mside sp-mside--away" },
     { label: `${home} · home`, rs: homeRows, cls: "sp-mside sp-mside--home" },
   ];
@@ -516,7 +518,7 @@ function MatchupsView({
   prop,
   onOpenPlayer,
 }: {
-  rows: BoardRow[];
+  rows: SpatialRow[];
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
 }) {
@@ -524,7 +526,7 @@ function MatchupsView({
 
   // Group by unique game (gameId), keeping in-game prob order; order games by
   // first pitch. Keyed by game id so doubleheaders stay separate.
-  const groups: { key: string; label: string; rows: BoardRow[] }[] = [];
+  const groups: { key: string; label: string; rows: SpatialRow[] }[] = [];
   const seen = new Map<string, number>();
   for (const r of rows) {
     const key = r.gameId ?? r.matchup ?? "Other";

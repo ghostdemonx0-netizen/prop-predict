@@ -23,10 +23,19 @@ export type Source = "current" | "blend" | "hist";
  */
 export type SpatialRow = BoardRow & { form?: "hot" | "cold" | "steady" };
 
-/** Map a recent-form multiplier to a hot/cold/steady chip value. */
-function formFromMult(m?: number): "hot" | "cold" | "steady" | undefined {
-  if (typeof m !== "number") return undefined;
-  return m > 1.03 ? "hot" : m < 0.97 ? "cold" : "steady";
+/**
+ * Map a recent-form multiplier to a hot/cold/steady tier.
+ *
+ * Shared across every mock-7 surface so the FormChip is derived identically
+ * everywhere: hot when the mult clears 1.03, cold when it drops below 0.97,
+ * steady in between. Returns undefined when the mult is missing (no chip) —
+ * pitcher (K) rows leave it undefined so no chip renders.
+ */
+export function formTier(
+  recentFormMult?: number,
+): "hot" | "cold" | "steady" | undefined {
+  if (typeof recentFormMult !== "number") return undefined;
+  return recentFormMult > 1.03 ? "hot" : recentFormMult < 0.97 ? "cold" : "steady";
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +157,7 @@ export function toBoardRows(
       kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
       status: r.lineup_status,
       bat_order: r.bat_order,
-      form: formFromMult(r.recent_form_mult),
+      form: formTier(r.recent_form_mult),
       windOut: r.wind_out_mph,
       windMph: r.wind_mph,
       windDir: r.wind_dir,
@@ -212,7 +221,7 @@ export function toBoardRows(
         kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
         status: r.lineup_status,
         bat_order: r.bat_order,
-        form: formFromMult(r.recent_form_mult),
+        form: formTier(r.recent_form_mult),
         windOut: r.wind_out_mph,
         windMph: r.wind_mph,
         windDir: r.wind_dir,
@@ -250,7 +259,7 @@ export function toBoardRows(
         kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
         status: r.lineup_status,
         bat_order: r.bat_order,
-        form: formFromMult(r.recent_form_mult),
+        form: formTier(r.recent_form_mult),
         windOut: r.wind_out_mph,
         windMph: r.wind_mph,
         windDir: r.wind_dir,
@@ -288,7 +297,7 @@ export function toBoardRows(
         kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
         status: r.lineup_status,
         bat_order: r.bat_order,
-        form: formFromMult(r.recent_form_mult),
+        form: formTier(r.recent_form_mult),
         windOut: r.wind_out_mph,
         windMph: r.wind_mph,
         windDir: r.wind_dir,
@@ -326,7 +335,7 @@ export function toBoardRows(
         kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
         status: r.lineup_status,
         bat_order: r.bat_order,
-        form: formFromMult(r.recent_form_mult),
+        form: formTier(r.recent_form_mult),
         windOut: r.wind_out_mph,
         windMph: r.wind_mph,
         windDir: r.wind_dir,
@@ -365,7 +374,7 @@ export function toBoardRows(
         kProb: r.vs ? pN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
         status: r.lineup_status,
         bat_order: r.bat_order,
-        form: formFromMult(r.recent_form_mult),
+        form: formTier(r.recent_form_mult),
         windOut: r.wind_out_mph,
         windMph: r.wind_mph,
         windDir: r.wind_dir,

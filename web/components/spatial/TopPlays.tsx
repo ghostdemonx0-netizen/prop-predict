@@ -33,7 +33,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import type { Projections } from "../../lib/types";
 import type { PropKind } from "../../lib/format";
 import { platoonAdvantage } from "../../lib/format";
-import { toBoardRows, type Source } from "../../lib/weighting";
+import { toBoardRows, type Source, type SpatialRow } from "../../lib/weighting";
 import type { BoardRow } from "../PropBoard";
 import type { LiveKind } from "../../lib/live";
 import { useLiveFor } from "../LiveProvider";
@@ -42,7 +42,7 @@ import { ClockIcon } from "../Icons";
 import { GlassCard } from "./GlassCard";
 import { ProbabilityOrb } from "./ProbabilityOrb";
 import { CatDot } from "./GlassDot";
-import { HandChip } from "./chips";
+import { HandChip, FormChip } from "./chips";
 import { LiveChip } from "./LiveChipSpatial";
 import { SegmentedControl } from "./SegmentedControl";
 
@@ -158,14 +158,18 @@ function TopPlayRow({
   sphere,
   live,
   showPitcher = true,
+  showForm = false,
   onOpenPlayer,
 }: {
-  r: BoardRow;
+  r: SpatialRow;
   rank: number;
   prop: PropKind;
   sphere: ReactNode;
   live: ReactNode;
   showPitcher?: boolean;
+  /** Batter-prop leaderboards render the recent-form chip; pitcher-oriented
+   *  boards (Pitcher-K, Contact, Batter-K) pass false so no chip renders. */
+  showForm?: boolean;
   onOpenPlayer: (playerId: number, prop: PropKind) => void;
 }) {
   const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
@@ -192,6 +196,7 @@ function TopPlayRow({
         <div className="sp-lname">
           <span>{r.player}</span>
           {pHand && <HandChip hand={pHand} adv={adv} />}
+          {showForm && r.form && <FormChip kind={r.form} />}
         </div>
         <div className="sp-lsub">
           {(showPitcher && r.opponent) || r.matchup ? (
@@ -235,11 +240,11 @@ function LeaderSection({
 }: {
   title: string;
   sub: string;
-  rows: BoardRow[];
+  rows: SpatialRow[];
   count: string;
   defaultOpen?: boolean;
   controls?: ReactNode;
-  render: (r: BoardRow, rank: number) => ReactNode;
+  render: (r: SpatialRow, rank: number) => ReactNode;
 }) {
   const shown = count === "All" ? rows : rows.slice(0, Number(count));
   return (
@@ -338,6 +343,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               r={r}
               rank={rank}
               prop="hr"
+              showForm
               live={chip(r, "hr")}
               sphere={<ProbabilityOrb prob={r.prob} kind="hr" size={46} />}
               onOpenPlayer={onOpenPlayer}
@@ -412,6 +418,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               r={r}
               rank={rank}
               prop={hitsKind}
+              showForm
               live={chip(r, hitsKind)}
               sphere={<ProbabilityOrb prob={r.prob} kind={hitsKind} size={46} />}
               onOpenPlayer={onOpenPlayer}
@@ -431,6 +438,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               r={r}
               rank={rank}
               prop={tbKind}
+              showForm
               live={chip(r, tbKind)}
               sphere={<ProbabilityOrb prob={r.prob} kind={tbKind} size={46} />}
               onOpenPlayer={onOpenPlayer}
@@ -450,6 +458,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               r={r}
               rank={rank}
               prop={runsKind}
+              showForm
               live={chip(r, runsKind)}
               sphere={<ProbabilityOrb prob={r.prob} kind={runsKind} size={46} />}
               onOpenPlayer={onOpenPlayer}
@@ -469,6 +478,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               r={r}
               rank={rank}
               prop={rbiKind}
+              showForm
               live={chip(r, rbiKind)}
               sphere={<ProbabilityOrb prob={r.prob} kind={rbiKind} size={46} />}
               onOpenPlayer={onOpenPlayer}
@@ -488,6 +498,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               r={r}
               rank={rank}
               prop={hrrKind}
+              showForm
               live={chip(r, hrrKind)}
               sphere={<ProbabilityOrb prob={r.prob} kind={hrrKind} size={46} />}
               onOpenPlayer={onOpenPlayer}
