@@ -2100,3 +2100,187 @@
   .sp-root .sp-mstat   { font-size: 1.8rem; }
   .sp-root .sp-mstats  { gap: 18px; }
 }
+
+/* =========================================================
+   TEMP — orb fill-structure variants comparison (sp-orbv-*)
+   Used only by /next/orbs (OrbVariants.tsx). Safe to delete
+   together with that route once a fill style is chosen.
+   ========================================================= */
+
+/* ---- page shell + comparison grid ---- */
+.sp-root .sp-orbv-page {
+  position:   relative;
+  z-index:    2;
+  max-width:  900px;
+  margin:     0 auto;
+  padding:    40px 20px 80px;
+  color:      hsl(0 0% 100% / .92);
+}
+.sp-root .sp-orbv-head h1 {
+  font-family:    var(--f-mono, monospace);
+  font-size:      1.4rem;
+  font-weight:    700;
+  margin:         0 0 8px;
+  letter-spacing: .01em;
+}
+.sp-root .sp-orbv-head p {
+  font-size:   .82rem;
+  line-height: 1.5;
+  opacity:     .72;
+  margin:      0 0 28px;
+  max-width:   620px;
+}
+.sp-root .sp-orbv-head code {
+  font-family: var(--f-mono, monospace);
+  background:  hsl(0 0% 100% / .08);
+  padding:     1px 5px;
+  border-radius: 4px;
+}
+
+.sp-root .sp-orbv-grid {
+  display:       flex;
+  flex-direction: column;
+  gap:           10px;
+}
+.sp-root .sp-orbv-row {
+  display:     flex;
+  align-items: stretch;
+  gap:         8px;
+}
+.sp-root .sp-orbv-cell {
+  flex:            1 1 0;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             8px;
+  padding:         14px 6px;
+  border-radius:   12px;
+  background:      hsl(230 30% 12% / .35);
+  border:          1px solid hsl(0 0% 100% / .05);
+  min-width:       0;
+}
+.sp-root .sp-orbv-rowhead,
+.sp-root .sp-orbv-corner {
+  flex:        0 0 58px;
+  font-family: var(--f-mono, monospace);
+  font-weight: 700;
+  font-size:   .9rem;
+  background:  transparent;
+  border:      none;
+}
+.sp-root .sp-orbv-colhead {
+  padding:        10px 6px;
+  font-family:    var(--f-mono, monospace);
+  font-weight:    700;
+  font-size:      .8rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  background:     hsl(230 40% 16% / .5);
+  color:          hsl(0 0% 100% / .85);
+}
+.sp-root .sp-orbv-corner { color: hsl(0 0% 100% / .4); }
+.sp-root .sp-orbv-caption {
+  font-family:    var(--f-mono, monospace);
+  font-size:      .58rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  opacity:        .5;
+}
+
+/* ---- shared variant scaffold (wrapper + ring + number) ---- */
+.sp-root .sp-orbv {
+  position:        relative;
+  display:         inline-flex;
+  flex:            0 0 auto;
+  align-items:     center;
+  justify-content: center;
+}
+.sp-root .sp-orbv-fill {
+  position:      absolute;
+  inset:         14%;
+  border-radius: 50%;
+  z-index:       1;
+  overflow:      hidden;
+}
+.sp-root .sp-orbv-ring {
+  position:  absolute;
+  inset:     0;
+  z-index:   2;
+  transform: translateZ(0);
+}
+.sp-root .sp-orbv-num {
+  position:        relative;
+  z-index:         3;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  font-family:     var(--f-mono, monospace);
+  font-weight:     700;
+  color:           hsl(0 0% 100% / .96);
+  text-shadow:     0 1px 4px hsl(248 80% 2% / .8);
+  line-height:     .98;
+}
+.sp-root .sp-orbv-num i {
+  font-style: normal;
+  font-size:  .58em;
+  opacity:    .72;
+}
+.sp-root .sp-orbv-num b {
+  font-style:     normal;
+  font-weight:    700;
+  font-size:      .46em;
+  letter-spacing: .06em;
+  opacity:        .86;
+  margin-top:     1px;
+}
+
+/* ---- V1 Flat: nothing extra; solid disc drawn via inline background ---- */
+.sp-root .sp-orbv-flat { /* flat, no depth */ }
+
+/* ---- V2 Matte: small soft top highlight over the gentle vertical shade ---- */
+.sp-root .sp-orbv-matte-hi {
+  position:      absolute;
+  top:           12%;
+  left:          24%;
+  width:         52%;
+  height:        30%;
+  border-radius: 50%;
+  background:    radial-gradient(closest-side, hsl(0 0% 100% / .28), hsl(0 0% 100% / 0) 78%);
+  filter:        blur(1.5px);
+}
+
+/* ---- V3 Glossy: strong specular + a lower gloss band; translucent fill ---- */
+.sp-root .sp-orbv-glossy { backdrop-filter: blur(1px); }
+.sp-root .sp-orbv-gloss-spec {
+  position:      absolute;
+  top:           8%;
+  left:          16%;
+  width:         46%;
+  height:        34%;
+  border-radius: 50%;
+  background:    radial-gradient(closest-side, hsl(0 0% 100% / .92), hsl(0 0% 100% / 0) 70%);
+  filter:        blur(.4px);
+}
+.sp-root .sp-orbv-gloss-band {
+  position:      absolute;
+  left:          14%;
+  right:         14%;
+  bottom:        14%;
+  height:        26%;
+  border-radius: 50%;
+  background:    radial-gradient(closest-side, hsl(0 0% 100% / .32), hsl(0 0% 100% / 0) 80%);
+  filter:        blur(1px);
+}
+
+/* ---- V4 Ring-forward: near-hollow fill; the fat ring carries the design ---- */
+.sp-root .sp-orbv-hollow { /* faint tint only, set inline */ }
+
+/* ---- responsive: let columns wrap tighter on narrow screens ---- */
+@media (max-width: 600px) {
+  .sp-root .sp-orbv-cell     { padding: 10px 2px; }
+  .sp-root .sp-orbv-caption  { display: none; }
+  .sp-root .sp-orbv-rowhead,
+  .sp-root .sp-orbv-corner   { flex-basis: 34px; font-size: .72rem; }
+}
