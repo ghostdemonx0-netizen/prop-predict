@@ -209,10 +209,10 @@
   z-index:       0;
 }
 
-/* Coloured glow halo — extends beyond sphere boundary */
+/* Coloured glow halo — extends beyond sphere boundary (reduced from -12% to -7% to tighten bloom) */
 .sp-root .orbHalo {
   position:      absolute;
-  inset:        -12%;
+  inset:        -7%;
   border-radius: 50%;
   z-index:       0;
 }
@@ -933,13 +933,38 @@
   letter-spacing: .14em;
 }
 
-/* ── Weighting segmented wrap ────────────────────────────── */
+/* ── Weighting segmented wrap (desktop in-bar) ───────────── */
 
 .sp-root .sp-wseg-wrap {
   display:        flex;
   flex-direction: column;
   align-items:    flex-end;
   gap:            4px;
+}
+
+/* Eyebrow inside wseg-wrap — slightly bolder than default eyebrow */
+.sp-root .sp-wseg-label {
+  font-weight:    600;
+  letter-spacing: .18em;
+}
+
+/* ── Weighting mobile row (≤880px) — full-width row below bar ── */
+
+.sp-root .sp-wseg-mobile-row {
+  display:                 none;
+  background:              var(--glass-2);
+  border-bottom:           1px solid var(--line);
+  backdrop-filter:         blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+}
+
+.sp-root .sp-wseg-mobile-inner {
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+  padding:     10px 0 12px;
+  max-width:   1180px;
+  margin:      0 auto;
 }
 
 /* ── Eyebrow label ───────────────────────────────────────── */
@@ -1096,6 +1121,13 @@
   color:      var(--ink);
 }
 
+/* Compact variant for placement inside the command bar */
+.sp-root .sp-datepick--cmd {
+  padding:       .32rem .62rem;
+  border-radius: 12px;
+  font-size:     .68rem;
+}
+
 /* ── KPI tiles grid ──────────────────────────────────────── */
 
 .sp-root .sp-tiles {
@@ -1138,8 +1170,10 @@
 /* ── Responsive ──────────────────────────────────────────── */
 
 @media (max-width: 880px) {
-  .sp-root .sp-wseg-wrap { display: none; }
-  .sp-root .sp-tiles     { grid-template-columns: repeat(2, 1fr); }
+  /* Hide weighting in the bar; show the full-width row below instead */
+  .sp-root .sp-wseg-wrap        { display: none; }
+  .sp-root .sp-wseg-mobile-row  { display: block; }
+  .sp-root .sp-tiles            { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 600px) {
@@ -1154,4 +1188,926 @@
   .sp-root .sp-dot-live    { animation: none !important; }
   .sp-root .sp-dock-glow   { transition: none !important; }
   .sp-root .sp-iristext    { animation: none !important; }
+}
+
+/* =========================================================
+   12. Board views — board/BoardView.tsx  (task 1.1)
+       Cards grid, tilt pcard, table.sp-board, matchups split.
+       Ported from mock7.html .grid/.pcard/.topr/.pmeta/.conds
+       + table.board, reskinning PropBoard.tsx's four views.
+   ========================================================= */
+
+/* ---- cards grid ---- */
+.sp-root .sp-board-grid {
+  display:               grid;
+  grid-template-columns: repeat(auto-fill, minmax(296px, 1fr));
+  gap:                   16px;
+  margin-top:            20px;
+}
+
+/* ---- clickable grid cell hosting the tilt card ---- */
+.sp-root .sp-pcard-click {
+  border-radius: var(--rad);
+  cursor:        pointer;
+  outline:       none;
+}
+.sp-root .sp-pcard-click:focus-visible {
+  box-shadow: 0 0 0 2px var(--iris-cyan);
+}
+
+/* ---- pcard body ---- */
+.sp-root .sp-pcard {
+  padding:  18px;
+  overflow: hidden;
+}
+.sp-root .sp-topr {
+  display:         flex;
+  align-items:     flex-start;
+  justify-content: space-between;
+  gap:             14px;
+}
+.sp-root .sp-topr-l { min-width: 0; }
+.sp-root .sp-pname {
+  font-family:    var(--f-disp);
+  font-weight:    700;
+  font-size:      1.12rem;
+  letter-spacing: -.02em;
+  line-height:    1.04;
+  transition:     color .2s;
+}
+.sp-root .sp-pcard-click:hover .sp-pname { color: var(--iris-mint); }
+.sp-root .sp-psub {
+  font-family:    var(--f-mono);
+  font-size:      .62rem;
+  letter-spacing: .06em;
+  color:          var(--ink-faint);
+  margin-top:     6px;
+  text-transform: uppercase;
+}
+.sp-root .sp-orb-live {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            6px;
+  flex:           0 0 auto;
+}
+
+.sp-root .sp-pmeta {
+  margin-top:     14px;
+  display:        flex;
+  flex-direction: column;
+  gap:            9px;
+}
+.sp-root .sp-prow {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  flex-wrap:   wrap;
+  font-size:   .78rem;
+  color:       var(--ink-dim);
+}
+.sp-root .sp-matchup {
+  font-family: var(--f-mono);
+  font-size:   .72rem;
+  color:       var(--ink);
+}
+.sp-root .sp-vs {
+  display:     inline-flex;
+  align-items: center;
+  gap:         6px;
+}
+.sp-root .sp-vs-lit { color: var(--ink); }
+.sp-root .sp-clock {
+  display:     inline-flex;
+  align-items: center;
+  gap:         5px;
+  opacity:     .75;
+}
+.sp-root .sp-conds {
+  display:      flex;
+  gap:          8px;
+  flex-wrap:    wrap;
+  padding-top:  11px;
+  margin-top:   3px;
+  border-top:   1px solid var(--line);
+}
+
+/* ---- table ---- */
+.sp-root .sp-board-tablewrap {
+  overflow-x: auto;
+  padding:    8px 12px 4px;
+  margin-top: 20px;
+}
+.sp-root table.sp-board {
+  width:           100%;
+  border-collapse: collapse;
+  font-size:       .86rem;
+  min-width:       520px;
+}
+.sp-root table.sp-board th {
+  font-family:    var(--f-mono);
+  font-size:      .56rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color:          var(--ink-faint);
+  text-align:     left;
+  padding:        10px;
+  border-bottom:  1px solid var(--line-2);
+  font-weight:    500;
+}
+.sp-root table.sp-board td {
+  padding:       11px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.sp-root table.sp-board tr { cursor: pointer; transition: background .18s; }
+.sp-root table.sp-board tbody tr:hover td      { background: hsl(150 60% 50% / .05); }
+.sp-root table.sp-board tbody tr:last-child td { border-bottom: 0; }
+.sp-root .sp-tp {
+  font-family: var(--f-disp);
+  font-weight: 700;
+  white-space: nowrap;
+  transition:  color .18s;
+}
+.sp-root table.sp-board tbody tr:hover .sp-tp { color: var(--iris-mint); }
+.sp-root .sp-prob-cell {
+  display:         flex;
+  justify-content: flex-end;
+  align-items:     center;
+  gap:             8px;
+}
+
+/* ---- matchups ---- */
+.sp-root .sp-mgroup { margin-bottom: 1.1rem; }
+.sp-root .sp-mhead {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             10px;
+  font-family:     var(--f-disp);
+  font-weight:     700;
+  font-size:       1rem;
+  letter-spacing:  -.01em;
+}
+.sp-root .sp-mtime {
+  font-family: var(--f-mono);
+  font-size:   .72rem;
+  color:       var(--ink-faint);
+  font-weight: 400;
+  display:     inline-flex;
+  align-items: center;
+  gap:         5px;
+}
+.sp-root details.sp-mdetails { margin-bottom: .55rem; }
+.sp-root details.sp-mdetails > summary {
+  list-style: none;
+  cursor:     pointer;
+  display:    flex;
+  align-items: center;
+  gap:        10px;
+  flex-wrap:  wrap;
+  padding:    4px 0;
+}
+.sp-root details.sp-mdetails > summary::-webkit-details-marker { display: none; }
+.sp-root details.sp-mdetails > summary .sp-mhead { flex: 1 1 auto; }
+.sp-root .sp-mcount {
+  color:       var(--ink-dim);
+  font-weight: 400;
+  font-size:   .78rem;
+}
+
+/* one player line */
+.sp-root .sp-mrow {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     center;
+  gap:             10px;
+  padding:         .55rem .25rem;
+  border-bottom:   1px solid var(--line);
+  cursor:          pointer;
+  transition:      background .18s;
+  outline:         none;
+}
+.sp-root .sp-mrow:hover { background: hsl(150 60% 50% / .05); }
+.sp-root .sp-mrow:focus-visible { box-shadow: inset 0 0 0 2px var(--iris-cyan); }
+.sp-root .sp-mrow-name {
+  display:     flex;
+  align-items: center;
+  gap:         .4rem;
+  flex-wrap:   wrap;
+  font-weight: 600;
+  min-width:   0;
+}
+.sp-root .sp-mrow-nm { transition: color .18s; }
+.sp-root .sp-mrow:hover .sp-mrow-nm { color: var(--iris-mint); }
+.sp-root .sp-mrow-right {
+  display:     flex;
+  align-items: center;
+  gap:         .5rem;
+  flex:        0 0 auto;
+}
+
+/* away | home split */
+.sp-root .sp-msplit {
+  display:               grid;
+  grid-template-columns: 1fr 1fr;
+}
+.sp-root .sp-mside--away { border-right: 1px solid var(--line-2); padding-right: .8rem; }
+.sp-root .sp-mside--home { padding-left: .8rem; }
+.sp-root .sp-mside-hdr {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     baseline;
+  gap:             .5rem;
+  margin:          .5rem 0 .2rem;
+  font-family:     var(--f-mono);
+  font-size:       .62rem;
+  letter-spacing:  .06em;
+  text-transform:  uppercase;
+  color:           var(--ink-faint);
+  white-space:     nowrap;
+}
+.sp-root .sp-mside-opp {
+  letter-spacing: normal;
+  text-transform: none;
+  font-size:      .82rem;
+  color:          var(--ink-dim);
+}
+.sp-root .sp-mside-opp b {
+  color:       var(--ink);
+  font-weight: 600;
+  text-shadow: 0 0 8px hsl(150 74% 52% / .45);
+}
+
+@media (max-width: 600px) {
+  .sp-root .sp-board-grid { grid-template-columns: 1fr; }
+  .sp-root .sp-msplit     { grid-template-columns: 1fr; }
+  .sp-root .sp-mside--away { border-right: 0; padding-right: 0; }
+  .sp-root .sp-mside--home { padding-left: 0; }
+}
+
+/* =========================================================
+   13. Game Hub — sp-hubcard / sp-bhead / sp-brow  (task 1.2)
+       Expandable game cards + the sortable batter grid.
+       Transcribed from mock7.html's .hubcard / .bhead / .brow.
+   ========================================================= */
+
+/* intro row under the eyebrow */
+.sp-root .sp-hub-intro {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     center;
+  gap:             1rem;
+  margin-bottom:   0.8rem;
+  flex-wrap:       wrap;
+}
+.sp-root .sp-hub-intro p {
+  margin:      0;
+  font-size:   0.8rem;
+  color:       var(--ink-dim);
+}
+.sp-root .sp-hub-intro span {
+  margin:      0;
+  font-family: var(--f-mono);
+  font-size:   0.62rem;
+  color:       var(--ink-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sp-root .sp-hub-cards {
+  display: grid;
+  gap:     10px;
+}
+
+/* the card shell (GlassCard .sp-float gets these extra rules) */
+.sp-root .sp-hubcard {
+  overflow:          hidden;
+  padding:           0;
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+
+.sp-root .sp-hub-summary {
+  list-style: none;
+  cursor:     pointer;
+  padding:    18px;
+}
+.sp-root .sp-hub-summary::-webkit-details-marker { display: none; }
+
+.sp-root .sp-hubtop {
+  display:         flex;
+  align-items:     flex-start;
+  justify-content: space-between;
+  gap:             14px;
+}
+.sp-root .sp-gtitle {
+  font-family:    var(--f-disp);
+  font-weight:    700;
+  font-size:      1.16rem;
+  letter-spacing: -0.02em;
+}
+.sp-root .sp-gtime {
+  font-family: var(--f-mono);
+  font-size:   0.62rem;
+  color:       var(--ink-faint);
+  display:     inline-flex;
+  align-items: center;
+  gap:         5px;
+  margin-top:  5px;
+}
+
+.sp-root .sp-hubchips {
+  display:     flex;
+  flex-wrap:   wrap;
+  gap:         8px;
+  margin-top:  13px;
+}
+
+.sp-root .sp-tap {
+  font-family:    var(--f-mono);
+  font-size:      0.6rem;
+  color:          var(--ink-faint);
+  letter-spacing: 0.06em;
+  margin-top:     13px;
+  display:        inline-flex;
+  align-items:    center;
+  gap:            6px;
+}
+.sp-root .sp-tap-chev {
+  color:      var(--iris-cyan);
+  display:    inline-flex;
+  transition: transform 0.3s var(--spring, ease);
+}
+.sp-root details[open] .sp-tap-chev { transform: rotate(180deg); }
+
+/* expanded body */
+.sp-root .sp-bd { padding: 0 16px 18px; }
+.sp-root .sp-bd-eye {
+  font-family:    var(--f-mono);
+  font-size:      0.56rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color:          var(--ink-faint);
+  margin:         16px 0 8px;
+}
+
+/* starting pitcher rows */
+.sp-root .sp-pitrow {
+  display:       flex;
+  align-items:   center;
+  gap:           10px;
+  padding:       11px 6px;
+  border-bottom: 1px solid var(--line);
+  cursor:        pointer;
+  transition:    background 0.18s;
+}
+.sp-root .sp-pitrow:hover { background: hsl(150 60% 50% / 0.05); }
+.sp-root .sp-pitrow:focus-visible { box-shadow: inset 0 0 0 2px var(--iris-cyan); }
+.sp-root .sp-pit-nm { font-weight: 600; transition: color 0.18s; }
+.sp-root .sp-pitrow:hover .sp-pit-nm { color: var(--iris-mint); }
+.sp-root .sp-pit-line {
+  font-family: var(--f-mono);
+  font-size:   0.7rem;
+  color:       var(--ink-dim);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.sp-root .sp-pit-right {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  flex-shrink: 0;
+}
+
+/* team header inside the breakdown */
+.sp-root .sp-teamhdr {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             8px;
+  font-family:     var(--f-mono);
+  font-size:       0.62rem;
+  letter-spacing:  0.06em;
+  color:           var(--ink-faint);
+  margin:          14px 0 5px;
+  flex-wrap:       wrap;
+}
+.sp-root .sp-teamhdr-opp {
+  color:          var(--ink);
+  font-size:      0.78rem;
+  letter-spacing: normal;
+}
+.sp-root .sp-teamhdr-gn { color: var(--iris-cyan); }
+
+/* the scrollable batter grid */
+.sp-root .sp-bgridwrap {
+  overflow-x:     auto;
+  scrollbar-width: thin;
+}
+.sp-root .sp-bhead,
+.sp-root .sp-brow {
+  display:               grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(7, 48px);
+  gap:                   6px;
+  align-items:           center;
+  min-width:             480px;
+}
+.sp-root .sp-bhead {
+  padding:       0 4px 8px;
+  border-bottom: 1px solid var(--line-2);
+}
+.sp-root .sp-bh {
+  font-family:    var(--f-mono);
+  font-size:      0.54rem;
+  letter-spacing: 0.04em;
+  font-weight:    600;
+  color:          var(--ink-faint);
+  text-align:     center;
+  background:     none;
+  border:         0;
+  padding:        0;
+}
+.sp-root .sp-bh--batters { text-align: left; }
+.sp-root .sp-bh--sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
+.sp-root .sp-bh--sortable:hover { color: var(--ink); }
+.sp-root .sp-bh--on { color: var(--ink); }
+.sp-root .sp-bh-ar { color: var(--iris-mint); margin-left: 1px; }
+.sp-root .sp-bh-kc .k { color: hsl(8 90% 76%); }
+.sp-root .sp-bh-kc .c { color: hsl(150 70% 72%); }
+.sp-root .sp-bh-kc .n { color: hsl(224 40% 76%); }
+
+.sp-root .sp-bnote {
+  font-family: var(--f-mono);
+  font-size:   0.62rem;
+  color:       var(--ink-faint);
+  padding:     6px 4px 0;
+}
+
+.sp-root .sp-brow {
+  padding:       9px 4px;
+  border-bottom: 1px solid var(--line);
+  cursor:        pointer;
+  transition:    background 0.18s;
+}
+.sp-root .sp-brow:hover { background: hsl(150 60% 50% / 0.05); }
+.sp-root .sp-brow:focus-visible { box-shadow: inset 0 0 0 2px var(--iris-cyan); }
+.sp-root .sp-bn {
+  display:     flex;
+  align-items: center;
+  gap:         7px;
+  flex-wrap:   wrap;
+  min-width:   0;
+}
+.sp-root .sp-bn-nm { font-size: 0.86rem; transition: color 0.18s; }
+.sp-root .sp-brow:hover .sp-bn-nm { color: var(--iris-mint); }
+
+.sp-root .sp-cell { display: flex; justify-content: center; align-items: center; }
+.sp-root .sp-bcell { flex-direction: column; gap: 3px; }
+.sp-root .sp-bcell-live { height: 13px; display: flex; align-items: center; }
+
+/* empty / no-games states */
+.sp-root .sp-hub-empty {
+  font-family: var(--f-mono);
+  font-size:   0.72rem;
+  color:       var(--ink-dim);
+  margin:      0;
+  padding:     0 16px 16px;
+}
+.sp-root .sp-hub-nogames {
+  color:      var(--ink-dim);
+  text-align: center;
+  padding:    26px 20px;
+}
+
+@media (max-width: 600px) {
+  .sp-root .sp-bhead,
+  .sp-root .sp-brow {
+    grid-template-columns: minmax(0, 1.3fr) repeat(7, 42px);
+    gap:                   4px;
+    min-width:             430px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   14. Top Plays — sp-shead / sp-countbar / sp-lb accordions / sp-lrow  (task 1.3)
+   Transcribed from mock7.html: .shead, .countbar, details.lb, .lead, .lrow.
+   All selectors scoped to .sp-root.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Section heading (mock7 .shead) ────────────────────────────────────────── */
+.sp-root .sp-shead {
+  display:     flex;
+  align-items: center;
+  gap:         14px;
+  margin:      26px 0 4px;
+}
+.sp-root .sp-shead h2 {
+  font-family:    var(--f-disp);
+  font-weight:    700;
+  font-size:      1.3rem;
+  letter-spacing: -0.02em;
+  margin:         0;
+}
+.sp-root .sp-shead-rule {
+  flex:       1;
+  height:     1px;
+  background: linear-gradient(90deg, var(--line-3), transparent);
+}
+
+/* ── Show-count bar (mock7 .countbar) ──────────────────────────────────────── */
+.sp-root .sp-countbar {
+  display:         flex;
+  align-items:     center;
+  gap:             10px;
+  justify-content: center;
+  margin-top:      18px;
+}
+
+/* ── Accordion stack ───────────────────────────────────────────────────────── */
+.sp-root .sp-lb-stack {
+  margin-top:     18px;
+  display:        flex;
+  flex-direction: column;
+  gap:            14px;
+}
+
+/* ── Accordion (mock7 details.lb; the glass comes from .sp-float via GlassCard) */
+.sp-root .sp-lb { overflow: hidden; }
+.sp-root .sp-lb details > summary {
+  list-style:  none;
+  cursor:      pointer;
+  padding:     14px 16px;
+  display:     flex;
+  align-items: center;
+  gap:         11px;
+}
+.sp-root .sp-lb details > summary::-webkit-details-marker { display: none; }
+.sp-root .sp-lb-ttl {
+  font-family: var(--f-disp);
+  font-weight: 700;
+  font-size:   0.96rem;
+}
+.sp-root .sp-lb-sub {
+  font-family: var(--f-mono);
+  font-size:   0.64rem;
+  color:       var(--ink-faint);
+}
+.sp-root .sp-lb-right {
+  margin-left: auto;
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+}
+.sp-root .sp-lb-chev {
+  color:      var(--ink-dim);
+  display:    flex;
+  flex-shrink: 0;
+  transition: transform 0.3s var(--spring), color 0.3s var(--ease);
+}
+.sp-root .sp-lb details[open] > summary .sp-lb-chev {
+  transform: rotate(180deg);
+  color:     var(--iris-mint);
+}
+.sp-root .sp-lb details[open] > summary { border-bottom: 1px solid var(--line); }
+
+/* inline threshold pillbar — never let a pill-tap toggle the accordion */
+.sp-root .sp-lb-thr { display: inline-flex; }
+
+/* empty per-section state */
+.sp-root .sp-lb-empty {
+  font-family: var(--f-mono);
+  font-size:   0.72rem;
+  color:       var(--ink-dim);
+  margin:      0;
+  padding:     12px 16px 16px;
+}
+
+/* ── Leaderboard rows (mock7 .lead / .lrow) ────────────────────────────────── */
+.sp-root .sp-lead { overflow: hidden; }
+.sp-root .sp-lrow {
+  display:       flex;
+  align-items:   center;
+  gap:           14px;
+  padding:       13px 16px;
+  border-bottom: 1px solid var(--line);
+  cursor:        pointer;
+  transition:    background 0.18s;
+}
+.sp-root .sp-lrow:last-child { border-bottom: 0; }
+.sp-root .sp-lrow:hover { background: hsl(150 60% 50% / 0.05); }
+.sp-root .sp-lrow:focus-visible {
+  outline:    none;
+  box-shadow: inset 0 0 0 2px var(--iris-cyan);
+}
+
+/* big display rank; #1 gets the iris gradient */
+.sp-root .sp-lrank {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size:   1rem;
+  color:       var(--ink-faint);
+  width:       26px;
+  flex:        0 0 auto;
+  text-align:  center;
+}
+.sp-root .sp-lrow:first-child .sp-lrank {
+  color:                  transparent;
+  background:             linear-gradient(120deg, var(--iris-mint), var(--iris-cyan));
+  -webkit-background-clip: text;
+  background-clip:        text;
+}
+
+.sp-root .sp-linfo { flex: 1; min-width: 0; }
+.sp-root .sp-lname {
+  font-family: var(--f-disp);
+  font-weight: 700;
+  font-size:   0.94rem;
+  display:     flex;
+  align-items: center;
+  gap:         7px;
+  flex-wrap:   wrap;
+  transition:  color 0.18s;
+}
+.sp-root .sp-lrow:hover .sp-lname { color: var(--iris-mint); }
+.sp-root .sp-lsub {
+  font-family: var(--f-mono);
+  font-size:   0.66rem;
+  color:       var(--ink-faint);
+  margin-top:  3px;
+  display:     flex;
+  gap:         10px;
+  flex-wrap:   wrap;
+  align-items: center;
+}
+.sp-root .sp-lsub-line {
+  display:     inline-flex;
+  align-items: center;
+  gap:         8px;
+  flex-wrap:   wrap;
+}
+.sp-root .sp-lsub-vs {
+  display:     inline-flex;
+  align-items: center;
+  gap:         5px;
+}
+.sp-root .sp-lsub-mu { opacity: 0.85; }
+.sp-root .sp-lsub-time {
+  display:     inline-flex;
+  align-items: center;
+  gap:         4px;
+  opacity:     0.8;
+}
+
+.sp-root .sp-lrow-right {
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   15. Parks ledger — sp-parks-ledger / sp-parks-row / sp-parks-rk / sp-parks-stats  (task 1.4)
+   Compact ranked environment ledger (best-env-first). Deliberately distinct
+   from the hub's expandable cards: a flat glass panel, numbered rows, no expand.
+   Ported from mock7.html's .ledger / .lrow2 / .pwstats / .rk CSS.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Explainer row under the eyebrow ──────────────────────────────────────── */
+.sp-root .sp-parks-intro {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     baseline;
+  gap:             1rem;
+  margin-bottom:   0.8rem;
+  flex-wrap:       wrap;
+}
+
+.sp-root .sp-parks-note {
+  font-size:  0.82rem;
+  color:      var(--ink-dim);
+  margin:     0;
+  max-width:  62ch;
+}
+
+.sp-root .sp-parks-hint {
+  font-family: var(--f-mono);
+  font-size:   0.62rem;
+  color:       var(--ink-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Glass ledger panel (GlassCard .sp-float + this padding) ──────────────── */
+.sp-root .sp-parks-ledger {
+  padding:    6px 18px;
+  margin-top: 16px;
+}
+
+/* ── Individual ledger row ─────────────────────────────────────────────────── */
+.sp-root .sp-parks-row {
+  display:       flex;
+  align-items:   center;
+  gap:           14px;
+  padding:       13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sp-root .sp-parks-row:last-child {
+  border-bottom: 0;
+}
+
+/* ── Rank numeral ──────────────────────────────────────────────────────────── */
+.sp-root .sp-parks-rk {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size:   1rem;
+  color:       var(--ink-faint);
+  width:       26px;
+  flex:        0 0 auto;
+  text-align:  center;
+}
+
+/* #1 gets the iris gradient (mint → cyan) */
+.sp-root .sp-parks-row:first-child .sp-parks-rk {
+  color:                   transparent;
+  background:              linear-gradient(120deg, var(--iris-mint), var(--iris-cyan));
+  -webkit-background-clip: text;
+  background-clip:         text;
+}
+
+/* ── Matchup + park name block ─────────────────────────────────────────────── */
+.sp-root .sp-parks-info {
+  flex:      1;
+  min-width: 0;
+}
+
+.sp-root .sp-parks-name {
+  font-family:    var(--f-disp);
+  font-weight:    700;
+  font-size:      0.96rem;
+  letter-spacing: -0.01em;
+  line-height:    1.1;
+}
+
+.sp-root .sp-parks-sub {
+  font-family: var(--f-mono);
+  font-size:   0.66rem;
+  color:       var(--ink-faint);
+  margin-top:  3px;
+}
+
+/* ── Condition pills cluster ───────────────────────────────────────────────── */
+.sp-root .sp-parks-stats {
+  display:         flex;
+  gap:             8px;
+  flex-wrap:       wrap;
+  justify-content: flex-end;
+  align-items:     center;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .sp-root .sp-parks-intro  { flex-direction: column; gap: 0.4rem; }
+  .sp-root .sp-parks-stats  { justify-content: flex-start; }
+  .sp-root .sp-parks-row    { flex-wrap: wrap; }
+}
+
+/* =========================================================
+   Player / Pitcher detail modal  (task 1.5)
+   Transcribed from mock7.html .overlay / .modal / .mtop /
+   .mpanel / .mhead / .stat + factor-driver + matchup rules.
+   ========================================================= */
+
+.sp-root .sp-overlay {
+  position: fixed; inset: 0; z-index: 120;
+  background: hsl(245 50% 2% / .68);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 16px; overflow: auto;
+  animation: fade .3s ease;
+}
+.sp-root .sp-modal {
+  max-width: 680px; width: 100%; overflow: hidden;
+  animation: popin .5s var(--spring);
+  box-shadow: 0 50px 110px -30px hsl(245 80% 1% / .9), inset 0 1px 0 var(--hi);
+}
+
+/* ---- header ---- */
+.sp-root .sp-mtop {
+  position: relative; padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, hsl(264 60% 30% / .22), transparent);
+}
+.sp-root .sp-mback {
+  font-family: var(--f-mono); font-size: .66rem; color: var(--ink-dim);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  background: 0; border: 0; padding: 0;
+}
+.sp-root .sp-mback:hover { color: var(--iris-mint); }
+.sp-root .sp-mclose {
+  position: absolute; top: 18px; right: 20px;
+  background: 0; border: 1px solid var(--line-3); color: var(--ink-dim);
+  width: 30px; height: 30px; border-radius: 9px; cursor: pointer;
+  font-size: 1.05rem; line-height: 1; transition: .18s;
+}
+.sp-root .sp-mclose:hover { color: var(--ink); border-color: var(--iris-mint); }
+.sp-root .sp-meyebrow {
+  display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  margin-top: 9px;
+}
+.sp-root .sp-mname {
+  font-family: var(--f-disp); font-weight: 800; font-size: 1.8rem;
+  letter-spacing: -.03em; margin-top: 9px;
+}
+
+/* ---- body + panels ---- */
+.sp-root .sp-mbody {
+  padding: 18px 22px 26px; display: flex; flex-direction: column; gap: 15px;
+}
+.sp-root .sp-mpanel {
+  padding: 17px; border-radius: 15px;
+  background: hsl(242 44% 7% / .5);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 var(--hi);
+}
+
+/* ---- headline stats + orb ---- */
+.sp-root .sp-mhead-row { display: flex; align-items: center; gap: 12px; }
+.sp-root .sp-mstats { display: flex; gap: 26px; flex-wrap: wrap; flex: 1; }
+.sp-root .sp-mstat {
+  font-family: var(--f-mono); font-weight: 700; font-size: 2.2rem;
+  letter-spacing: -.03em; line-height: 1;
+}
+.sp-root .sp-mstat--glow {
+  color: transparent;
+  background: linear-gradient(120deg, var(--iris-mint), var(--iris-cyan));
+  -webkit-background-clip: text; background-clip: text;
+}
+.sp-root .sp-mstat--dim { color: var(--ink-faint); opacity: .6; }
+.sp-root .sp-mstat-lab {
+  font-family: var(--f-mono); font-size: .56rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-faint); margin-top: 7px;
+}
+
+/* ---- conditions strip ---- */
+.sp-root .sp-mconds {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+}
+
+/* ---- matchup legend + rows ---- */
+.sp-root .sp-mlegend {
+  font-family: var(--f-mono); font-size: .58rem; color: var(--ink-faint);
+  display: flex; gap: 10px; flex-wrap: wrap; margin: 2px 0 10px;
+}
+.sp-root .sp-mlegend .sp-lk { color: hsl(8 90% 76%); }
+.sp-root .sp-mlegend .sp-lc { color: hsl(150 70% 72%); }
+
+.sp-root .sp-mlineup { display: flex; flex-direction: column; }
+.sp-root .sp-mline {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+}
+.sp-root .sp-mline--num {
+  padding: 9px 0; border-bottom: 1px solid var(--line);
+}
+.sp-root .sp-mline--num:last-child { border-bottom: 0; }
+.sp-root .sp-ord {
+  font-family: var(--f-mono); font-size: .7rem; color: var(--ink-faint);
+  width: 18px; text-align: center; flex-shrink: 0;
+}
+.sp-root .sp-mline-name {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0;
+}
+.sp-root .sp-linklike {
+  background: 0; border: 0; padding: 0; cursor: pointer;
+  font: inherit; color: var(--ink); font-size: .9rem;
+  text-align: left;
+}
+.sp-root .sp-linklike:hover { color: var(--iris-mint); }
+
+/* ---- pitcher projection-vs-line bar ---- */
+.sp-root .sp-proj-track {
+  position: relative; height: 13px; margin-top: 13px;
+  background: hsl(150 40% 40% / .08); border-radius: 999px;
+}
+.sp-root .sp-proj-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px;
+}
+.sp-root .sp-proj-mid {
+  position: absolute; top: -4px; bottom: -4px; width: 2px;
+  background: var(--ink); border-radius: 2px;
+}
+
+.sp-root .sp-live-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--iris-mint); margin-right: 6px;
+  box-shadow: 0 0 8px var(--iris-mint);
+}
+
+@media (max-width: 600px) {
+  .sp-root .sp-overlay { padding: 16px 8px; }
+  .sp-root .sp-mbody   { padding: 16px 14px 22px; }
+  .sp-root .sp-mpanel  { padding: 14px; }
+  .sp-root .sp-mname   { font-size: 1.5rem; }
+  .sp-root .sp-mstat   { font-size: 1.8rem; }
+  .sp-root .sp-mstats  { gap: 18px; }
 }

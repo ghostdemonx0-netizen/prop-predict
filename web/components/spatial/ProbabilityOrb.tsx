@@ -104,14 +104,18 @@ export function ProbabilityOrb({
         }}
       />
 
-      {/* 3. Sphere core + specular highlight */}
+      {/* 3. Sphere core + specular highlight
+            Gradient tightened (90%×90% vs original 120%×120%) so the light-to-dark
+            transition is crisper and the rim edge reads as a defined sphere boundary.
+            Rim inset (last box-shadow item) adds a subtle dark-edge definition. */}
       <span
         className="orbCore"
         style={{
-          background: `radial-gradient(120% 120% at 32% 26%, ${bright}, ${col} 44%, ${dark} 98%)`,
+          background: `radial-gradient(90% 90% at 34% 28%, ${bright}, ${col} 38%, ${dark} 90%)`,
           boxShadow: [
             `inset 0 ${sh1Y}px ${sh1B}px hsla(${H} 80% 10% / .55)`,
             `inset 0 -${sh2Y}px ${sh2B}px hsla(${H} 90% 72% / ${p.innerHiOpacity.toFixed(2)})`,
+            `inset 0 0 0 1px hsla(${H} ${S}% ${Math.max(p.darkL + 4, 10)}% / .35)`,
           ].join(", "),
         }}
       >

@@ -90,7 +90,7 @@ export function HandChip({
 export type FormKind = "hot" | "cold" | "steady";
 
 const FORM_DEFAULTS: Record<FormKind, string> = {
-  hot:    "↑ hot",
+  hot:    "▲ hot",   // same solid-triangle style as cold, mirrored up
   cold:   "▼ cold",
   steady: "— steady",
 };
