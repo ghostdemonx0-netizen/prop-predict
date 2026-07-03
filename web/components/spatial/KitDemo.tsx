@@ -21,8 +21,10 @@ import { FactorBar }        from "./FactorBar";
 import { GlassCard }        from "./GlassCard";
 import { LiveChip }         from "./LiveChipSpatial";
 import { BoardView, type BoardViewMode } from "./board/BoardView";
+import { TopPlays, type TopPlaysThresholds } from "./TopPlays";
 import type { NavSection }  from "./NavDock";
 import type { BoardRow }    from "../PropBoard";
+import type { Projections } from "../../lib/types";
 
 // ── Section heading ──────────────────────────────────────────────────────────
 
@@ -83,6 +85,62 @@ const BOARD_VIEWS: { value: BoardViewMode; label: string }[] = [
   { value: "matchups", label: "Matchups" },
 ];
 
+// ── Demo Projections (drives the TopPlays leaderboards) ───────────────────────
+const DEMO_PROJECTIONS: Projections = {
+  date: DEMO_DATES[0],
+  updated: DEMO_DATES[0],
+  hr: [
+    { player: "Aaron Judge", team: "NYY", park: "Yankee Stadium", matchup: "BOS @ NYY",
+      game_id: 1, game_time: "2026-07-02T19:05", player_id: 592450, bats: "R", bat_order: 3,
+      probability: 0.41, wind_out_mph: 8, weather_mult: 1.05, park_mult: 1.08, recent_form_mult: 1.1,
+      lineup_status: "confirmed",
+      vs: { name: "B. Bello", throws: "R", lean: "H", prob: 0.31, k_prob: 0.24, hit_prob: 0.31,
+        bvp: { pa: 9, ab: 8, hits: 2, hr: 1, k: 2, avg: ".250" } } },
+    { player: "Shohei Ohtani", team: "LAD", park: "Oracle Park", matchup: "LAD @ SF",
+      game_id: 2, game_time: "2026-07-02T21:45", player_id: 660271, bats: "L", bat_order: 3,
+      probability: 0.34, wind_out_mph: -6, weather_mult: 0.94, park_mult: 0.92, recent_form_mult: 1.05,
+      lineup_status: "confirmed",
+      vs: { name: "L. Webb", throws: "R", lean: "K", prob: 0.29, k_prob: 0.29, hit_prob: 0.22 } },
+    { player: "Rafael Devers", team: "BOS", park: "Yankee Stadium", matchup: "BOS @ NYY",
+      game_id: 1, game_time: "2026-07-02T19:05", player_id: 646240, bats: "L", bat_order: 3,
+      probability: 0.24, wind_out_mph: 8, weather_mult: 1.05, park_mult: 1.08, recent_form_mult: 0.98,
+      lineup_status: "projected",
+      vs: { name: "G. Cole", throws: "R", lean: "NEU", prob: 0.26, k_prob: 0.27, hit_prob: 0.26 } },
+  ],
+  strikeouts: [
+    { player: "Gerrit Cole", team: "NYY", matchup: "BOS @ NYY", game_id: 1, game_time: "2026-07-02T19:05",
+      player_id: 543037, throws: "R", pitcher_status: "confirmed", expected_ks: 6.8, line: 5.5, over_prob: 0.62 },
+    { player: "Logan Webb", team: "SF", matchup: "LAD @ SF", game_id: 2, game_time: "2026-07-02T21:45",
+      player_id: 657277, throws: "R", pitcher_status: "confirmed", expected_ks: 5.4, line: 5.5, over_prob: 0.48 },
+  ],
+  hits: [
+    { player: "Aaron Judge", team: "NYY", matchup: "BOS @ NYY", game_id: 1, game_time: "2026-07-02T19:05",
+      player_id: 592450, bats: "R", bat_order: 3, lineup_status: "confirmed", p_ge1: 0.72, p_ge2: 0.34, p_ge3: 0.08,
+      vs: { name: "B. Bello", throws: "R", lean: "H", prob: 0.31, k_prob: 0.24, hit_prob: 0.31 } },
+    { player: "Mookie Betts", team: "LAD", matchup: "LAD @ SF", game_id: 2, game_time: "2026-07-02T21:45",
+      player_id: 605141, bats: "R", bat_order: 1, lineup_status: "confirmed", p_ge1: 0.66, p_ge2: 0.28, p_ge3: 0.06,
+      vs: { name: "L. Webb", throws: "R", lean: "NEU", prob: 0.28, k_prob: 0.22, hit_prob: 0.28 } },
+  ],
+  total_bases: [
+    { player: "Aaron Judge", team: "NYY", matchup: "BOS @ NYY", game_id: 1, game_time: "2026-07-02T19:05",
+      player_id: 592450, bats: "R", bat_order: 3, lineup_status: "confirmed", p_ge2: 0.52, p_ge3: 0.31, p_ge4: 0.19 },
+  ],
+  runs: [
+    { player: "Aaron Judge", team: "NYY", matchup: "BOS @ NYY", game_id: 1, game_time: "2026-07-02T19:05",
+      player_id: 592450, bats: "R", bat_order: 3, lineup_status: "confirmed", p_ge1: 0.58, p_ge2: 0.19 },
+  ],
+  rbi: [
+    { player: "Aaron Judge", team: "NYY", matchup: "BOS @ NYY", game_id: 1, game_time: "2026-07-02T19:05",
+      player_id: 592450, bats: "R", bat_order: 3, lineup_status: "confirmed", p_ge1: 0.55, p_ge2: 0.21 },
+  ],
+  hrr: [
+    { player: "Aaron Judge", team: "NYY", matchup: "BOS @ NYY", game_id: 1, game_time: "2026-07-02T19:05",
+      player_id: 592450, bats: "R", bat_order: 3, lineup_status: "confirmed", p_ge2: 0.63, p_ge3: 0.38, p_ge4: 0.2 },
+  ],
+};
+
+const DEMO_THRESHOLDS: TopPlaysThresholds = { hits: 1, tb: 2, runs: 1, rbi: 1, hrr: 2 };
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 export function KitDemo() {
@@ -94,6 +152,7 @@ export function KitDemo() {
   const [segSm, setSegSm]     = useState("p");
   const [segScroll, setSegScroll] = useState("hr");
   const [boardView, setBoardView] = useState<BoardViewMode>("cards");
+  const [topThr, setTopThr]   = useState<TopPlaysThresholds>(DEMO_THRESHOLDS);
 
   return (
     <>
@@ -256,6 +315,16 @@ export function KitDemo() {
           view={boardView}
           prop="hr"
           onOpenPlayer={(id) => console.log("open player", id)}
+        />
+
+        {/* ── Top Plays (task 1.3) ───────────────────────────────── */}
+        <QaHeading>TopPlays — 9 leaderboards · show-count · inline thresholds</QaHeading>
+        <TopPlays
+          projections={DEMO_PROJECTIONS}
+          source={source}
+          threshold={topThr}
+          onThreshold={(prop, n) => setTopThr((t) => ({ ...t, [prop]: n }))}
+          onOpenPlayer={(id, prop) => console.log("open player", id, prop)}
         />
 
       </main>

@@ -1687,3 +1687,180 @@
     min-width:             430px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   14. Top Plays — sp-shead / sp-countbar / sp-lb accordions / sp-lrow  (task 1.3)
+   Transcribed from mock7.html: .shead, .countbar, details.lb, .lead, .lrow.
+   All selectors scoped to .sp-root.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Section heading (mock7 .shead) ────────────────────────────────────────── */
+.sp-root .sp-shead {
+  display:     flex;
+  align-items: center;
+  gap:         14px;
+  margin:      26px 0 4px;
+}
+.sp-root .sp-shead h2 {
+  font-family:    var(--f-disp);
+  font-weight:    700;
+  font-size:      1.3rem;
+  letter-spacing: -0.02em;
+  margin:         0;
+}
+.sp-root .sp-shead-rule {
+  flex:       1;
+  height:     1px;
+  background: linear-gradient(90deg, var(--line-3), transparent);
+}
+
+/* ── Show-count bar (mock7 .countbar) ──────────────────────────────────────── */
+.sp-root .sp-countbar {
+  display:         flex;
+  align-items:     center;
+  gap:             10px;
+  justify-content: center;
+  margin-top:      18px;
+}
+
+/* ── Accordion stack ───────────────────────────────────────────────────────── */
+.sp-root .sp-lb-stack {
+  margin-top:     18px;
+  display:        flex;
+  flex-direction: column;
+  gap:            14px;
+}
+
+/* ── Accordion (mock7 details.lb; the glass comes from .sp-float via GlassCard) */
+.sp-root .sp-lb { overflow: hidden; }
+.sp-root .sp-lb details > summary {
+  list-style:  none;
+  cursor:      pointer;
+  padding:     14px 16px;
+  display:     flex;
+  align-items: center;
+  gap:         11px;
+}
+.sp-root .sp-lb details > summary::-webkit-details-marker { display: none; }
+.sp-root .sp-lb-ttl {
+  font-family: var(--f-disp);
+  font-weight: 700;
+  font-size:   0.96rem;
+}
+.sp-root .sp-lb-sub {
+  font-family: var(--f-mono);
+  font-size:   0.64rem;
+  color:       var(--ink-faint);
+}
+.sp-root .sp-lb-right {
+  margin-left: auto;
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+}
+.sp-root .sp-lb-chev {
+  color:      var(--ink-dim);
+  display:    flex;
+  flex-shrink: 0;
+  transition: transform 0.3s var(--spring), color 0.3s var(--ease);
+}
+.sp-root .sp-lb details[open] > summary .sp-lb-chev {
+  transform: rotate(180deg);
+  color:     var(--iris-mint);
+}
+.sp-root .sp-lb details[open] > summary { border-bottom: 1px solid var(--line); }
+
+/* inline threshold pillbar — never let a pill-tap toggle the accordion */
+.sp-root .sp-lb-thr { display: inline-flex; }
+
+/* empty per-section state */
+.sp-root .sp-lb-empty {
+  font-family: var(--f-mono);
+  font-size:   0.72rem;
+  color:       var(--ink-dim);
+  margin:      0;
+  padding:     12px 16px 16px;
+}
+
+/* ── Leaderboard rows (mock7 .lead / .lrow) ────────────────────────────────── */
+.sp-root .sp-lead { overflow: hidden; }
+.sp-root .sp-lrow {
+  display:       flex;
+  align-items:   center;
+  gap:           14px;
+  padding:       13px 16px;
+  border-bottom: 1px solid var(--line);
+  cursor:        pointer;
+  transition:    background 0.18s;
+}
+.sp-root .sp-lrow:last-child { border-bottom: 0; }
+.sp-root .sp-lrow:hover { background: hsl(150 60% 50% / 0.05); }
+.sp-root .sp-lrow:focus-visible {
+  outline:    none;
+  box-shadow: inset 0 0 0 2px var(--iris-cyan);
+}
+
+/* big display rank; #1 gets the iris gradient */
+.sp-root .sp-lrank {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size:   1rem;
+  color:       var(--ink-faint);
+  width:       26px;
+  flex:        0 0 auto;
+  text-align:  center;
+}
+.sp-root .sp-lrow:first-child .sp-lrank {
+  color:                  transparent;
+  background:             linear-gradient(120deg, var(--iris-mint), var(--iris-cyan));
+  -webkit-background-clip: text;
+  background-clip:        text;
+}
+
+.sp-root .sp-linfo { flex: 1; min-width: 0; }
+.sp-root .sp-lname {
+  font-family: var(--f-disp);
+  font-weight: 700;
+  font-size:   0.94rem;
+  display:     flex;
+  align-items: center;
+  gap:         7px;
+  flex-wrap:   wrap;
+  transition:  color 0.18s;
+}
+.sp-root .sp-lrow:hover .sp-lname { color: var(--iris-mint); }
+.sp-root .sp-lsub {
+  font-family: var(--f-mono);
+  font-size:   0.66rem;
+  color:       var(--ink-faint);
+  margin-top:  3px;
+  display:     flex;
+  gap:         10px;
+  flex-wrap:   wrap;
+  align-items: center;
+}
+.sp-root .sp-lsub-line {
+  display:     inline-flex;
+  align-items: center;
+  gap:         8px;
+  flex-wrap:   wrap;
+}
+.sp-root .sp-lsub-vs {
+  display:     inline-flex;
+  align-items: center;
+  gap:         5px;
+}
+.sp-root .sp-lsub-mu { opacity: 0.85; }
+.sp-root .sp-lsub-time {
+  display:     inline-flex;
+  align-items: center;
+  gap:         4px;
+  opacity:     0.8;
+}
+
+.sp-root .sp-lrow-right {
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+  flex-shrink: 0;
+}
