@@ -171,9 +171,17 @@ function PitcherRow({
         }
       }}
     >
-      <span className="sp-pit-nm">{r.player}</span>
-      {pHand && <HandChip hand={pHand} />}
-      {r.status && <TagChip status={tagStatus(r.status)} />}
+      <span className="sp-pit-main">
+        <span className="sp-pit-nmrow">
+          <span className="sp-pit-nm">{r.player}</span>
+          {pHand && <HandChip hand={pHand} />}
+        </span>
+        {r.status && (
+          <span className="sp-pit-sub">
+            <TagChip status={tagStatus(r.status)} />
+          </span>
+        )}
+      </span>
       <span className="sp-pit-line">
         line {r.line} · proj {r.projection} K
       </span>

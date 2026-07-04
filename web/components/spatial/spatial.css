@@ -1341,7 +1341,7 @@
   width:           100%;
   border-collapse: collapse;
   font-size:       .86rem;
-  min-width:       520px;
+  min-width:       360px;
 }
 .sp-root table.sp-board th {
   font-family:    var(--f-mono);
@@ -1368,11 +1368,19 @@
   transition:  color .18s;
 }
 .sp-root table.sp-board tbody tr:hover .sp-tp { color: var(--iris-mint); }
-/* Player cell: name on its own line, hand/status chips wrap cleanly beneath
-   it so narrow tables (Table + Split views) never overflow. */
+/* Player cell: name + hand chip inline on top, PROJ/CONF + form chips stacked on
+   their own line beneath — same two-line convention as the Cards view. Keeps the
+   narrow Table + Split tables from overflowing on mobile. */
 .sp-root table.sp-board td.sp-pl-cell {
   white-space: normal;
-  max-width:   220px;
+  max-width:   200px;
+}
+.sp-root .sp-pl-name {
+  display:     flex;
+  align-items: center;
+  gap:         7px;
+  flex-wrap:   wrap;
+  min-width:   0;
 }
 .sp-root .sp-pl-chips {
   display:   flex;
@@ -1380,11 +1388,48 @@
   gap:       5px;
   margin-top: 5px;
 }
+
+/* Merged Team + Matchup cell: one line following the @/vs rule —
+   "TEAM @/vs OPP · Pitcher [hand]". Wraps only if it truly must. */
+.sp-root table.sp-board td.sp-mu-cell { color: var(--ink-dim); }
+.sp-root .sp-mu-line {
+  display:     inline-flex;
+  align-items: center;
+  gap:         5px;
+  flex-wrap:   wrap;
+  font-size:   .82rem;
+}
+.sp-root .sp-mu-mu {
+  font-family: var(--f-mono);
+  color:       var(--ink);
+  white-space: nowrap;
+}
+.sp-root .sp-mu-sep { opacity: .4; }
+.sp-root .sp-mu-pit { color: var(--ink-dim); }
+
+/* Probability cell: sphere (with the live tracker pill stacked UNDER it, like the
+   Game Hub orbs) plus the tracked prop+threshold label to the RIGHT of the sphere. */
 .sp-root .sp-prob-cell {
   display:         flex;
   justify-content: flex-end;
   align-items:     center;
-  gap:             8px;
+  gap:             10px;
+}
+.sp-root .sp-orb-stack {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            4px;
+  flex:           0 0 auto;
+}
+.sp-root .sp-track-lbl {
+  font-family:    var(--f-mono);
+  font-size:      .54rem;
+  font-weight:    600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color:          var(--ink-faint);
+  white-space:    nowrap;
 }
 
 /* ---- matchups ---- */
@@ -1441,13 +1486,21 @@
 .sp-root .sp-mrow:hover { background: hsl(150 60% 50% / .05); }
 .sp-root .sp-mrow:focus-visible { box-shadow: inset 0 0 0 2px var(--iris-cyan); }
 .sp-root .sp-mrow-name {
+  display:        flex;
+  flex-direction: column;
+  align-items:    flex-start;
+  gap:            3px;
+  font-weight:    600;
+  min-width:      0;
+}
+.sp-root .sp-mrow-nmrow {
   display:     flex;
   align-items: center;
   gap:         .4rem;
   flex-wrap:   wrap;
-  font-weight: 600;
   min-width:   0;
 }
+.sp-root .sp-mrow-sub { display: flex; }
 .sp-root .sp-mrow-nm { transition: color .18s; }
 .sp-root .sp-mrow:hover .sp-mrow-nm { color: var(--iris-mint); }
 .sp-root .sp-mrow-right {
@@ -1614,6 +1667,20 @@
 }
 .sp-root .sp-pitrow:hover { background: hsl(150 60% 50% / 0.05); }
 .sp-root .sp-pitrow:focus-visible { box-shadow: inset 0 0 0 2px var(--iris-cyan); }
+.sp-root .sp-pit-main {
+  display:        flex;
+  flex-direction: column;
+  gap:            4px;
+  min-width:      0;
+}
+.sp-root .sp-pit-nmrow {
+  display:     flex;
+  align-items: center;
+  gap:         7px;
+  flex-wrap:   wrap;
+  min-width:   0;
+}
+.sp-root .sp-pit-sub { display: flex; gap: 5px; flex-wrap: wrap; }
 .sp-root .sp-pit-nm { font-weight: 600; transition: color 0.18s; }
 .sp-root .sp-pitrow:hover .sp-pit-nm { color: var(--iris-mint); }
 .sp-root .sp-pit-line {
@@ -1703,12 +1770,20 @@
 .sp-root .sp-brow:hover { background: hsl(150 60% 50% / 0.05); }
 .sp-root .sp-brow:focus-visible { box-shadow: inset 0 0 0 2px var(--iris-cyan); }
 .sp-root .sp-bn {
+  display:        flex;
+  flex-direction: column;
+  align-items:    flex-start;
+  gap:            4px;
+  min-width:      0;
+}
+.sp-root .sp-bn-nmrow {
   display:     flex;
   align-items: center;
   gap:         7px;
   flex-wrap:   wrap;
   min-width:   0;
 }
+.sp-root .sp-bn-chips { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .sp-root .sp-bn-nm { font-size: 0.86rem; transition: color 0.18s; }
 .sp-root .sp-brow:hover .sp-bn-nm { color: var(--iris-mint); }
 

@@ -222,10 +222,16 @@ function BatterRow({
       }}
     >
       <span className="sp-bn">
-        <span className="sp-bn-nm">{hrRow.player}</span>
-        {pHand && <HandChip hand={pHand} adv={adv} />}
-        {form && <FormChip kind={form} />}
-        {hrRow.status && <TagChip status={tagStatus(hrRow.status)} order={hrRow.bat_order} />}
+        <span className="sp-bn-nmrow">
+          <span className="sp-bn-nm">{hrRow.player}</span>
+          {pHand && <HandChip hand={pHand} adv={adv} />}
+        </span>
+        {(form || hrRow.status) && (
+          <span className="sp-bn-chips">
+            {form && <FormChip kind={form} />}
+            {hrRow.status && <TagChip status={tagStatus(hrRow.status)} order={hrRow.bat_order} />}
+          </span>
+        )}
       </span>
       <span className="sp-cell">{leanCell}</span>
       {propCell(hrRow, "hr", "hr")}

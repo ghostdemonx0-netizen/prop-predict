@@ -82,6 +82,21 @@ function nameMatchup(r: SpatialRow): string {
   return r.team === home ? `${r.team} vs ${away}` : `${r.team} @ ${home}`;
 }
 
+/**
+ * The prop + threshold this board is tracking, as a tidy uppercase label —
+ * "1+ HITS", "2+ BASES", "1+ RUNS", "1+ RBI", "2+ H+R+RBI". Derived from the
+ * active prop kind (the numeric threshold is encoded in it), never hardcoded.
+ * Returns null for Home Runs and Strikeouts (no single threshold to name).
+ */
+function propTrackLabel(prop: PropKind): string | null {
+  if (prop.startsWith("hits")) return `${prop.slice(4)}+ HITS`;
+  if (prop.startsWith("tb")) return `${prop.slice(2)}+ BASES`;
+  if (prop.startsWith("runs")) return `${prop.slice(4)}+ RUNS`;
+  if (prop.startsWith("rbi")) return `${prop.slice(3)}+ RBI`;
+  if (prop.startsWith("hrr")) return `${prop.slice(3)}+ H+R+RBI`;
+  return null;
+}
+
 /** Weather condition pills (ported from PropBoard.WeatherChips). */
 function ConditionPills({ r }: { r: SpatialRow }) {
   const dir =
@@ -271,6 +286,7 @@ function BoardTable({
 }) {
   const liveFor = useLiveFor();
   const isK = prop === "k";
+  const trackLabel = propTrackLabel(prop);
 
   return (
     <div className="sp-board-tablewrap sp-float">
@@ -278,8 +294,7 @@ function BoardTable({
         <thead>
           <tr>
             <th style={{ whiteSpace: "nowrap" }}>Player</th>
-            <th style={{ whiteSpace: "nowrap" }}>Team</th>
-            <th style={{ width: "100%" }}>{isK ? "Opponent" : "Matchup"}</th>
+            <th style={{ width: "100%" }}>Matchup</th>
             <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Time</th>
             {isK && (
               <th
@@ -298,16 +313,19 @@ function BoardTable({
             const lv = liveFor(r, prop as LiveKind);
             const pHand = handGlyph(r.playerHand);
             const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
+            const oppHand = handGlyph(r.opponent?.hand);
             return (
               <tr
                 key={r.id}
                 onClick={() => r.player_id != null && onOpenPlayer(r.player_id, prop)}
               >
                 <td className="sp-pl-cell">
-                  <span className="sp-tp">{r.player}</span>
-                  {(pHand || r.status || (!isK && r.form)) && (
+                  <span className="sp-pl-name">
+                    <span className="sp-tp">{r.player}</span>
+                    {pHand && <HandChip hand={pHand} adv={adv} />}
+                  </span>
+                  {(r.status || (!isK && r.form)) && (
                     <span className="sp-pl-chips">
-                      {pHand && <HandChip hand={pHand} adv={adv} />}
                       {r.status && (
                         <TagChip status={tagStatus(r.status)} order={r.bat_order} />
                       )}
@@ -315,23 +333,17 @@ function BoardTable({
                     </span>
                   )}
                 </td>
-                <td className="sp-mono" style={{ color: "var(--ink-dim)", whiteSpace: "nowrap" }}>
-                  {r.team}
-                </td>
-                <td style={{ color: "var(--ink-dim)" }}>
-                  {isK ? (
-                    r.opponent && <span>vs {r.opponent.name}</span>
-                  ) : (
-                    <>
-                      <span style={{ whiteSpace: "nowrap" }}>{r.detail}</span>
-                      {r.opponent && (
-                        <>
-                          <span style={{ opacity: 0.45 }}> · </span>
-                          <OppFragment opponent={r.opponent} />
-                        </>
-                      )}
-                    </>
-                  )}
+                <td className="sp-mu-cell">
+                  <span className="sp-mu-line">
+                    <span className="sp-mu-mu">{nameMatchup(r)}</span>
+                    {!isK && r.opponent && (
+                      <>
+                        <span className="sp-mu-sep"> · </span>
+                        <span className="sp-mu-pit">{r.opponent.name}</span>
+                        {oppHand && <HandChip hand={oppHand} />}
+                      </>
+                    )}
+                  </span>
                 </td>
                 <td
                   className="sp-mono"
@@ -351,8 +363,11 @@ function BoardTable({
                 )}
                 <td>
                   <div className="sp-prob-cell">
-                    {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} />}
-                    <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
+                    <div className="sp-orb-stack">
+                      <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
+                      {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
+                    </div>
+                    {trackLabel && <span className="sp-track-lbl">{trackLabel}</span>}
                   </div>
                 </td>
               </tr>
@@ -432,9 +447,15 @@ function BoardRowLine({
       }}
     >
       <span className="sp-mrow-name">
-        <span className="sp-mrow-nm">{r.player}</span>
-        {pHand && <HandChip hand={pHand} adv={adv} />}
-        {!isK && r.form && <FormChip kind={r.form} />}
+        <span className="sp-mrow-nmrow">
+          <span className="sp-mrow-nm">{r.player}</span>
+          {pHand && <HandChip hand={pHand} adv={adv} />}
+        </span>
+        {!isK && r.form && (
+          <span className="sp-mrow-sub">
+            <FormChip kind={r.form} />
+          </span>
+        )}
       </span>
       <span className="sp-mrow-right">
         {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
