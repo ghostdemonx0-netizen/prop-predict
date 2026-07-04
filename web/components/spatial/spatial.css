@@ -1424,6 +1424,11 @@
   gap:            4px;
   flex:           0 0 auto;
 }
+.sp-root .sp-track-row {
+  display:     flex;
+  align-items: center;
+  gap:         5px;
+}
 .sp-root .sp-track-lbl {
   font-family:    var(--f-mono);
   font-size:      .54rem;

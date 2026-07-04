@@ -368,8 +368,12 @@ function BoardTable({
                   <div className="sp-prob-cell">
                     <div className="sp-orb-stack">
                       <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
-                      {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
-                      {trackLabel && <span className="sp-track-lbl">{trackLabel}</span>}
+                      {(trackLabel || lv) && (
+                        <div className="sp-track-row">
+                          {trackLabel && <span className="sp-track-lbl">{trackLabel}</span>}
+                          {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>
