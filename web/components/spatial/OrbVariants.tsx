@@ -126,7 +126,9 @@ export type OrbVariant =
   | "pearl"
   | "neonLightChrome"
   | "neonMedChrome"
-  | "chromeNeonEdge";
+  | "chromeNeonEdge"
+  | "neonTransChrome"
+  | "neonGlass";
 
 interface VariantOrbProps {
   variant: OrbVariant;
@@ -356,6 +358,51 @@ export function VariantOrb({ variant, prob, kind, size = 72, label }: VariantOrb
         <RingAndNum prob={prob} col={bright} size={size} glow={5} label={label} />,
       );
 
+    // ── Neon + transparent chrome — glowing rim + a SEE-THROUGH metal sheen ─────
+    // Readability pick. The fill is a LOW-OPACITY metallic gradient (alpha ~.10–.24)
+    // so the dark background shows through faintly and the centered % keeps strong
+    // contrast. Same cheap recipe as the round-3 mixes: NO backdrop-filter, NO blur,
+    // only a thin neon rim line + small inner sheen + one small outer glow.
+    case "neonTransChrome":
+      return wrap(
+        <span
+          className="sp-orbv-fill sp-orbv-ntc"
+          style={{
+            background: `linear-gradient(158deg, hsl(${H} ${S}% 62% / .24) 0%, hsl(${H} ${S}% 42% / .16) 30%, hsl(${H} ${S}% 22% / .10) 52%, hsl(${H} ${S}% 16% / .12) 64%, hsl(${H} ${S}% 34% / .20) 86%, hsl(${H} ${S}% 20% / .14) 100%)`,
+            boxShadow: [
+              `inset 0 1px 2px hsl(${H} 30% 96% / .22)`,
+              `inset 0 0 0 1.5px hsl(${H} ${S}% ${brightL}% / .9)`,
+              `inset 0 0 7px hsl(${H} ${S}% ${brightL}% / .28)`,
+              `0 0 8px hsl(${H} ${S}% ${brightL}% / .4)`,
+            ].join(", "),
+          }}
+        />,
+        <RingAndNum prob={prob} col={bright} size={size} glow={4} label={label} />,
+      );
+
+    // ── Neon + glass — glowing rim + a NEARLY-CLEAR glassy center ────────────────
+    // Maximum % legibility. The fill is almost fully transparent (just a faint hue
+    // tint, alpha ~.06–.12) so the number reads on the dark background; a single
+    // thin top gloss line (.sp-orbv-glass-gloss) sells the glass. Neon rim carries
+    // the color. Cheapest possible fill — no blur/backdrop-filter.
+    case "neonGlass":
+      return wrap(
+        <span
+          className="sp-orbv-fill sp-orbv-glass"
+          style={{
+            background: `linear-gradient(160deg, hsl(${H} ${S}% 60% / .12) 0%, hsl(${H} ${S}% 40% / .06) 46%, hsl(${H} ${S}% 24% / .08) 100%)`,
+            boxShadow: [
+              `inset 0 0 0 1.5px hsl(${H} ${S}% ${Math.min(brightL + 4, 82)}% / .92)`,
+              `inset 0 0 6px hsl(${H} ${S}% ${brightL}% / .22)`,
+              `0 0 8px hsl(${H} ${S}% ${brightL}% / .4)`,
+            ].join(", "),
+          }}
+        >
+          <span className="sp-orbv-glass-gloss" />
+        </span>,
+        <RingAndNum prob={prob} col={bright} size={size} glow={4} label={label} />,
+      );
+
     default:
       return wrap(<span className="sp-orbv-fill" style={{ background: col }} />);
   }
@@ -368,6 +415,8 @@ const COLUMNS: { key: OrbVariant; label: string }[] = [
   { key: "neonLightChrome", label: "Neon + light chrome" },
   { key: "neonMedChrome", label: "Neon + medium chrome" },
   { key: "chromeNeonEdge", label: "Chrome + neon edge" },
+  { key: "neonTransChrome", label: "Neon + transparent chrome" },
+  { key: "neonGlass", label: "Neon + glass" },
 ];
 
 // Sample probabilities chosen to sweep heatColor's blue→green→amber→red range.
@@ -385,9 +434,12 @@ export function OrbVariants() {
           <strong>Chrome</strong> and <strong>Neon rim</strong> are the round-2 originals, kept for
           reference. The three mixes add a chrome fill inside a neon rim at rising brightness (
           <strong>light → medium</strong>), then a chrome-dominant orb with a neon edge accent. All
-          new mixes are tuned to render CHEAP — no blur/backdrop-filter, minimal box-shadows. Same
-          progress ring + centered % + <code>heatColor()</code> base color across all; samples sweep
-          the color range (kind: <code>hr</code>).
+          new mixes are tuned to render CHEAP — no blur/backdrop-filter, minimal box-shadows. Two
+          added readability picks — <strong>Neon + transparent chrome</strong> (see-through metal
+          sheen) and <strong>Neon + glass</strong> (near-clear center) — keep the neon rim but let the
+          dark background show through so the centered % stays crisp. Same progress ring + centered %
+          + <code>heatColor()</code> base color across all; samples sweep the color range (kind:{" "}
+          <code>hr</code>).
         </p>
       </div>
 
