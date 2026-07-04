@@ -4,10 +4,14 @@
  * Exports: CatDot, EnvDot, LeanPair.
  *
  * Ported from mock7.html's glassDot() / catDot() / envDot() / leanPair() /
- * leanCell() functions.  Unlike ProbabilityOrb, the glass dot has:
- *   • No orbShadow layer
- *   • orbCore fills inset:0 (the full dot area)
+ * leanCell() functions, now wearing the same "Neon + glass" finish as
+ * ProbabilityOrb (neon glowing rim + a near-clear glassy center) so the dots
+ * read as one family — but RINGLESS (these aren't probabilities). The glass dot:
+ *   • No orbShadow / no orbHalo layer
+ *   • orbCore fills inset:0 (the full dot area) with the glass fill + neon rim
  *   • No orbRing (no SVG arc)
+ * Cheap to render: no backdrop-filter, no blurred halo — just a light glass
+ * gradient + a small neon rim box-shadow.
  *
  * Fixed hues per mock7 (not adjustable):
  *   K = hue  8 (red-ish)
@@ -28,39 +32,29 @@ function clamp(x: number, a: number, b: number) {
 
 interface DotStyles {
   wrapper: React.CSSProperties;
-  halo:    React.CSSProperties;
   core:    React.CSSProperties;
   num:     React.CSSProperties;
 }
 
+// "Neon + glass" finish, ringless. Same recipe as ProbabilityOrb's orbCore:
+// near-clear glass fill (alpha ~.06–.12) + a small neon rim box-shadow in the
+// dot's fixed hue. `t` (0..1 intensity) only lifts saturation/brightness.
 function glassDotStyles(hue: number, size: number, t: number): DotStyles {
   const tc  = clamp(t, 0, 1);
   const sat = Math.round(64 + tc * 26);
   const lig = Math.round(46 + tc * 14);
 
-  const c      = `hsl(${hue} ${sat}% ${lig}%)`;
-  const bright = `hsl(${hue} ${sat}% ${Math.min(lig + 24, 88)}%)`;
-  const dark   = `hsl(${hue} ${sat}% ${Math.max(lig - 28, 8)}%)`;
-
-  const haloBlur = (size * (0.12 + tc * 0.3)).toFixed(1);
-  const haloOp   = (0.1 + tc * 0.5).toFixed(2);
-  const outerSh  = (size * 0.07).toFixed(1);
-  const outerBlur = (size * 0.16).toFixed(1);
-  const outerOp  = (0.16 + tc * 0.4).toFixed(2);
-  const insetSh  = (size * 0.05).toFixed(1);
-  const insetBlur = (size * 0.12).toFixed(1);
+  const brightL = Math.min(lig + 24, 88);
+  const rim     = Math.min(brightL + 4, 82);
 
   return {
     wrapper: { width: size, height: size },
-    halo: {
-      filter:     `blur(${haloBlur}px)`,
-      background: `radial-gradient(closest-side, hsl(${hue} ${sat}% 62% / ${haloOp}), transparent 72%)`,
-    },
     core: {
-      background: `radial-gradient(120% 120% at 32% 26%, ${bright}, ${c} 44%, ${dark} 98%)`,
+      background: `linear-gradient(160deg, hsl(${hue} ${sat}% 60% / .12) 0%, hsl(${hue} ${sat}% 40% / .06) 46%, hsl(${hue} ${sat}% 24% / .08) 100%)`,
       boxShadow: [
-        `inset 0 ${insetSh}px ${insetBlur}px hsl(${hue} 80% 10% / .5)`,
-        `0 ${outerSh}px ${outerBlur}px hsl(${hue} ${sat}% 30% / ${outerOp})`,
+        `inset 0 0 0 1.5px hsl(${hue} ${sat}% ${rim}% / .92)`,   // bright neon rim line
+        `inset 0 0 6px hsl(${hue} ${sat}% ${brightL}% / .22)`,   // small inner rim glow
+        `0 0 8px hsl(${hue} ${sat}% ${brightL}% / .4)`,          // small outer bloom
       ].join(", "),
     },
     num: { fontSize: `${(size * 0.3).toFixed(1)}px` },
@@ -101,9 +95,7 @@ export function CatDot({
           : "no strong edge"
       }
     >
-      {/* Halo — coloured glow beyond sphere boundary */}
-      <span className="orbHalo" style={s.halo} />
-      {/* Core — sphere body with specular highlight */}
+      {/* Core — glass sphere body with neon rim + thin top gloss */}
       <span className="orbCore" style={s.core}>
         <span className="orbSpec" />
       </span>
@@ -149,7 +141,6 @@ export function EnvDot({ pct, size = 56 }: { pct: number; size?: number }) {
       style={s.wrapper}
       title="park + weather, combined"
     >
-      <span className="orbHalo" style={s.halo} />
       <span className="orbCore" style={s.core}>
         <span className="orbSpec" />
       </span>

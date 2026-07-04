@@ -1,11 +1,17 @@
 /**
- * ProbabilityOrb.tsx — Depth-halo probability orb, mock 7 "Spatial Depth" skin.
+ * ProbabilityOrb.tsx — "Neon + glass" probability orb, mock 7 "Spatial Depth" skin.
  *
- * Renders the layered sphere structure from mock7.html's orb() function:
- *   orbShadow → orbHalo → orbCore + orbSpec → orbRing (SVG) → orbNum
+ * The chosen finish: a neon glowing rim (in the heatColor hue) around a
+ * NEARLY-CLEAR glassy center, so the dark background shows through and the
+ * centered % stays high-contrast. Kept deliberately CHEAP to render (it appears
+ * many times per page): no backdrop-filter, no blurred halo/shadow layers, just
+ * a light glass gradient + a small neon rim box-shadow + one thin top gloss line.
  *
- * Visual parameters come entirely from orbMath.orbParams(); this component
- * only handles the per-kind heat computation and JSX markup.
+ * Structure:  orbCore (glass fill + neon rim) + orbSpec (top gloss)
+ *             → orbRing (SVG progress, neon color) → orbNum (centered %)
+ *
+ * KEEPS: the SVG progress ring (raw %), the centered % number, and heatColor().
+ * orbMath.orbParams() still drives the ring offset + heat-scaled ring glow.
  */
 "use client";
 
@@ -42,10 +48,8 @@ function heatT(prob: number, kind: PropKind): number {
 // ── sphere base colour, derived from the live site's heatColor() scale ───────
 // heatColor(prob, kind) returns an `hsl(H, S%, L%)` string that sweeps
 // blue → cyan → green → amber → red across each prop's realistic range, so two
-// different probabilities read as visibly different hues (the mock7 indigo→mint
-// ramp made most orbs look uniformly blue). We parse that HSL and let it drive
-// the sphere's hue/sat/light; the ring math, glow, halo, shadow and specular
-// structure still come from orbParams(prob, heat).
+// different probabilities read as visibly different hues. The neon rim + ring
+// carry that colour; the glassy center is near-transparent.
 function parseHsl(str: string): { h: number; s: number; l: number } {
   const m = str.match(/hsl\(\s*([\d.]+)[,\s]+([\d.]+)%[,\s]+([\d.]+)%/);
   if (!m) return { h: 255, s: 80, l: 46 };
@@ -74,75 +78,43 @@ export function ProbabilityOrb({
   const heat = heatT(prob, kind);
   const p    = orbParams(prob, heat);
 
-  // ── derived pixel values (size-dependent) ──────────────────────────────────
-  const blurPx      = (size * p.blur).toFixed(1);
-  const syPx        = (size * p.elevation).toFixed(1);
-  const haloBlurPx  = (size * p.halo).toFixed(1);
-  const numFsPx     = (size * 0.27).toFixed(1);
+  const numFsPx = (size * 0.27).toFixed(1);
 
-  // orbCore inner-shadow sizes (mock7: size*0.045 / size*0.11 / size*0.05 / size*0.12)
-  const sh1Y  = (size * 0.045).toFixed(1);
-  const sh1B  = (size * 0.11).toFixed(1);
-  const sh2Y  = (size * 0.05).toFixed(1);
-  const sh2B  = (size * 0.12).toFixed(1);
-
-  // ── colour strings (hue/sat/light from heatColor; variants keep sphere depth) ─
+  // ── colour strings (hue/sat/light from heatColor) ──────────────────────────
   const base   = parseHsl(heatColor(prob, kind));
   const H = Math.round(base.h);
-  // Lift saturation a touch so the glass sphere stays vivid at heatColor's 52%.
+  // Lift saturation a touch so the neon rim stays vivid at heatColor's ~52%.
   const S = Math.min(Math.round(base.s) + 16, 92);
   const light   = Math.round(base.l);
   const brightL = Math.min(light + 24, 88);
-  const darkL   = Math.max(light - 26, 8);
-  const col    = `hsl(${H} ${S}% ${light}%)`;
-  const bright = `hsl(${H} ${S}% ${brightL}%)`;
-  const dark   = `hsl(${H} ${S}% ${darkL}%)`;
+  const bright  = `hsl(${H} ${S}% ${brightL}%)`;
+  const rim     = Math.min(brightL + 4, 82);
 
   // ── SVG ring ───────────────────────────────────────────────────────────────
-  const C   = ORB_RING_C;
   const off = p.ringOffset.toFixed(2);
 
   return (
     <span className="orb" style={{ width: size, height: size }}>
 
-      {/* 1. Cast shadow */}
-      <span
-        className="orbShadow"
-        style={{
-          filter:     `blur(${blurPx}px)`,
-          transform:  `translateY(${syPx}px) scale(.84)`,
-          background: `radial-gradient(closest-side, hsla(${H} ${S}% 36% / ${p.shadowOpacity.toFixed(2)}), transparent 76%)`,
-        }}
-      />
-
-      {/* 2. Coloured halo */}
-      <span
-        className="orbHalo"
-        style={{
-          filter:     `blur(${haloBlurPx}px)`,
-          background: `radial-gradient(closest-side, hsla(${H} ${S}% 62% / ${p.haloOpacity.toFixed(2)}), transparent 72%)`,
-        }}
-      />
-
-      {/* 3. Sphere core + specular highlight
-            Gradient tightened (90%×90% vs original 120%×120%) so the light-to-dark
-            transition is crisper and the rim edge reads as a defined sphere boundary.
-            Rim inset (last box-shadow item) adds a subtle dark-edge definition. */}
+      {/* Neon-glass sphere: near-clear glassy center + neon glowing rim.
+          Fill alpha ~.06–.12 lets the dark background read through so the % keeps
+          contrast; the neon colour lives on the rim box-shadow + the ring. */}
       <span
         className="orbCore"
         style={{
-          background: `radial-gradient(90% 90% at 34% 28%, ${bright}, ${col} 38%, ${dark} 90%)`,
+          background: `linear-gradient(160deg, hsl(${H} ${S}% 60% / .12) 0%, hsl(${H} ${S}% 40% / .06) 46%, hsl(${H} ${S}% 24% / .08) 100%)`,
           boxShadow: [
-            `inset 0 ${sh1Y}px ${sh1B}px hsla(${H} 80% 10% / .55)`,
-            `inset 0 -${sh2Y}px ${sh2B}px hsla(${H} 90% 72% / ${p.innerHiOpacity.toFixed(2)})`,
-            `inset 0 0 0 1px hsla(${H} ${S}% ${Math.max(darkL + 4, 10)}% / .35)`,
+            `inset 0 0 0 1.5px hsl(${H} ${S}% ${rim}% / .92)`,   // bright neon rim line
+            `inset 0 0 6px hsl(${H} ${S}% ${brightL}% / .22)`,   // small inner rim glow
+            `0 0 8px hsl(${H} ${S}% ${brightL}% / .4)`,          // small outer bloom
           ].join(", "),
         }}
       >
+        {/* thin top gloss line — sells the glass (styled via .orbSpec) */}
         <span className="orbSpec" />
       </span>
 
-      {/* 4. SVG progress ring */}
+      {/* SVG progress ring — neon colour, heat-scaled drop-shadow glow */}
       <svg className="orbRing" viewBox="0 0 100 100">
         <g transform="rotate(-90 50 50)">
           {/* track */}
@@ -156,17 +128,17 @@ export function ProbabilityOrb({
           <circle
             cx="50" cy="50" r="42"
             fill="none"
-            stroke={col}
+            stroke={bright}
             strokeWidth="6"
             strokeLinecap="round"
-            strokeDasharray={C.toFixed(2)}
+            strokeDasharray={ORB_RING_C.toFixed(2)}
             strokeDashoffset={off}
-            style={{ filter: `drop-shadow(0 0 ${p.glow.toFixed(1)}px ${col})` }}
+            style={{ filter: `drop-shadow(0 0 ${p.glow.toFixed(1)}px ${bright})` }}
           />
         </g>
       </svg>
 
-      {/* 5. Numeric label */}
+      {/* Numeric label */}
       <span className="orbNum" style={{ fontSize: `${numFsPx}px` }}>
         {Math.round(prob * 100)}<i>%</i>
         {label && <b>{label}</b>}
