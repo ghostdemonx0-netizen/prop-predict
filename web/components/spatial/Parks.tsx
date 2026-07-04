@@ -125,7 +125,7 @@ export function Parks({ games }: { games: Game[] }) {
             </div>
 
             {/* EnvDot — combined park + weather boost */}
-            <EnvDot pct={g.env} size={52} />
+            <EnvDot pct={g.env} size={58} />
 
           </div>
         ))}

@@ -166,7 +166,7 @@ function HeadlinePanel({
     <div className="sp-mpanel">
       <div className="sp-mhead-row">
         <div className="sp-mstats">{children}</div>
-        <ProbabilityOrb prob={prob} kind={kind} size={86} />
+        <ProbabilityOrb prob={prob} kind={kind} size={96} />
       </div>
     </div>
   );

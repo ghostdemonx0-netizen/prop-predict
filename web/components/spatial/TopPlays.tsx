@@ -345,7 +345,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               prop="hr"
               showForm
               live={chip(r, "hr")}
-              sphere={<ProbabilityOrb prob={r.prob} kind="hr" size={46} />}
+              sphere={<ProbabilityOrb prob={r.prob} kind="hr" size={52} />}
               onOpenPlayer={onOpenPlayer}
             />
           )}
@@ -364,7 +364,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               prop="k"
               showPitcher={false}
               live={chip(r, "k")}
-              sphere={<ProbabilityOrb prob={r.prob} kind="k" size={46} />}
+              sphere={<ProbabilityOrb prob={r.prob} kind="k" size={52} />}
               onOpenPlayer={onOpenPlayer}
             />
           )}
@@ -382,7 +382,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               rank={rank}
               prop="hr"
               live={chip(r, "contact")}
-              sphere={<CatDot kind="C" prob={r.hitProb ?? 0} size={46} />}
+              sphere={<CatDot kind="C" prob={r.hitProb ?? 0} size={52} />}
               onOpenPlayer={onOpenPlayer}
             />
           )}
@@ -400,7 +400,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               rank={rank}
               prop="hr"
               live={chip(r, "batterK")}
-              sphere={<CatDot kind="K" prob={r.kProb ?? 0} size={46} />}
+              sphere={<CatDot kind="K" prob={r.kProb ?? 0} size={52} />}
               onOpenPlayer={onOpenPlayer}
             />
           )}
@@ -420,7 +420,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               prop={hitsKind}
               showForm
               live={chip(r, hitsKind)}
-              sphere={<ProbabilityOrb prob={r.prob} kind={hitsKind} size={46} />}
+              sphere={<ProbabilityOrb prob={r.prob} kind={hitsKind} size={52} />}
               onOpenPlayer={onOpenPlayer}
             />
           )}
@@ -440,7 +440,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               prop={tbKind}
               showForm
               live={chip(r, tbKind)}
-              sphere={<ProbabilityOrb prob={r.prob} kind={tbKind} size={46} />}
+              sphere={<ProbabilityOrb prob={r.prob} kind={tbKind} size={52} />}
               onOpenPlayer={onOpenPlayer}
             />
           )}
@@ -460,7 +460,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               prop={runsKind}
               showForm
               live={chip(r, runsKind)}
-              sphere={<ProbabilityOrb prob={r.prob} kind={runsKind} size={46} />}
+              sphere={<ProbabilityOrb prob={r.prob} kind={runsKind} size={52} />}
               onOpenPlayer={onOpenPlayer}
             />
           )}
@@ -480,7 +480,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               prop={rbiKind}
               showForm
               live={chip(r, rbiKind)}
-              sphere={<ProbabilityOrb prob={r.prob} kind={rbiKind} size={46} />}
+              sphere={<ProbabilityOrb prob={r.prob} kind={rbiKind} size={52} />}
               onOpenPlayer={onOpenPlayer}
             />
           )}
@@ -500,7 +500,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               prop={hrrKind}
               showForm
               live={chip(r, hrrKind)}
-              sphere={<ProbabilityOrb prob={r.prob} kind={hrrKind} size={46} />}
+              sphere={<ProbabilityOrb prob={r.prob} kind={hrrKind} size={52} />}
               onOpenPlayer={onOpenPlayer}
             />
           )}

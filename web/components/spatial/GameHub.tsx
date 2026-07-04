@@ -100,7 +100,7 @@ function CardFace({ g }: { g: Game }) {
             {g.park_name ?? g.park}
           </div>
         </div>
-        <EnvDot pct={g.env} size={54} />
+        <EnvDot pct={g.env} size={60} />
       </div>
 
       <div className="sp-hubchips">
@@ -179,7 +179,7 @@ function PitcherRow({
       </span>
       <span className="sp-pit-right">
         {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} />}
-        <ProbabilityOrb prob={r.prob} kind="k" size={40} />
+        <ProbabilityOrb prob={r.prob} kind="k" size={44} />
       </span>
     </div>
   );

@@ -190,7 +190,7 @@ function PropCard({
           </div>
         </div>
         <div className="sp-orb-live">
-          <ProbabilityOrb prob={r.prob} kind={prop} size={64} />
+          <ProbabilityOrb prob={r.prob} kind={prop} size={72} />
           {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} />}
         </div>
       </div>
@@ -342,7 +342,7 @@ function BoardTable({
                 <td>
                   <div className="sp-prob-cell">
                     {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} />}
-                    <ProbabilityOrb prob={r.prob} kind={prop} size={42} />
+                    <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
                   </div>
                 </td>
               </tr>
@@ -428,7 +428,7 @@ function BoardRowLine({
       </span>
       <span className="sp-mrow-right">
         {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
-        <ProbabilityOrb prob={r.prob} kind={prop} size={42} />
+        <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
       </span>
     </div>
   );
