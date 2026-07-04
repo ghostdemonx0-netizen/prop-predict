@@ -28,6 +28,17 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+/**
+ * Returns true on touch-primary devices (phones/tablets). Used to fully skip
+ * the pointer-tracking tilt listeners and the parallax rAF loop, so no
+ * per-frame GPU/DOM work runs on phones — where these effects aren't even
+ * reachable (no hover pointer) and are the main source of mobile lag.
+ */
+function isTouchDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+}
+
 // ---------------------------------------------------------------------------
 // useTilt
 // ---------------------------------------------------------------------------
@@ -52,7 +63,7 @@ function prefersReducedMotion(): boolean {
 export function useTilt(ref: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     const el = ref.current;
-    if (!el || prefersReducedMotion()) return;
+    if (!el || prefersReducedMotion() || isTouchDevice()) return;
 
     const onMove = (e: PointerEvent) => {
       if (e.pointerType === "touch") return;
@@ -106,7 +117,7 @@ export function useParallax(): [
   const field2Ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (prefersReducedMotion()) return;
+    if (prefersReducedMotion() || isTouchDevice()) return;
 
     let tx = 0, ty = 0, cx = 0, cy = 0;
     let rafId: number;

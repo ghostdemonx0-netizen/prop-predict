@@ -2377,3 +2377,72 @@
   .sp-root .sp-orbv-rowhead,
   .sp-root .sp-orbv-corner   { flex-basis: 34px; font-size: .72rem; }
 }
+
+/* =========================================================
+   MOBILE PERFORMANCE OVERRIDES  (phones only, ≤640px)
+   ---------------------------------------------------------
+   The /next skin renders at a 600px logical viewport on phones,
+   so this block targets real phones only — DESKTOP IS UNTOUCHED
+   (it never enters this media query).  Goal: cut GPU cost from
+   live backdrop-blur, the stacked depth-field layers, and the
+   blurred orb halos/shadows, while keeping the dark-glass look.
+
+   Placed last in the file so these rules win by source order
+   (same specificity as their desktop originals).
+   ========================================================= */
+@media (max-width: 640px) {
+
+  /* --- 1. Kill live backdrop-blur on every glass surface --------------
+     backdrop-filter over many cards atop an animated field is the single
+     biggest mobile perf killer.  Drop it and compensate with a heavier,
+     higher-alpha dark-glass fill so panels still read as dark glass.
+     Also collapse the 3-layer card shadow down to one subtle contact
+     shadow (the 70px ambient blur is expensive when repeated per card). */
+  .sp-root .sp-float {
+    backdrop-filter:         none;
+    -webkit-backdrop-filter: none;
+    background: linear-gradient(168deg,
+      hsl(238 40% 12% / .93),
+      hsl(240 44% 8%  / .96));
+    box-shadow: var(--sh-con), inset 0 1px 0 var(--hi);
+  }
+
+  /* Live chips — solid-ish glass, no live blur */
+  .sp-root .sp-live-chip {
+    backdrop-filter:         none;
+    -webkit-backdrop-filter: none;
+  }
+  .sp-root .sp-live-chip--pregame { background: hsl(240 40% 10% / .82); }
+  .sp-root .sp-live-chip--live    { background: hsl(40 55% 11% / .85); }
+  .sp-root .sp-live-chip--cleared { background: hsl(150 55% 10% / .82); box-shadow: none; }
+  .sp-root .sp-live-chip--missed  { background: hsl(2 58% 11% / .82); }
+
+  /* Modal overlay — swap the blurred scrim for a more opaque dark scrim */
+  .sp-root .sp-overlay {
+    backdrop-filter:         none;
+    -webkit-backdrop-filter: none;
+    background: hsl(245 50% 2% / .86);
+  }
+
+  /* --- 2. Simplify the depth field ------------------------------------
+     Drop the two cheapest-to-lose-but-costly overlays (grain blend +
+     grid mesh mask), hide the secondary parallax blob, and reduce the
+     primary field to a single moody radial with no saturate() filter. */
+  .sp-root .sp-grain,
+  .sp-root .sp-mesh,
+  .sp-root .sp-field2 { display: none; }
+
+  .sp-root .sp-field {
+    background:
+      radial-gradient(70% 52% at 50% -6%, hsl(264 82% 40% / .34), transparent 66%),
+      radial-gradient(60% 46% at 82% 100%, hsl(322 76% 38% / .16), transparent 66%);
+    filter: none;
+  }
+
+  /* --- 3. Trim orb halo + cast-shadow blur ----------------------------
+     The halo/shadow blur radii are set inline & scale with orb size, so
+     cap them with a small fixed radius (needs !important to beat inline).
+     Orbs stay legible — the glow just renders far cheaper. */
+  .sp-root .orbHalo   { filter: blur(6px) !important; }
+  .sp-root .orbShadow { filter: blur(4px) !important; }
+}
