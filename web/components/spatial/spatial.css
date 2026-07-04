@@ -2344,6 +2344,32 @@
   filter:        blur(1.5px);
 }
 
+/* =========================================================
+   ROUND 3 chrome/neon mixes (Neon+light chrome / Neon+medium
+   chrome / Chrome+neon edge). Fill background + box-shadow are
+   set inline per-orb (heat driven). Deliberately CHEAP to
+   render: no backdrop-filter, no big blur, minimal shadows.
+   ========================================================= */
+
+/* ---- Neon + light chrome: dim quiet metal, NO sub-element (cheapest) ---- */
+/* .sp-orbv-nlc fill bg + rim box-shadow are 100% inline; nothing to add. */
+
+/* ---- Neon + medium chrome: one cheap UNBLURRED soft specular dot ---- */
+/* .sp-orbv-nmc fill bg + rim box-shadow set inline. */
+.sp-root .sp-orbv-softspec {
+  position:      absolute;
+  top:           12%;
+  left:          22%;
+  width:         34%;
+  height:        22%;
+  border-radius: 50%;
+  background:    radial-gradient(closest-side, hsl(0 0% 100% / .55), hsl(0 0% 100% / 0) 76%);
+  /* no filter/blur on purpose — keeps this variant cheap */
+}
+
+/* ---- Chrome + neon edge: reuses .sp-orbv-chrome-spec (round-2 hard dot) ---- */
+/* .sp-orbv-cne fill bg + neon-edge box-shadow set inline; no extra class needed. */
+
 /* ---- responsive: let columns wrap tighter on narrow screens ---- */
 @media (max-width: 600px) {
   .sp-root .sp-orbv-cell     { padding: 10px 2px; }

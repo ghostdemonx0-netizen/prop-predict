@@ -1,21 +1,23 @@
 /**
- * OrbVariants.tsx — ROUND 2 sphere-finish comparison for the probability orb.
+ * OrbVariants.tsx — ROUND 3 chrome/neon-mix comparison for the probability orb.
  *
- * Round 1 (Current/Flat/Matte/Glossy/Ring-forward) is decided: the user liked the
- * GLOSSY sphere but wants to compare MORE distinct spherical finishes before
- * committing. This round keeps Glossy for reference and adds five more genuinely
- * different sphere styles. Every variant still stays a round orb.
+ * Round 2 narrowed the field to CHROME (polished metal) and NEON RIM (dark core,
+ * glowing colored edge). Round 3 keeps both originals for reference and adds three
+ * MIXES so the user can pick a chrome/neon blend — with a hard eye on phone
+ * performance (bright glows + heavy blur cost GPU/refresh-rate, so the mixes are
+ * tuned CHEAP: no backdrop-filter, no big blur, minimal box-shadows).
  *
  * Every variant KEEPS the same SVG progress ring (encodes raw %), the centered
- * % number, and the same heatColor(prob, kind) base color. Only the SPHERE
- * FINISH/STYLE changes.
+ * % number, and the same heatColor(prob, kind) base color. Only the finish changes.
  *
- *   Glossy   — translucent liquid-glass bubble with a gloss highlight (round-1 pick)
- *   Chrome   — polished metal: sharp specular top-left + dark reflected band lower
- *   Neon rim — dark near-black core, bright glowing rim/edge in the heat color
- *   Gel      — glossy translucent candy/jelly bead with soft gloss + subsurface glow
- *   Gradient — clean sphere, soft directional light→deep gradient, single highlight
- *   Pearl    — pearlescent/satin sphere, broad diffuse sheen, slight iridescent shift
+ *   Chrome              — round-2 polished metal (bright), kept as reference
+ *   Neon rim            — round-2 dark-core glowing colored rim, kept as reference
+ *   Neon + light chrome — neon rim + a DIM, quiet chrome fill (cheapest: no sub-el)
+ *   Neon + medium chrome— neon rim + a fuller/brighter chrome fill (middle ground)
+ *   Chrome + neon edge  — round-2 bright chrome fill + a thin neon rim accent
+ *
+ * The older round-1/2 finishes (glossy/gel/gradient/pearl) remain in the switch for
+ * reference but are no longer shown in the grid (see COLUMNS).
  *
  * This component does NOT reuse the real .orb* CSS classes. All structure lives in
  * .sp-orbv-* classes so the real ProbabilityOrb is untouched.
@@ -115,7 +117,16 @@ function RingAndNum({
 }
 
 // ── one variant orb ──────────────────────────────────────────────────────────
-export type OrbVariant = "glossy" | "chrome" | "neon" | "gel" | "gradient" | "pearl";
+export type OrbVariant =
+  | "glossy"
+  | "chrome"
+  | "neon"
+  | "gel"
+  | "gradient"
+  | "pearl"
+  | "neonLightChrome"
+  | "neonMedChrome"
+  | "chromeNeonEdge";
 
 interface VariantOrbProps {
   variant: OrbVariant;
@@ -278,6 +289,73 @@ export function VariantOrb({ variant, prob, kind, size = 72, label }: VariantOrb
       );
     }
 
+    // ── Neon + light chrome — glowing rim + a DIM, quiet chrome fill inside ──────
+    // Round 3, the "light" pick. The rim carries the color; the interior is a
+    // low-brightness metallic sheen (muted linear gradient, top highlight capped
+    // ~56% so it never gets bright). Cheapest of the set: NO sub-elements, NO
+    // blur/backdrop-filter, only 3 box-shadows (thin rim line + small inner + small
+    // outer glow). Nothing expensive to composite.
+    case "neonLightChrome":
+      return wrap(
+        <span
+          className="sp-orbv-fill sp-orbv-nlc"
+          style={{
+            background: `linear-gradient(158deg, hsl(${H} ${S}% 56%) 0%, hsl(${H} ${S}% 38%) 26%, hsl(${H} ${S}% 22%) 50%, hsl(${H} ${S}% 14%) 62%, hsl(${H} ${S}% 30%) 84%, hsl(${H} ${S}% 18%) 100%)`,
+            boxShadow: [
+              `inset 0 0 0 1.5px hsl(${H} ${S}% ${brightL}% / .9)`,
+              `inset 0 0 6px hsl(${H} ${S}% ${brightL}% / .3)`,
+              `0 0 7px hsl(${H} ${S}% ${brightL}% / .38)`,
+            ].join(", "),
+          }}
+        />,
+        <RingAndNum prob={prob} col={bright} size={size} glow={4} label={label} />,
+      );
+
+    // ── Neon + medium chrome — glowing rim + a fuller/slightly brighter chrome ──
+    // Middle ground: top highlight ~74%, a single cheap (unblurred) soft specular
+    // dot, and a slightly stronger rim glow. Still no blur/backdrop-filter.
+    case "neonMedChrome":
+      return wrap(
+        <span
+          className="sp-orbv-fill sp-orbv-nmc"
+          style={{
+            background: `linear-gradient(158deg, hsl(${H} ${S}% 74%) 0%, hsl(${H} ${S}% 52%) 22%, hsl(${H} ${S}% 28%) 48%, hsl(${H} ${S}% 16%) 60%, hsl(${H} ${S}% 44%) 84%, hsl(${H} ${S}% 22%) 100%)`,
+            boxShadow: [
+              `inset 0 1px 2px hsl(${H} 30% 96% / .35)`,
+              `inset 0 0 0 1.5px hsl(${H} ${S}% ${Math.min(brightL + 4, 82)}% / .95)`,
+              `inset 0 0 9px hsl(${H} ${S}% ${brightL}% / .4)`,
+              `0 0 10px hsl(${H} ${S}% ${brightL}% / .42)`,
+            ].join(", "),
+          }}
+        >
+          <span className="sp-orbv-softspec" />
+        </span>,
+        <RingAndNum prob={prob} col={bright} size={size} glow={5} label={label} />,
+      );
+
+    // ── Chrome + neon edge — round-2 bright chrome fill with a thin neon accent ──
+    // Chrome-dominant: keeps the round-2 metal gradient + hard specular + top light
+    // lip + dark base. The round-2 metallic edge + black cast are swapped for a thin
+    // neon rim line + one small neon outer glow. One sub-element, no blur/backdrop.
+    case "chromeNeonEdge":
+      return wrap(
+        <span
+          className="sp-orbv-fill sp-orbv-cne"
+          style={{
+            background: `linear-gradient(158deg, hsl(${H} ${Math.min(S + 6, 96)}% 92%) 0%, hsl(${H} ${S}% 66%) 20%, hsl(${H} ${S}% 30%) 46%, hsl(${H} ${S}% 15%) 58%, hsl(${H} ${S}% 52%) 82%, hsl(${H} ${S}% 24%) 100%)`,
+            boxShadow: [
+              `inset 0 2px 3px hsl(${H} 30% 98% / .6)`,
+              `inset 0 -9px 12px hsl(${H} 60% 6% / .5)`,
+              `inset 0 0 0 1.25px hsl(${H} ${S}% ${brightL}% / .95)`,
+              `0 0 10px hsl(${H} ${S}% ${brightL}% / .5)`,
+            ].join(", "),
+          }}
+        >
+          <span className="sp-orbv-chrome-spec" />
+        </span>,
+        <RingAndNum prob={prob} col={bright} size={size} glow={5} label={label} />,
+      );
+
     default:
       return wrap(<span className="sp-orbv-fill" style={{ background: col }} />);
   }
@@ -285,12 +363,11 @@ export function VariantOrb({ variant, prob, kind, size = 72, label }: VariantOrb
 
 // ── comparison grid ───────────────────────────────────────────────────────────
 const COLUMNS: { key: OrbVariant; label: string }[] = [
-  { key: "glossy", label: "Glossy" },
   { key: "chrome", label: "Chrome" },
   { key: "neon", label: "Neon rim" },
-  { key: "gel", label: "Gel" },
-  { key: "gradient", label: "Gradient" },
-  { key: "pearl", label: "Pearl" },
+  { key: "neonLightChrome", label: "Neon + light chrome" },
+  { key: "neonMedChrome", label: "Neon + medium chrome" },
+  { key: "chromeNeonEdge", label: "Chrome + neon edge" },
 ];
 
 // Sample probabilities chosen to sweep heatColor's blue→green→amber→red range.
@@ -302,12 +379,15 @@ export function OrbVariants() {
   return (
     <div className="sp-orbv-page">
       <div className="sp-orbv-head">
-        <h1>Orb sphere designs — round 2</h1>
+        <h1>Orb sphere designs — round 3 (chrome / neon mixes)</h1>
         <p>
-          Six spherical finishes. Same progress ring + centered % + <code>heatColor()</code> base
-          color across all of them — only the sphere FINISH changes. <strong>Glossy</strong> is the
-          round-1 pick, kept here for comparison. Sample probabilities sweep the color range (kind:{" "}
-          <code>hr</code>).
+          Narrowed to <strong>Chrome</strong> and <strong>Neon rim</strong> from round 2, now mixed.{" "}
+          <strong>Chrome</strong> and <strong>Neon rim</strong> are the round-2 originals, kept for
+          reference. The three mixes add a chrome fill inside a neon rim at rising brightness (
+          <strong>light → medium</strong>), then a chrome-dominant orb with a neon edge accent. All
+          new mixes are tuned to render CHEAP — no blur/backdrop-filter, minimal box-shadows. Same
+          progress ring + centered % + <code>heatColor()</code> base color across all; samples sweep
+          the color range (kind: <code>hr</code>).
         </p>
       </div>
 
