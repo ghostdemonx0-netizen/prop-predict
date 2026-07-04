@@ -27,4 +27,10 @@ jobs:
           git archive origin/board-data web/public/data | tar -x
           echo "board files:" && ls web/public/data
       - name: Deploy to Vercel (prod)
+        # ORG_ID + PROJECT_ID are REQUIRED — without them `vercel deploy` can't
+        # identify the linked project (web/.vercel is gitignored in CI) and
+        # silently deploys to a stray project instead of prop-predict.
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx vercel deploy --prod --cwd web --token ${{ secrets.VERCEL_TOKEN }} --yes
