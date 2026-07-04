@@ -69,6 +69,19 @@ function handGlyph(h?: string): "R" | "L" | "SW" | null {
   return null;
 }
 
+/**
+ * Player TEAM-first matchup label for the under-name sub-line.
+ * Reuses the same home/away logic the board already renders (gameLabel in
+ * lib/weighting): player's team is the AWAY side → "@ opponent", else "vs
+ * opponent".  e.g. "SF @ COL"  ·  "NYY vs MIN".
+ */
+function nameMatchup(r: SpatialRow): string {
+  if (!r.matchup) return r.team ?? "";
+  const [away, home] = r.matchup.split(" @ ");
+  if (home === undefined) return r.team ? `${r.team} ${r.matchup}` : r.matchup;
+  return r.team === home ? `${r.team} vs ${away}` : `${r.team} @ ${home}`;
+}
+
 /** Weather condition pills (ported from PropBoard.WeatherChips). */
 function ConditionPills({ r }: { r: SpatialRow }) {
   const dir =
@@ -88,12 +101,19 @@ function ConditionPills({ r }: { r: SpatialRow }) {
   const hasWind = typeof dir === "number" && typeof mph === "number";
   const hasTemp = typeof r.tempF === "number";
   const showRain = (r.precipPct ?? 0) >= 20;
-  if (!hasWind && !hasTemp && !showRain) return null;
+  const hasTime = !!r.time;
+  if (!hasWind && !hasTemp && !showRain && !hasTime) return null;
 
   const windColor = hasWind ? arrowColor(dir as number) : "var(--warn)";
 
   return (
     <div className="sp-conds">
+      {hasTime && (
+        <FBox
+          icon={<ClockIcon size={13} style={{ color: "var(--ink-faint)" }} />}
+          value={r.time}
+        />
+      )}
       {hasWind && (
         <FBox
           icon={<WindIcon deg={dir as number} size={13} style={{ color: windColor }} />}
@@ -184,10 +204,11 @@ function PropCard({
     <ClickableCard onOpen={() => r.player_id != null && onOpenPlayer(r.player_id, prop)}>
       <div className="sp-topr" style={{ animationDelay: `${index * 45}ms` }}>
         <div className="sp-topr-l">
-          <div className="sp-pname">{r.player}</div>
-          <div className="sp-psub">
-            {r.team} · {r.detail}
+          <div className="sp-pname-row">
+            <span className="sp-pname">{r.player}</span>
+            {pHand && <HandChip hand={pHand} adv={adv} />}
           </div>
+          <div className="sp-psub">{nameMatchup(r)}</div>
         </div>
         <div className="sp-orb-live">
           <ProbabilityOrb prob={r.prob} kind={prop} size={72} />
@@ -203,22 +224,11 @@ function PropCard({
         </div>
 
         <div className="sp-prow">
-          {pHand && <HandChip hand={pHand} adv={adv} />}
-          {r.matchup && (
-            <span className="sp-matchup" title="game">
-              {r.matchup}
-            </span>
-          )}
           {isK
             ? r.projection && <span>proj {r.projection} K</span>
             : r.opponent && <OppFragment opponent={r.opponent} />}
           {!isK && r.bvp && r.bvp.pa > 0 && (
             <Bvp hits={r.bvp.hits} ab={r.bvp.ab} hr={r.bvp.hr} />
-          )}
-          {r.time && (
-            <span className="sp-clock">
-              <ClockIcon size={12} /> {r.time}
-            </span>
           )}
         </div>
 

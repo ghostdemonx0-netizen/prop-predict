@@ -477,6 +477,21 @@
   }
 }
 
+/* Mobile (≤600px): shrink the prop selector + threshold pills just enough that
+   all options fit within the viewport on one line WITHOUT horizontal scrolling.
+   overflow-x:auto stays as a fallback for very narrow screens. */
+@media (max-width: 600px) {
+  .sp-root .sp-seg--props        { gap: 2px; padding: 3px; }
+  .sp-root .sp-seg--props .sp-seg-btn {
+    font-size: .6rem;
+    padding:   .38rem .4rem;
+  }
+  .sp-root .sp-seg--sm .sp-seg-btn {
+    font-size: .58rem;
+    padding:   .3rem .46rem;
+  }
+}
+
 /* =========================================================
    9. Chips — Badge, TagChip, HandChip, FormChip, FBox, Bvp
       Transcribed from mock7.html badge / tagchip / hand /
@@ -1204,20 +1219,34 @@
   margin-top:            20px;
 }
 
-/* ---- clickable grid cell hosting the tilt card ---- */
+/* ---- clickable grid cell hosting the tilt card ----
+   height:100% so every card fills its grid row → consistent card heights. */
 .sp-root .sp-pcard-click {
   border-radius: var(--rad);
   cursor:        pointer;
   outline:       none;
+  height:        100%;
 }
 .sp-root .sp-pcard-click:focus-visible {
   box-shadow: 0 0 0 2px var(--iris-cyan);
 }
 
-/* ---- pcard body ---- */
+/* ---- pcard body ----
+   flex column + full height so the weather/time row can anchor to the bottom
+   (margin-top:auto on .sp-conds), keeping same-row cards evenly aligned. */
 .sp-root .sp-pcard {
-  padding:  18px;
-  overflow: hidden;
+  padding:        18px;
+  overflow:       hidden;
+  height:         100%;
+  display:        flex;
+  flex-direction: column;
+}
+/* The tilt lift-layer wraps the card content — make it fill + flex too. */
+.sp-root .sp-pcard .sp-lift-layer {
+  display:        flex;
+  flex-direction: column;
+  flex:           1 1 auto;
+  min-height:     0;
 }
 .sp-root .sp-topr {
   display:         flex;
@@ -1226,6 +1255,13 @@
   gap:             14px;
 }
 .sp-root .sp-topr-l { min-width: 0; }
+/* Name + batter hand chip sit inline on the top row. */
+.sp-root .sp-pname-row {
+  display:     flex;
+  align-items: center;
+  gap:         7px;
+  min-width:   0;
+}
 .sp-root .sp-pname {
   font-family:    var(--f-disp);
   font-weight:    700;
@@ -1233,13 +1269,16 @@
   letter-spacing: -.02em;
   line-height:    1.04;
   transition:     color .2s;
+  min-width:      0;
 }
+.sp-root .sp-pname-row .sp-hand { flex: 0 0 auto; }
 .sp-root .sp-pcard-click:hover .sp-pname { color: var(--iris-mint); }
+/* Under-name matchup — FULL strength (same colour as the name, not faint). */
 .sp-root .sp-psub {
   font-family:    var(--f-mono);
-  font-size:      .62rem;
+  font-size:      .68rem;
   letter-spacing: .06em;
-  color:          var(--ink-faint);
+  color:          var(--ink);
   margin-top:     6px;
   text-transform: uppercase;
 }
@@ -1256,6 +1295,7 @@
   display:        flex;
   flex-direction: column;
   gap:            9px;
+  flex:           1 1 auto;
 }
 .sp-root .sp-prow {
   display:     flex;
@@ -1287,7 +1327,7 @@
   gap:          8px;
   flex-wrap:    wrap;
   padding-top:  11px;
-  margin-top:   3px;
+  margin-top:   auto;         /* anchor the time/weather row to the card bottom */
   border-top:   1px solid var(--line);
 }
 

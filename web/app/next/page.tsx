@@ -379,7 +379,7 @@ export default function NextPage() {
               display: "flex",
               flexDirection: "column",
               gap: 12,
-              alignItems: "flex-start",
+              alignItems: "center",
               margin: "18px 0",
             }}
           >
