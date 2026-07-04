@@ -124,12 +124,6 @@ function ConditionPills({ r }: { r: SpatialRow }) {
 
   return (
     <div className="sp-conds">
-      {hasTime && (
-        <FBox
-          icon={<ClockIcon size={13} style={{ color: "var(--ink-faint)" }} />}
-          value={r.time}
-        />
-      )}
       {hasWind && (
         <FBox
           icon={<WindIcon deg={dir as number} size={13} style={{ color: windColor }} />}
@@ -150,6 +144,14 @@ function ConditionPills({ r }: { r: SpatialRow }) {
           icon={<RainIcon size={13} style={{ color: "var(--iris-cyan)" }} />}
           value={`${r.precipPct}%`}
         />
+      )}
+      {hasTime && (
+        <div style={{ marginLeft: "auto" }}>
+          <FBox
+            icon={<ClockIcon size={13} style={{ color: "var(--ink-faint)" }} />}
+            value={r.time}
+          />
+        </div>
       )}
     </div>
   );
