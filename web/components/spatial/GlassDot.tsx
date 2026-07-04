@@ -4,15 +4,15 @@
  * Exports: CatDot, EnvDot, LeanPair.
  *
  * Ported from mock7.html's glassDot() / catDot() / envDot() / leanPair() /
- * leanCell() functions, now wearing the same "Tinted glass" finish as
- * ProbabilityOrb (neon glowing rim + a LIGHT heat-tinted translucent fill) so the
- * dots read as one family — but RINGLESS (these aren't probabilities). The dot:
+ * leanCell() functions, now wearing the same "Neon + glass" (near-clear) finish
+ * as ProbabilityOrb (neon glowing rim + a near-clear glassy fill) so the dots
+ * read as one family — but RINGLESS (these aren't probabilities). The dot:
  *   • No orbShadow / no orbHalo layer
- *   • orbCore fills inset:0 (the full dot area) with the tinted fill + neon rim
+ *   • orbCore fills inset:0 (the full dot area) with the glass fill + neon rim
  *   • No orbRing (no SVG arc)
- *   • Number/letter in IBM Plex Mono, DARK ink on the light fill (see .orbNum)
- * Cheap to render: no backdrop-filter, no blurred halo — just a tinted radial
- * gradient + a small neon rim box-shadow.
+ *   • Number/letter in IBM Plex Mono, WHITE on the near-clear fill (see .orbNum)
+ * Cheap to render: no backdrop-filter, no blurred halo — just a light glass
+ * gradient + a small neon rim box-shadow + one thin top gloss line.
  *
  * Fixed hues per mock7 (not adjustable):
  *   K = hue  8 (red-ish)
@@ -38,11 +38,10 @@ interface DotStyles {
   num:     React.CSSProperties;
 }
 
-// "Tinted glass" finish, ringless. Same recipe as ProbabilityOrb's orbCore: a
-// LIGHT, translucent wash of the dot's fixed hue behind the number + a small neon
-// rim box-shadow. `t` (0..1 intensity) lifts the rim saturation/brightness; the
-// fill itself uses a softened saturation so the wash stays gentle. Number/letter
-// is drawn in dark ink (see .orbNum) for contrast on the light backing.
+// "Neon + glass" (near-clear) finish, ringless. Same recipe as ProbabilityOrb's
+// orbCore: a near-clear glass fill (alpha ~.06–.12) + a small neon rim box-shadow
+// in the dot's fixed hue. `t` (0..1 intensity) only lifts saturation/brightness.
+// Number/letter is drawn in white (see .orbNum) for contrast on the dark backing.
 function glassDotStyles(hue: number, size: number, t: number): DotStyles {
   const tc  = clamp(t, 0, 1);
   const sat = Math.round(64 + tc * 26);
@@ -50,16 +49,14 @@ function glassDotStyles(hue: number, size: number, t: number): DotStyles {
 
   const brightL = Math.min(lig + 24, 88);
   const rim     = Math.min(brightL + 4, 82);
-  const softS   = Math.min(sat, 70);
 
   return {
     wrapper: { width: size, height: size },
     core: {
-      background: `radial-gradient(120% 120% at 50% 40%, hsl(${hue} ${softS}% 84% / .78) 0%, hsl(${hue} ${softS}% 70% / .68) 56%, hsl(${hue} ${softS}% 60% / .66) 100%)`,
+      background: `linear-gradient(160deg, hsl(${hue} ${sat}% 60% / .12) 0%, hsl(${hue} ${sat}% 40% / .06) 46%, hsl(${hue} ${sat}% 24% / .08) 100%)`,
       boxShadow: [
-        `inset 0 1px 2px hsl(0 0% 100% / .45)`,                  // glassy top highlight
         `inset 0 0 0 1.5px hsl(${hue} ${sat}% ${rim}% / .92)`,   // bright neon rim line
-        `inset 0 0 6px hsl(${hue} ${sat}% ${brightL}% / .24)`,   // small inner rim glow
+        `inset 0 0 6px hsl(${hue} ${sat}% ${brightL}% / .22)`,   // small inner rim glow
         `0 0 8px hsl(${hue} ${sat}% ${brightL}% / .4)`,          // small outer bloom
       ].join(", "),
     },
@@ -101,8 +98,10 @@ export function CatDot({
           : "no strong edge"
       }
     >
-      {/* Core — tinted glass sphere body with neon rim */}
-      <span className="orbCore" style={s.core} />
+      {/* Core — near-clear glass sphere body with neon rim + thin top gloss */}
+      <span className="orbCore" style={s.core}>
+        <span className="orbSpec" />
+      </span>
       {/* Label — column layout: "41%" over "K" */}
       <span className="orbNum col" style={s.num}>
         {kind === "N" ? (
@@ -145,7 +144,9 @@ export function EnvDot({ pct, size = 56 }: { pct: number; size?: number }) {
       style={s.wrapper}
       title="park + weather, combined"
     >
-      <span className="orbCore" style={s.core} />
+      <span className="orbCore" style={s.core}>
+        <span className="orbSpec" />
+      </span>
       <span className="orbNum col" style={s.num}>
         {signed(pct)}
       </span>
@@ -194,11 +195,10 @@ export function LeanPair({
           <CatDot kind="N" prob={0} size={dotSize} />
           <span className="sp-lean-cell-both">
             <span className="sp-lean-cell-sub sp-lean-cell-sub-k">
-              K {Math.round(k * 100)}%
+              K{Math.round(k * 100)}%
             </span>
-            <span className="sp-lean-cell-sub sp-lean-cell-sub-dot">·</span>
             <span className="sp-lean-cell-sub sp-lean-cell-sub-c">
-              C {Math.round(h * 100)}%
+              C{Math.round(h * 100)}%
             </span>
           </span>
         </span>
