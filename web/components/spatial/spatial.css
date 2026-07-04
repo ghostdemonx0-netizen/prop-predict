@@ -477,18 +477,19 @@
   }
 }
 
-/* Mobile (≤600px): shrink the prop selector + threshold pills just enough that
-   all options fit within the viewport on one line WITHOUT horizontal scrolling.
-   overflow-x:auto stays as a fallback for very narrow screens. */
+/* Mobile (≤600px): keep the prop selector at a comfortably readable size — big
+   enough to read easily at the 600px vertical viewport. The .sp-seg-scroll
+   wrapper's overflow-x:auto lets it scroll horizontally on the narrowest phones,
+   which is preferred over shrinking the labels down to unreadable. */
 @media (max-width: 600px) {
-  .sp-root .sp-seg--props        { gap: 2px; padding: 3px; }
+  .sp-root .sp-seg--props        { gap: 3px; padding: 3px; }
   .sp-root .sp-seg--props .sp-seg-btn {
-    font-size: .6rem;
-    padding:   .38rem .4rem;
+    font-size: .76rem;
+    padding:   .46rem .64rem;
   }
   .sp-root .sp-seg--sm .sp-seg-btn {
-    font-size: .58rem;
-    padding:   .3rem .46rem;
+    font-size: .62rem;
+    padding:   .32rem .52rem;
   }
 }
 
@@ -1255,11 +1256,12 @@
   gap:             14px;
 }
 .sp-root .sp-topr-l { min-width: 0; }
-/* Name + batter hand chip sit inline on the top row. */
+/* Name + batter hand chip + PROJ/CONF lineup chip sit inline on the top row. */
 .sp-root .sp-pname-row {
   display:     flex;
   align-items: center;
   gap:         7px;
+  flex-wrap:   wrap;
   min-width:   0;
 }
 .sp-root .sp-pname {
@@ -1407,13 +1409,13 @@
 .sp-root .sp-mu-sep { opacity: .4; }
 .sp-root .sp-mu-pit { color: var(--ink-dim); }
 
-/* Probability cell: sphere (with the live tracker pill stacked UNDER it, like the
-   Game Hub orbs) plus the tracked prop+threshold label to the RIGHT of the sphere. */
+/* Probability cell: sphere with the live tracker pill AND the abbreviated
+   prop+threshold label both stacked UNDER it (small, muted, tidy — nothing to
+   the right of the sphere, so the table stays narrow on mobile). */
 .sp-root .sp-prob-cell {
   display:         flex;
   justify-content: flex-end;
   align-items:     center;
-  gap:             10px;
 }
 .sp-root .sp-orb-stack {
   display:        flex;

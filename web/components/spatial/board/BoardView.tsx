@@ -83,17 +83,18 @@ function nameMatchup(r: SpatialRow): string {
 }
 
 /**
- * The prop + threshold this board is tracking, as a tidy uppercase label —
- * "1+ HITS", "2+ BASES", "1+ RUNS", "1+ RBI", "2+ H+R+RBI". Derived from the
- * active prop kind (the numeric threshold is encoded in it), never hardcoded.
+ * The prop + threshold this board is tracking, as a tidy compact abbreviation —
+ * "1+ H", "2+ TB", "1+ R", "1+ RBI", "2+ HRR". Abbreviated so it can sit under
+ * the sphere without widening the table. Derived from the active prop kind (the
+ * numeric threshold is encoded in it), never hardcoded.
  * Returns null for Home Runs and Strikeouts (no single threshold to name).
  */
 function propTrackLabel(prop: PropKind): string | null {
-  if (prop.startsWith("hits")) return `${prop.slice(4)}+ HITS`;
-  if (prop.startsWith("tb")) return `${prop.slice(2)}+ BASES`;
-  if (prop.startsWith("runs")) return `${prop.slice(4)}+ RUNS`;
+  if (prop.startsWith("hits")) return `${prop.slice(4)}+ H`;
+  if (prop.startsWith("tb")) return `${prop.slice(2)}+ TB`;
+  if (prop.startsWith("runs")) return `${prop.slice(4)}+ R`;
   if (prop.startsWith("rbi")) return `${prop.slice(3)}+ RBI`;
-  if (prop.startsWith("hrr")) return `${prop.slice(3)}+ H+R+RBI`;
+  if (prop.startsWith("hrr")) return `${prop.slice(3)}+ HRR`;
   return null;
 }
 
@@ -222,6 +223,7 @@ function PropCard({
           <div className="sp-pname-row">
             <span className="sp-pname">{r.player}</span>
             {pHand && <HandChip hand={pHand} adv={adv} />}
+            {r.status && <TagChip status={tagStatus(r.status)} order={r.bat_order} />}
           </div>
           <div className="sp-psub">{nameMatchup(r)}</div>
         </div>
@@ -234,7 +236,6 @@ function PropCard({
       <div className="sp-pmeta">
         <div className="sp-prow">
           <Badge kind={tier}>{strengthLabel(r.prob, prop)}</Badge>
-          {r.status && <TagChip status={tagStatus(r.status)} order={r.bat_order} />}
           {!isK && r.form && <FormChip kind={r.form} />}
         </div>
 
@@ -366,8 +367,8 @@ function BoardTable({
                     <div className="sp-orb-stack">
                       <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
                       {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
+                      {trackLabel && <span className="sp-track-lbl">{trackLabel}</span>}
                     </div>
-                    {trackLabel && <span className="sp-track-lbl">{trackLabel}</span>}
                   </div>
                 </td>
               </tr>

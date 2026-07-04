@@ -417,6 +417,7 @@ export default function NextPage() {
               display: "flex",
               gap: 16,
               flexWrap: "wrap",
+              justifyContent: "center",
               margin: "18px 0",
             }}
           >
