@@ -32,7 +32,7 @@ import { WindIcon, TempIcon, RainIcon, ClockIcon } from "../Icons";
 
 import { GlassCard } from "./GlassCard";
 import { EnvDot } from "./GlassDot";
-import { HandChip, TagChip, FBox } from "./chips";
+import { HandChip, TagChip, FBox, envImpactColor, tempColor } from "./chips";
 import { ProbabilityOrb } from "./ProbabilityOrb";
 import { LiveChip } from "./LiveChipSpatial";
 import { BatterGrid } from "./BatterGrid";
@@ -104,8 +104,14 @@ function CardFace({ g }: { g: Game }) {
       </div>
 
       <div className="sp-hubchips">
-        <FBox label="Park" value={signed(g.park_mult)} />
-        <FBox label="Wx" value={signed(g.weather_mult)} />
+        <FBox
+          label="Park"
+          value={<span style={{ color: envImpactColor(g.park_mult) }}>{signed(g.park_mult)}</span>}
+        />
+        <FBox
+          label="Wx"
+          value={<span style={{ color: envImpactColor(g.weather_mult) }}>{signed(g.weather_mult)}</span>}
+        />
         {hasWind && (
           <FBox
             icon={<WindIcon deg={g.wind_dir as number} size={13} style={{ color: arrowColor(g.wind_dir as number) }} />}
@@ -113,7 +119,15 @@ function CardFace({ g }: { g: Game }) {
             value={`${Math.round(g.wind_mph as number)}mph`}
           />
         )}
-        {typeof g.temp_f === "number" && <FBox icon={<TempIcon size={13} />} value={`${Math.round(g.temp_f)}°`} />}
+        {typeof g.temp_f === "number" && (() => {
+          const tc = tempColor(g.temp_f);
+          return (
+            <FBox
+              icon={<TempIcon size={13} style={{ color: tc }} />}
+              value={<span style={{ color: tc }}>{Math.round(g.temp_f)}°</span>}
+            />
+          );
+        })()}
         {showRain && (
           <FBox icon={<RainIcon size={13} style={{ color: "var(--iris-cyan)" }} />} value={`${g.precip_pct}%`} />
         )}

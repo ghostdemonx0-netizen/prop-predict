@@ -13,6 +13,35 @@ import "./spatial.css";
 import type { ReactNode } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  Shared environment-chip colour helpers
+//
+//  These give EVERY env chip (Park %, Wx %, Temp) one consistent colour scale
+//  across every surface (board Cards, Game Hub, Parks ledger, …), so the same
+//  chip is never coloured on one surface and plain on another.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Colour for a signed offense-impact multiplier (park, weather, or combined
+ *  env). Mirrors EnvDot's green / amber / red sign logic (GlassDot.tsx) so the
+ *  flat env chips match the env spheres: favors offense → green, suppresses →
+ *  red, neutral → amber. `mult` is a multiplier around 1 (e.g. 1.08 = +8%). */
+export function envImpactColor(mult: number): string {
+  const b = mult - 1;
+  if (b >= 0.02) return "var(--green)";
+  if (b <= -0.02) return "var(--red)";
+  return "var(--amber)";
+}
+
+/** Progressive weather-heat colour for a temperature pill (unchanged scale,
+ *  now shared so every surface colours temp identically):
+ *  cold (<60°) blue · mild (60–78°) green · warm (79–88°) amber · hot (>88°) red. */
+export function tempColor(t: number): string {
+  if (t < 60) return "var(--iris-cyan)";
+  if (t <= 78) return "var(--green)";
+  if (t <= 88) return "var(--amber)";
+  return "var(--red)";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  Badge — Strong / Lean / Pass tier label
 // ─────────────────────────────────────────────────────────────────────────────
 

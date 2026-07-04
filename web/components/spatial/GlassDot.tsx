@@ -190,12 +190,13 @@ export function LeanPair({
       return (
         <span className="sp-lean-cell">
           <CatDot kind="N" prob={0} size={dotSize} />
-          <span style={{ display: "flex", gap: 4 }}>
+          <span className="sp-lean-cell-both">
             <span className="sp-lean-cell-sub sp-lean-cell-sub-k">
-              K{Math.round(k * 100)}
+              K {Math.round(k * 100)}%
             </span>
+            <span className="sp-lean-cell-sub sp-lean-cell-sub-dot">·</span>
             <span className="sp-lean-cell-sub sp-lean-cell-sub-c">
-              C{Math.round(h * 100)}
+              C {Math.round(h * 100)}%
             </span>
           </span>
         </span>

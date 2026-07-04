@@ -629,6 +629,17 @@
   flex-direction: column;
 }
 
+/* The small K/C letter under the big % inside a CatDot — larger + brighter so
+   it stays legible on the neon-glass fill (was .46em / .86 opacity = too faint). */
+.sp-root .sp-dot .orbNum b {
+  font-size:      .6em;
+  font-weight:    800;
+  letter-spacing: .05em;
+  opacity:        1;
+  color:          hsl(0 0% 100%);
+  text-shadow:    0 1px 3px hsl(248 80% 2% / .9), 0 0 6px hsl(248 80% 2% / .8);
+}
+
 /* ---- LeanPair wrappers ---- */
 .sp-root .sp-lean-pair {
   display:     inline-flex;
@@ -657,6 +668,16 @@
 }
 .sp-root .sp-lean-cell-sub-k { color: hsl(8 90% 76%);   }
 .sp-root .sp-lean-cell-sub-c { color: hsl(150 70% 72%); }
+
+/* Neutral (N) sub-row: both K% and C% side-by-side, spaced + with % signs so it
+   reads as clearly as the leaning K/C caption (was cramped "K21 C24"). */
+.sp-root .sp-lean-cell-both {
+  display:     inline-flex;
+  align-items: center;
+  gap:         5px;
+  white-space: nowrap;
+}
+.sp-root .sp-lean-cell-sub-dot { color: var(--ink-faint); }
 
 /* =========================================================
    11. Factor Bar — sp-drv / sp-track / sp-delta

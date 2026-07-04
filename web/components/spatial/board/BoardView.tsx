@@ -31,7 +31,7 @@ import { WindIcon, TempIcon, RainIcon, ClockIcon } from "../../Icons";
 
 import { GlassCard } from "../GlassCard";
 import { ProbabilityOrb } from "../ProbabilityOrb";
-import { Badge, TagChip, HandChip, FormChip, FBox, Bvp } from "../chips";
+import { Badge, TagChip, HandChip, FormChip, FBox, Bvp, tempColor } from "../chips";
 import { LiveChip } from "../LiveChipSpatial";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,15 +67,6 @@ function handGlyph(h?: string): "R" | "L" | "SW" | null {
   if (h[0] === "L") return "L";
   if (h[0] === "R") return "R";
   return null;
-}
-
-/** Progressive weather-heat colour for the temperature pill.
- *  cold (<60°) = blue · mild (60–78°) = green · warm (79–88°) = amber · hot (>88°) = red. */
-function tempColor(t: number): string {
-  if (t < 60) return "var(--iris-cyan)";
-  if (t <= 78) return "var(--green)";
-  if (t <= 88) return "var(--amber)";
-  return "var(--red)";
 }
 
 /** Weather condition pills (ported from PropBoard.WeatherChips). */

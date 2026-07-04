@@ -17,7 +17,7 @@ import type { Game } from "../../lib/types";
 import { arrowColor } from "../../lib/format";
 import { WindIcon, TempIcon } from "../Icons";
 import { EnvDot } from "./GlassDot";
-import { FBox } from "./chips";
+import { FBox, envImpactColor, tempColor } from "./chips";
 import { GlassCard } from "./GlassCard";
 import "./spatial.css";
 
@@ -87,14 +87,14 @@ export function Parks({ games }: { games: Game[] }) {
               <FBox
                 icon={<span aria-hidden="true">🏟️</span>}
                 label="Park"
-                value={signed(g.park_mult)}
+                value={<span style={{ color: envImpactColor(g.park_mult) }}>{signed(g.park_mult)}</span>}
               />
 
               {/* Weather factor */}
               <FBox
                 icon={<span aria-hidden="true">🌬️</span>}
                 label="Wx"
-                value={signed(g.weather_mult)}
+                value={<span style={{ color: envImpactColor(g.weather_mult) }}>{signed(g.weather_mult)}</span>}
               />
 
               {/* Wind direction + speed (optional) */}
@@ -112,12 +112,15 @@ export function Parks({ games }: { games: Game[] }) {
               )}
 
               {/* Temperature (optional) */}
-              {typeof g.temp_f === "number" && (
-                <FBox
-                  icon={<TempIcon size={12} style={{ flexShrink: 0 }} />}
-                  value={`${Math.round(g.temp_f)}°`}
-                />
-              )}
+              {typeof g.temp_f === "number" && (() => {
+                const tc = tempColor(g.temp_f);
+                return (
+                  <FBox
+                    icon={<TempIcon size={12} style={{ color: tc, flexShrink: 0 }} />}
+                    value={<span style={{ color: tc }}>{Math.round(g.temp_f)}°</span>}
+                  />
+                );
+              })()}
 
             </div>
 
