@@ -1,0 +1,30 @@
+name: deploy-code
+
+# Fast deploy for CODE-ONLY changes (UI, styling, components) that do NOT need a
+# board recompute. Pulls the already-computed board JSON from the `board-data`
+# branch (seconds) and ships main to Vercel — ~2 min instead of the ~10 min
+# board-refresh recompute. The real board/data pipeline is untouched; the cron
+# board-refresh still owns board updates + the freeze rule.
+on:
+  workflow_dispatch:
+
+concurrency:
+  # Share nothing with refresh-board's group so a code deploy never cancels a
+  # board recompute; but serialize code deploys with each other.
+  group: deploy-code
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull latest board JSON from board-data branch
+        run: |
+          git fetch -q origin board-data --depth=1
+          mkdir -p web/public/data
+          # extract all board JSON (latest.json, index.json, dated files) from the snapshot
+          git archive origin/board-data web/public/data | tar -x
+          echo "board files:" && ls web/public/data
+      - name: Deploy to Vercel (prod)
+        run: npx vercel deploy --prod --cwd web --token ${{ secrets.VERCEL_TOKEN }} --yes
