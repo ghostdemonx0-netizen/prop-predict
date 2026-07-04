@@ -226,16 +226,15 @@
   overflow:      hidden;
 }
 
-/* Thin top gloss line — sells the "glass" of the neon-glass finish.
-   Cheap: a single unblurred linear-gradient sliver near the top edge. */
+/* Subtle top gloss — sells the "glass" of the deep-glass finish. Cheap: a single
+   unblurred full-inset linear-gradient that lightens the top edge (matches the
+   OrbVariants "Deep glass" .sp-orbv-cardgloss sub-element). */
 .sp-root .orbSpec {
-  position:      absolute;
-  top:           9%;
-  left:          20%;
-  width:         60%;
-  height:        24%;
-  border-radius: 50%;
-  background:    linear-gradient(180deg, hsl(0 0% 100% / .3), hsl(0 0% 100% / 0) 92%);
+  position:       absolute;
+  inset:          0;
+  border-radius:  50%;
+  pointer-events: none;
+  background:     linear-gradient(180deg, hsl(0 0% 100% / .06), transparent 30%);
 }
 
 /* SVG progress ring — sits above the core */
@@ -246,10 +245,10 @@
   transform: translateZ(0);
 }
 
-/* Centred numeric label (NN%) — WHITE on the near-clear glass fill (dark
-   background shows through the center). font-family is set inline to IBM Plex
-   Mono (see orbFont.ts); the fallback here keeps a mono face if that ever fails
-   to load. Tabular + lining figures so the digits line up. */
+/* Centred numeric label (NN%) — WHITE with a dark halo on the deep glass fill.
+   font-family is set inline to IBM Plex Mono (see orbFont.ts); the fallback here
+   keeps a mono face if that ever fails to load. Tabular + lining figures so the
+   digits line up. */
 .sp-root .orbNum {
   position:        relative;
   z-index:         3;
@@ -260,8 +259,7 @@
   font-family:     var(--f-mono);
   font-weight:     700;
   color:           hsl(0 0% 100% / .96);
-  /* two-layer dark halo so the % stays high-contrast on the near-clear
-     glass fill (dark background shows through the center) */
+  /* two-layer dark halo so the % stays high-contrast on the deep glass fill */
   text-shadow:     0 1px 4px hsl(248 80% 2% / .85), 0 0 7px hsl(248 80% 2% / .7);
   line-height:     .98;
   font-variant-numeric:  tabular-nums lining-nums;
@@ -635,8 +633,8 @@
 }
 
 /* The small K/C letter under the big % inside a CatDot — larger + brighter WHITE
-   so it stays legible on the near-clear neon-glass fill (keeps the earlier
-   %-and-legible-letter fix; was .46em / .86 opacity = too faint). */
+   so it stays legible on the deep-glass fill (keeps the earlier %-and-legible-
+   letter fix; was .46em / .86 opacity = too faint). */
 .sp-root .sp-dot .orbNum b {
   font-size:      .6em;
   font-weight:    800;
@@ -2345,143 +2343,4 @@
   letter-spacing: .02em;
   opacity:     .62;
   margin-top:  12px;
-}
-
-/* =========================================================
-   TEMP — Orb sphere-FILL comparison (/next/orbs)
-   Structure-only classes for OrbVariants.tsx. Does NOT touch the real .orb*
-   classes. Delete this block + OrbVariants.tsx + app/next/orbs once a fill is
-   chosen. Every variant keeps the neon ring + SVG progress ring + centered %.
-   ========================================================= */
-
-.sp-root .sp-orbv-page {
-  padding:    32px 20px 80px;
-  max-width:  1100px;
-  margin:     0 auto;
-}
-.sp-root .sp-orbv-head h1 {
-  font-family:    var(--f-mono);
-  font-size:      1.15rem;
-  font-weight:    700;
-  color:          hsl(0 0% 100% / .92);
-  margin:         0 0 8px;
-}
-.sp-root .sp-orbv-head p {
-  font-family:  var(--f-body, sans-serif);
-  font-size:    .82rem;
-  line-height:  1.5;
-  color:        var(--ink-dim);
-  max-width:    760px;
-  margin:       0 0 28px;
-}
-.sp-root .sp-orbv-head code { font-family: var(--f-mono); }
-
-.sp-root .sp-orbv-grid {
-  display:        flex;
-  flex-direction: column;
-  gap:            14px;
-}
-.sp-root .sp-orbv-row {
-  display:        grid;
-  grid-template-columns: 64px repeat(5, 1fr);
-  align-items:    center;
-  gap:            10px;
-}
-.sp-root .sp-orbv-cell {
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  justify-content:center;
-  gap:            8px;
-  padding:        6px 4px;
-}
-.sp-root .sp-orbv-corner {
-  font-family:  var(--f-mono);
-  font-size:    .62rem;
-  color:        var(--ink-faint);
-}
-.sp-root .sp-orbv-colhead {
-  font-family:  var(--f-mono);
-  font-size:    .66rem;
-  font-weight:  700;
-  color:        hsl(0 0% 100% / .82);
-  text-align:   center;
-  line-height:  1.2;
-}
-.sp-root .sp-orbv-rowhead {
-  font-family:  var(--f-mono);
-  font-size:    .8rem;
-  font-weight:  700;
-  color:        var(--ink-dim);
-}
-.sp-root .sp-orbv-caption {
-  font-family:  var(--f-mono);
-  font-size:    .56rem;
-  color:        var(--ink-faint);
-  text-align:   center;
-}
-
-/* one orb */
-.sp-root .sp-orbv {
-  position:        relative;
-  display:         inline-flex;
-  flex:            0 0 auto;
-  align-items:     center;
-  justify-content: center;
-}
-.sp-root .sp-orbv-fill {
-  position:      absolute;
-  inset:         0;
-  border-radius: 50%;
-  overflow:      hidden;
-  z-index:       1;
-}
-/* frosted (Cards glass frosted) — the ONLY variant that blurs */
-.sp-root .sp-orbv-frost {
-  backdrop-filter:         blur(20px) saturate(1.3);
-  -webkit-backdrop-filter: blur(20px) saturate(1.3);
-}
-/* card top-gloss sliver (same idea as .sp-float::after, on the round fill) */
-.sp-root .sp-orbv-cardgloss {
-  position:       absolute;
-  inset:          0;
-  border-radius:  inherit;
-  pointer-events: none;
-  background:     linear-gradient(180deg, hsl(0 0% 100% / .06), transparent 30%);
-}
-/* thin top gloss line for the near-clear neon glass */
-.sp-root .sp-orbv-glass-gloss {
-  position:      absolute;
-  top:           9%;
-  left:          20%;
-  width:         60%;
-  height:        24%;
-  border-radius: 50%;
-  background:    linear-gradient(180deg, hsl(0 0% 100% / .3), hsl(0 0% 100% / 0) 92%);
-}
-
-.sp-root .sp-orbv-ring {
-  position:  absolute;
-  inset:     0;
-  z-index:   2;
-  transform: translateZ(0);
-}
-/* centered % — WHITE with a subtle dark halo so it stays legible on dark fills */
-.sp-root .sp-orbv-num {
-  position:        relative;
-  z-index:         3;
-  display:         flex;
-  align-items:     center;
-  justify-content: center;
-  font-weight:     700;
-  color:           hsl(0 0% 100% / .96);
-  text-shadow:     0 1px 4px hsl(248 80% 2% / .85), 0 0 7px hsl(248 80% 2% / .7);
-  line-height:     .98;
-  font-variant-numeric:  tabular-nums lining-nums;
-  font-feature-settings: "tnum" 1, "lnum" 1;
-}
-.sp-root .sp-orbv-num i {
-  font-style: normal;
-  font-size:  .58em;
-  opacity:    .72;
 }

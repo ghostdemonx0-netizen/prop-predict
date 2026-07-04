@@ -1,15 +1,16 @@
 /**
- * ProbabilityOrb.tsx — "Neon + glass" (near-clear) probability orb, mock 7
- * "Spatial Depth" skin.
+ * ProbabilityOrb.tsx — "Deep glass" probability orb, mock 7 "Spatial Depth" skin.
  *
- * The finish: a neon glowing rim (in the heatColor hue) around a NEARLY-CLEAR
- * glassy center, so the dark background shows through and the centered % stays
- * high-contrast (drawn in WHITE with a dark halo — see .orbNum). The number uses
- * IBM Plex Mono (orbFont.ts). Kept deliberately CHEAP to render (it appears many
- * times per page): no backdrop-filter, no blurred halo/shadow layers — just a
- * light glass gradient + a small neon rim box-shadow + one thin top gloss line.
+ * The finish: a neon glowing rim (in the heatColor hue) around a DARK, DEEP
+ * translucent glass center — a radial gradient that reads darkest at the bottom
+ * edge, giving the sphere real depth — with a thin inset top highlight. The
+ * centered % is drawn in WHITE with a subtle dark halo (see .orbNum) so it stays
+ * high-contrast on the dark fill. The number uses IBM Plex Mono (orbFont.ts).
+ * Kept deliberately CHEAP to render (it appears many times per page): no
+ * backdrop-filter, no blurred halo/shadow layers — just a radial glass gradient
+ * + a small neon rim box-shadow + one subtle top gloss (.orbSpec).
  *
- * Structure:  orbCore (near-clear glass fill + neon rim) + orbSpec (top gloss)
+ * Structure:  orbCore (deep-glass fill + neon rim) + orbSpec (top gloss)
  *             → orbRing (SVG progress, neon color) → orbNum (centered %, IBM Plex Mono)
  *
  * KEEPS: the SVG progress ring (raw %), the centered % number, and heatColor().
@@ -99,14 +100,16 @@ export function ProbabilityOrb({
   return (
     <span className="orb" style={{ width: size, height: size }}>
 
-      {/* Neon-glass sphere: near-clear glassy center + neon glowing rim.
-          Fill alpha ~.06–.12 lets the dark background read through so the % keeps
-          contrast; the vivid neon colour lives on the rim box-shadow + the ring. */}
+      {/* Deep-glass sphere: dark, deep translucent glass center + neon glowing rim.
+          The radial fill darkens toward the bottom edge for real depth; the vivid
+          neon colour lives on the rim box-shadow + the ring. A thin inset top
+          highlight + the .orbSpec gloss sell the glass. */}
       <span
         className="orbCore"
         style={{
-          background: `linear-gradient(160deg, hsl(${H} ${S}% 60% / .12) 0%, hsl(${H} ${S}% 40% / .06) 46%, hsl(${H} ${S}% 24% / .08) 100%)`,
+          background: `radial-gradient(120% 120% at 50% 36%, hsl(${H} ${S}% 20% / .5) 0%, hsl(${H} ${S}% 11% / .68) 58%, hsl(${H} ${S}% 7% / .82) 100%)`,
           boxShadow: [
+            `inset 0 1px 1px hsl(0 0% 100% / .1)`,               // thin top highlight
             `inset 0 0 0 1.5px hsl(${H} ${S}% ${rim}% / .92)`,   // bright neon rim line
             `inset 0 0 6px hsl(${H} ${S}% ${brightL}% / .22)`,   // small inner rim glow
             `0 0 8px hsl(${H} ${S}% ${brightL}% / .4)`,          // small outer bloom
@@ -141,7 +144,7 @@ export function ProbabilityOrb({
         </g>
       </svg>
 
-      {/* Numeric label — IBM Plex Mono (white on the near-clear glass fill) */}
+      {/* Numeric label — IBM Plex Mono (white with a dark halo on the deep glass) */}
       <span className="orbNum" style={{ fontSize: `${numFsPx}px`, fontFamily: orbMono.style.fontFamily }}>
         {Math.round(prob * 100)}<i>%</i>
         {label && <b>{label}</b>}

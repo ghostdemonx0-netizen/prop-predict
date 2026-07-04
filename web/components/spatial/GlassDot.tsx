@@ -4,15 +4,15 @@
  * Exports: CatDot, EnvDot, LeanPair.
  *
  * Ported from mock7.html's glassDot() / catDot() / envDot() / leanPair() /
- * leanCell() functions, now wearing the same "Neon + glass" (near-clear) finish
- * as ProbabilityOrb (neon glowing rim + a near-clear glassy fill) so the dots
- * read as one family — but RINGLESS (these aren't probabilities). The dot:
+ * leanCell() functions, now wearing the same "Deep glass" finish as
+ * ProbabilityOrb (neon glowing rim + a dark, deep translucent glass fill) so the
+ * dots read as one family — but RINGLESS (these aren't probabilities). The dot:
  *   • No orbShadow / no orbHalo layer
- *   • orbCore fills inset:0 (the full dot area) with the glass fill + neon rim
+ *   • orbCore fills inset:0 (the full dot area) with the deep-glass fill + neon rim
  *   • No orbRing (no SVG arc)
- *   • Number/letter in IBM Plex Mono, WHITE on the near-clear fill (see .orbNum)
- * Cheap to render: no backdrop-filter, no blurred halo — just a light glass
- * gradient + a small neon rim box-shadow + one thin top gloss line.
+ *   • Number/letter in IBM Plex Mono, WHITE with a dark halo (see .orbNum)
+ * Cheap to render: no backdrop-filter, no blurred halo — just a radial glass
+ * gradient + a small neon rim box-shadow + one subtle top gloss.
  *
  * Fixed hues per mock7 (not adjustable):
  *   K = hue  8 (red-ish)
@@ -38,10 +38,11 @@ interface DotStyles {
   num:     React.CSSProperties;
 }
 
-// "Neon + glass" (near-clear) finish, ringless. Same recipe as ProbabilityOrb's
-// orbCore: a near-clear glass fill (alpha ~.06–.12) + a small neon rim box-shadow
-// in the dot's fixed hue. `t` (0..1 intensity) only lifts saturation/brightness.
-// Number/letter is drawn in white (see .orbNum) for contrast on the dark backing.
+// "Deep glass" finish, ringless. Same recipe as ProbabilityOrb's orbCore: a dark,
+// deep translucent glass fill (radial, darkens toward the bottom) + a thin inset
+// top highlight + a small neon rim box-shadow in the dot's fixed hue. `t` (0..1
+// intensity) only lifts saturation/brightness of the rim/glow. The number/letter
+// is drawn in white (see .orbNum) for contrast on the dark fill.
 function glassDotStyles(hue: number, size: number, t: number): DotStyles {
   const tc  = clamp(t, 0, 1);
   const sat = Math.round(64 + tc * 26);
@@ -53,8 +54,9 @@ function glassDotStyles(hue: number, size: number, t: number): DotStyles {
   return {
     wrapper: { width: size, height: size },
     core: {
-      background: `linear-gradient(160deg, hsl(${hue} ${sat}% 60% / .12) 0%, hsl(${hue} ${sat}% 40% / .06) 46%, hsl(${hue} ${sat}% 24% / .08) 100%)`,
+      background: `radial-gradient(120% 120% at 50% 36%, hsl(${hue} ${sat}% 20% / .5) 0%, hsl(${hue} ${sat}% 11% / .68) 58%, hsl(${hue} ${sat}% 7% / .82) 100%)`,
       boxShadow: [
+        `inset 0 1px 1px hsl(0 0% 100% / .1)`,                   // thin top highlight
         `inset 0 0 0 1.5px hsl(${hue} ${sat}% ${rim}% / .92)`,   // bright neon rim line
         `inset 0 0 6px hsl(${hue} ${sat}% ${brightL}% / .22)`,   // small inner rim glow
         `0 0 8px hsl(${hue} ${sat}% ${brightL}% / .4)`,          // small outer bloom
