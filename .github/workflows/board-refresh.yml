@@ -17,6 +17,17 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+      - name: Use latest main HEAD (avoid stale trigger-SHA deploy races)
+        # workflow_dispatch pins the checkout to main's SHA at trigger time. With a
+        # ~10 min compute, a run triggered just before a code merge would deploy the
+        # OLD code on top of a newer deploy (the bug that made fresh UI deploys
+        # "not land"). Reset to the current main HEAD so the robot always ships the
+        # latest code. Gitignored board state (restored from cache below) is not
+        # touched by a git reset, so the freeze-merge is unaffected.
+        run: |
+          git fetch -q --depth=1 origin main
+          git reset --hard FETCH_HEAD
+          echo "deploying $(git rev-parse --short HEAD)"
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
