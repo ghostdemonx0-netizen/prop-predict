@@ -76,8 +76,8 @@ const PROP_OPTIONS = [
 ];
 
 const VIEW_OPTIONS: { value: BoardViewMode; label: string }[] = [
-  { value: "cards", label: "Cards" },
   { value: "split", label: "Split" },
+  { value: "cards", label: "Cards" },
   { value: "table", label: "Table" },
   { value: "matchups", label: "Matchups" },
 ];
@@ -204,7 +204,7 @@ export default function Home() {
   const [source, setSource] = useState<Source>("current");
   const [section, setSection] = useState<NavSection>("board");
   const [prop, setProp] = useState<BoardProp>("hr");
-  const [view, setView] = useState<BoardViewMode>("cards");
+  const [view, setView] = useState<BoardViewMode>("split");
   const [threshold, setThreshold] = useState<Thresholds>({
     hits: 1,
     tb: 2,
@@ -219,7 +219,6 @@ export default function Home() {
   // ── Read URL params + load the date index once on mount (mirror page.tsx). ──
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const want = params.get("date");
 
     const propParam = params.get("prop");
     if (propParam === "k") setProp("k");
@@ -272,7 +271,9 @@ export default function Home() {
 
     loadIndex().then((ds) => {
       setDates(ds);
-      setSelectedDate(want && ds.includes(want) ? want : ds[0] ?? "");
+      // Always land on the current (newest) day on load/refresh — never a stale
+      // earlier day. The date picker still browses earlier dates in-session.
+      setSelectedDate([...ds].sort().at(-1) ?? "");
     });
   }, []);
 
@@ -292,7 +293,9 @@ export default function Home() {
     if (!selectedDate) return;
     const params = new URLSearchParams(window.location.search);
     if (params.has("player")) return;
-    params.set("date", selectedDate);
+    // Date is intentionally NOT persisted to the URL — every load/refresh lands
+    // on the current (newest) day; the picker browses earlier dates in-session.
+    params.delete("date");
     params.set("prop", prop);
     const t = urlThreshold(prop, threshold);
     if (t != null) params.set("threshold", String(t));
