@@ -1687,6 +1687,29 @@
 .sp-root .sp-mu-sep { opacity: .4; }
 .sp-root .sp-mu-pit { color: var(--ink-dim); }
 
+/* Second-line game time under the matchup — shown ONLY on mobile portrait, where
+   the separate Time column is collapsed into this cell (see @640 below) so the
+   table (esp. the wider Strikeouts table with its extra Model Book Line + Proj Ks
+   columns) fits without overflowing / horizontal scroll. Hidden on desktop, where
+   Time keeps its own column. */
+.sp-root .sp-mu-time {
+  display:     none;
+  margin-top:  3px;
+  font-size:   .72rem;
+  color:       var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* Mobile portrait: MERGE Matchup + Time into one column. The standalone Time
+   column (th + td) is dropped and the game time stacks as a second line under the
+   matchup, so the table is narrower and the Strikeouts table (Player | Matchup |
+   Model Book Line | Proj Ks | Probability) no longer overflows the probability
+   column off-screen. Desktop keeps Matchup and Time as separate columns. */
+@media (max-width: 640px) {
+  .sp-root table.sp-board .sp-col-time { display: none; }
+  .sp-root .sp-mu-time { display: block; }
+}
+
 /* Probability cell: sphere with the live tracker pill AND the abbreviated
    prop+threshold label both stacked UNDER it (small, muted, tidy — nothing to
    the right of the sphere, so the table stays narrow on mobile). */

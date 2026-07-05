@@ -28,7 +28,7 @@ import { gameTimeLabel, windText, arrowColor } from "../../lib/format";
 import { toBoardRows, type Source } from "../../lib/weighting";
 import type { BoardRow } from "../PropBoard";
 import { useLiveFor } from "../LiveProvider";
-import { WindIcon, TempIcon, RainIcon, ClockIcon } from "../Icons";
+import { WindIcon, TempIcon, RainIcon, ClockIcon, ParkIcon, ParkWeatherIcon } from "../Icons";
 
 import { GlassCard } from "./GlassCard";
 import { EnvDot } from "./GlassDot";
@@ -105,10 +105,12 @@ function CardFace({ g }: { g: Game }) {
 
       <div className="sp-hubchips">
         <FBox
+          icon={<ParkIcon size={13} style={{ color: "var(--ink-faint)" }} />}
           label="Park"
           value={<span style={{ color: envImpactColor(g.park_mult) }}>{signed(g.park_mult)}</span>}
         />
         <FBox
+          icon={<ParkWeatherIcon size={13} style={{ color: "var(--ink-faint)" }} />}
           label="Wx"
           value={<span style={{ color: envImpactColor(g.weather_mult) }}>{signed(g.weather_mult)}</span>}
         />

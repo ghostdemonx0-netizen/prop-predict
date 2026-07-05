@@ -15,7 +15,7 @@
 
 import type { Game } from "../../lib/types";
 import { arrowColor } from "../../lib/format";
-import { WindIcon, TempIcon, RainIcon } from "../Icons";
+import { WindIcon, TempIcon, RainIcon, ParkIcon, ParkWeatherIcon } from "../Icons";
 import { EnvDot } from "./GlassDot";
 import { FBox, envImpactColor, tempColor } from "./chips";
 import { GlassCard } from "./GlassCard";
@@ -85,14 +85,14 @@ export function Parks({ games }: { games: Game[] }) {
 
               {/* Park factor */}
               <FBox
-                icon={<span aria-hidden="true">🏟️</span>}
+                icon={<ParkIcon size={12} style={{ color: "var(--ink-faint)", flexShrink: 0 }} />}
                 label="Park"
                 value={<span style={{ color: envImpactColor(g.park_mult) }}>{signed(g.park_mult)}</span>}
               />
 
               {/* Weather factor */}
               <FBox
-                icon={<span aria-hidden="true">🌬️</span>}
+                icon={<ParkWeatherIcon size={12} style={{ color: "var(--ink-faint)", flexShrink: 0 }} />}
                 label="Wx"
                 value={<span style={{ color: envImpactColor(g.weather_mult) }}>{signed(g.weather_mult)}</span>}
               />

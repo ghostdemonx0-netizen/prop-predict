@@ -320,7 +320,7 @@ function BoardTable({
           <tr>
             <th style={{ whiteSpace: "nowrap" }}>Player</th>
             <th style={{ width: "100%" }}>Matchup</th>
-            <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Time</th>
+            <th className="sp-col-time" style={{ textAlign: "center", whiteSpace: "nowrap" }}>Time</th>
             {isK && (
               <th
                 style={{ textAlign: "center" }}
@@ -370,9 +370,10 @@ function BoardTable({
                       </>
                     )}
                   </span>
+                  {r.time && <span className="sp-mu-time sp-mono">{r.time}</span>}
                 </td>
                 <td
-                  className="sp-mono"
+                  className="sp-mono sp-col-time"
                   style={{ textAlign: "center", whiteSpace: "nowrap", color: "var(--ink-dim)" }}
                 >
                   {r.time}
