@@ -225,10 +225,13 @@ const Frosted: React.FC<{ size?: number }> = ({ size = 34 }) => (
     <path d="M16 5 L27 16 L16 27 L5 16 Z" fill="url(#blg3-body)" />
     {/* soft frost bloom on top */}
     <path d="M16 5 L27 16 L16 27 L5 16 Z" fill="url(#blg3-frost)" />
+    {/* specular glint along the top-left facet — sells the glass depth */}
+    <path d="M15 6 L7.2 13.8" stroke="hsl(0 0% 100% / .6)" strokeWidth="0.8" strokeLinecap="round" opacity="0.55" />
     {/* soft rim (no glow — diffuse) */}
     <path d="M16 5 L27 16 L16 27 L5 16 Z" fill="none" stroke="url(#blg3-rim)" strokeWidth="1.4" strokeLinejoin="round" opacity="0.85" />
-    {/* black bolt — slightly smaller so more frosted fill surrounds it */}
-    <path d="M18 9.6 L11.4 16.4 L14.8 16.4 L13.7 22.8 L20.6 15.6 L17 15.6 Z" fill="hsl(232 32% 6%)" opacity="1" transform="translate(16 16) scale(0.84) translate(-16 -16)" />
+    {/* black bolt — smaller so more frosted fill surrounds it, with a hairline
+        light edge so it reads as etched into the glass (not a flat hole) */}
+    <path d="M18 9.6 L11.4 16.4 L14.8 16.4 L13.7 22.8 L20.6 15.6 L17 15.6 Z" fill="hsl(232 32% 6%)" stroke="hsl(188 64% 82% / .5)" strokeWidth="0.5" strokeLinejoin="round" opacity="1" transform="translate(16 16) scale(0.84) translate(-16 -16)" />
   </svg>
 );
 
