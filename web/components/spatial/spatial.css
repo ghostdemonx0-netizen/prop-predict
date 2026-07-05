@@ -1306,6 +1306,34 @@
   padding:       .07rem .28rem;
 }
 
+/* Line 1 of a leaderboard cell — rank's sibling: the name + its hand chip kept
+   tight together (games/pitchers: this sits inline before the team chip;
+   batters: it's the top line with the team chip stacked underneath). */
+.sp-root .sp-dnameline {
+  flex:        0 1 auto;
+  min-width:   0;
+  display:     inline-flex;
+  align-items: baseline;
+  gap:         5px;
+  overflow:    hidden;
+}
+
+/* ---- Top Batters: 3 columns, team chip STACKED under the name ---- */
+/* 3 balanced columns (ranks 1–3 | 4–6 | 7–9). */
+.sp-root .sp-dcols--3 { grid-template-columns: 1fr 1fr 1fr; gap: 6px 12px; }
+
+/* Stacked cell: name+hand on line 1, team chip on its own line below. Align the
+   row to the top so the two-line cells line up cleanly with the rank. */
+.sp-root .sp-drow--stack { align-items: flex-start; }
+.sp-root .sp-drow--stack .sp-drank { line-height: 1.3; }
+.sp-root .sp-drow--stack .sp-dnamewrap {
+  flex-direction: column;
+  align-items:    flex-start;
+  gap:            2px;
+}
+/* Full-width name line so long names ellipsise (never push the team chip out). */
+.sp-root .sp-drow--stack .sp-dnameline { width: 100%; }
+
 .sp-root .sp-dval {
   flex:        0 0 auto;
   font-family: var(--f-mono);
@@ -1390,6 +1418,22 @@
   .sp-root .sp-dbox--mstack .sp-dcols  { grid-template-columns: 1fr; gap: 3px; }
   .sp-root .sp-dbox--mstack .sp-dlist  { gap: 4px; }
   .sp-root .sp-dbox--mstack .sp-drow   { line-height: 1.1; }
+
+  /* Top Batters keeps its THREE columns on mobile (team stacked under each
+     name). Placed AFTER the generic 2-col .sp-dcols rule above so it wins for
+     the 3-col box. Tighten gaps + fonts so three narrow stacked cells fit a
+     half-width dashboard cell with NO horizontal overflow (names ellipsise);
+     height ≈ 3 rows, roughly matching the single-column pitcher box beside it. */
+  .sp-root .sp-dcols--3 { grid-template-columns: 1fr 1fr 1fr; gap: 4px 5px; }
+  .sp-root .sp-dbox--stackteam .sp-drow  { gap: 3px; }
+  .sp-root .sp-dbox--stackteam .sp-drank { font-size: .5rem; width: .9em; }
+  .sp-root .sp-dbox--stackteam .sp-dname { font-size: .6rem; }
+  .sp-root .sp-dbox--stackteam .sp-dnamewrap .sp-hand {
+    font-size: .44rem; padding: .04rem .16rem;
+  }
+  .sp-root .sp-dbox--stackteam .sp-dnamewrap .sp-teamchip {
+    font-size: .42rem; padding: .03rem .18rem;
+  }
 }
 
 /* ── Reduced-motion ──────────────────────────────────────── */

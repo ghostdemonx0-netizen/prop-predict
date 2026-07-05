@@ -1,6 +1,5 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import type { BoardRow } from "./PropBoard";
 import { deriveLive, isActiveWindow, type LivePayload, type LiveKind, type LiveGame } from "../lib/live";
 
 const EMPTY: LivePayload = { updated: "", games: {}, players: {} };
@@ -46,10 +45,12 @@ export function LiveProvider({ date, games, children }: { date: string; games: L
 }
 
 /** Returns a helper that maps a board row + prop kind to its live chip state
- *  (or null when the row has no player id). */
+ *  (or null when the row has no player id). Accepts any object carrying the three
+ *  fields it reads (player_id / gameId / line) — a full BoardRow, or the minimal
+ *  pitcher shape the header leaderboard threads through. */
 export function useLiveFor() {
   const payload = useContext(Ctx);
-  return (row: BoardRow, kind: LiveKind) => {
+  return (row: { player_id?: number; gameId?: string; line?: string }, kind: LiveKind) => {
     const pid = row.player_id != null ? String(row.player_id) : undefined;
     if (!pid) return null;
     const status = row.gameId ? payload.games[row.gameId] : undefined;

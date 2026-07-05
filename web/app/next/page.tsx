@@ -372,10 +372,11 @@ export default function NextPage() {
       color: envImpactColor(g.env),
     }));
 
-  // ── Box 3 — Top 6 batters across ALL batter props ──
+  // ── Box 3 — Top 9 batters across ALL batter props ──
   // METRIC: for each unique batter (keyed by player_id), average their
   // source-weighted probability across every batter prop they appear in, taken
-  // at that prop's base/lowest threshold, then rank descending and take 6.
+  // at that prop's base/lowest threshold, then rank descending and take 9
+  // (shown as THREE columns of 3: ranks 1–3 | 4–6 | 7–9).
   // Base thresholds per prop — edit this list to re-tune the composite metric:
   const BATTER_BASES: [PropKind, number][] = [
     ["hr", 1],
@@ -418,7 +419,7 @@ export default function NextPage() {
   const topBatters: DashRow[] = [...batterAcc.values()]
     .map((e) => ({ name: e.name, hand: e.hand, team: e.team, adv: e.adv, avg: e.sum / e.n }))
     .sort((a, b) => b.avg - a.avg)
-    .slice(0, 6)
+    .slice(0, 9)
     .map((e) => ({ name: e.name, hand: e.hand, team: e.team, adv: e.adv }));
 
   // ── Box 4 — Top pitchers: TWO-STEP rank (top-6-proj pool, ordered by over %) ──
@@ -430,6 +431,9 @@ export default function NextPage() {
   //   their (already-high) projection lands at #1.
   // Display is unchanged: proj K is the HEADLINE value ("X.X K"); the over-line
   // probability rides along as a smaller secondary %. Only the ORDER changed.
+  // playerId/gameId/line are threaded through so each row can render the SAME
+  // live K tracker the board uses (LiveChip fed by useLiveFor(row, "k")), shown
+  // to the LEFT of the proj-K value.
   const topPitchers: DashRow[] = toBoardRows(data, "k", 0, source)
     .sort((a, b) => Number(b.projection ?? 0) - Number(a.projection ?? 0)) // step 1
     .slice(0, 6)
@@ -440,6 +444,9 @@ export default function NextPage() {
       sub: pct(r.prob),
       hand: handGlyph(r.playerHand),
       team: r.team,
+      playerId: r.player_id,
+      gameId: r.gameId,
+      line: r.line,
     }));
 
   return (
@@ -447,6 +454,10 @@ export default function NextPage() {
       {/* ── Sticky command bar (owns the date selector) ── */}
       <CommandBar dates={dates} selectedDate={selectedDate} onDate={setSelectedDate} />
 
+      {/* ONE LiveProvider wraps the header AND the board so the header's Top
+          Pitchers live-K trackers share the same live context as the board /
+          Top Plays (single provider, no duplication). */}
+      <LiveProvider date={selectedDate} games={liveGames}>
       <main className="sp-wrap" style={{ paddingBottom: 80 }}>
         {/* ── Header dashboard (stats box + game/batter/pitcher leaderboards) ── */}
         <HeaderDash
@@ -547,7 +558,6 @@ export default function NextPage() {
         )}
 
         {/* ── Active surface ── */}
-        <LiveProvider date={selectedDate} games={liveGames}>
           {section === "board" && (
             <BoardView
               rows={boardRows}
@@ -577,8 +587,8 @@ export default function NextPage() {
             />
           )}
           {section === "parks" && <Parks games={data.games ?? []} />}
-        </LiveProvider>
       </main>
+      </LiveProvider>
 
       {/* Modal lives outside <main> so its fixed overlay covers the viewport. */}
       <PlayerModal
