@@ -395,7 +395,7 @@ export default function NextPage() {
   // the header HandChip so it lights up (cyan glow) just like on the board.
   const batterAcc = new Map<
     number,
-    { name: string; hand?: "R" | "L" | "SW"; adv: boolean; sum: number; n: number }
+    { name: string; hand?: "R" | "L" | "SW"; team?: string; adv: boolean; sum: number; n: number }
   >();
   for (const [kind, thr] of BATTER_BASES) {
     for (const r of toBoardRows(data, kind, thr, source)) {
@@ -405,6 +405,7 @@ export default function NextPage() {
         {
           name: r.player,
           hand: handGlyph(r.playerHand),
+          team: r.team,
           adv: platoonAdvantage(r.playerHand, r.opponent?.hand),
           sum: 0,
           n: 0,
@@ -415,27 +416,30 @@ export default function NextPage() {
     }
   }
   const topBatters: DashRow[] = [...batterAcc.values()]
-    .map((e) => ({ name: e.name, hand: e.hand, adv: e.adv, avg: e.sum / e.n }))
+    .map((e) => ({ name: e.name, hand: e.hand, team: e.team, adv: e.adv, avg: e.sum / e.n }))
     .sort((a, b) => b.avg - a.avg)
     .slice(0, 6)
-    .map((e) => ({ name: e.name, hand: e.hand, adv: e.adv }));
+    .map((e) => ({ name: e.name, hand: e.hand, team: e.team, adv: e.adv }));
 
-  // ── Box 4 — Top 6 pitchers by PROJECTED strikeouts (most Ks) ──
-  // RANKING METRIC: projected strikeouts — KRow.expected_ks, source-weighted
-  // (surfaced on the board row as `projection`, the same "proj X.X K" the Game
-  // Hub shows), sorted DESCENDING (most Ks first). To re-rank, change the sort
-  // key below (e.g. back to over-prob: `Number(b.prob) - Number(a.prob)`).
-  // Display: proj K is the HEADLINE value ("X.X K"); the K over-line probability
-  // rides along as a smaller secondary %. (The book K-line "O X.XK" was removed —
-  // it cluttered + overflowed these tight header rows.)
+  // ── Box 4 — Top pitchers: TWO-STEP rank (top-6-proj pool, ordered by over %) ──
+  // STEP 1 — candidate pool: take the top 6 pitchers by PROJECTED strikeouts
+  //   (KRow.expected_ks, source-weighted → the board row's `projection`, the same
+  //   "proj X.X K" the Game Hub shows), highest proj K first.
+  // STEP 2 — within that 6-pitcher pool, ORDER by the K over-line probability
+  //   (`prob`, i.e. over_prob) DESCENDING — so the pitcher most likely to hit
+  //   their (already-high) projection lands at #1.
+  // Display is unchanged: proj K is the HEADLINE value ("X.X K"); the over-line
+  // probability rides along as a smaller secondary %. Only the ORDER changed.
   const topPitchers: DashRow[] = toBoardRows(data, "k", 0, source)
-    .sort((a, b) => Number(b.projection ?? 0) - Number(a.projection ?? 0))
+    .sort((a, b) => Number(b.projection ?? 0) - Number(a.projection ?? 0)) // step 1
     .slice(0, 6)
+    .sort((a, b) => Number(b.prob) - Number(a.prob)) // step 2: order pool by over %
     .map((r) => ({
       name: r.player,
       value: r.projection ? `${r.projection} K` : pct(r.prob),
       sub: pct(r.prob),
       hand: handGlyph(r.playerHand),
+      team: r.team,
     }));
 
   return (

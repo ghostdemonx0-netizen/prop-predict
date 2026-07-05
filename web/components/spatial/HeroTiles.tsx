@@ -9,13 +9,14 @@
  *            dividers, centred → a short/wide box that balances the grid).
  *   Box 2  — Top games (ranked by combined park+weather env boost).
  *   Box 3  — Top batters (ranked by best composite across all batter props;
- *            shows a hand chip after each name, no % — the composite isn't a
- *            meaningful displayable number).
- *   Box 4  — Top pitchers (ranked by PROJECTED strikeouts — most Ks first);
- *            shows a hand chip after the name + the proj K as the headline
- *            value ("X.X K") + the over-line probability as a smaller secondary
- *            %. On mobile (≤640px) this box shows only the TOP 3 (single column,
- *            full names); on desktop it shows the full 6 in two columns.
+ *            shows a hand chip + team chip after each name, no % — the composite
+ *            isn't a meaningful displayable number).
+ *   Box 4  — Top pitchers (two-step rank: top 6 by PROJECTED strikeouts, then
+ *            those 6 ORDERED by over-line probability %); shows a hand chip +
+ *            team chip after the name + the proj K as the headline value
+ *            ("X.X K") + the over-line probability as a smaller secondary %. On
+ *            mobile (≤640px) this box collapses to ONE tight column showing all
+ *            5–6 rows; on desktop it shows the full 6 in two columns.
  *
  * Player names render in FULL on every viewport (mobile + desktop) — long names
  * ellipsise inside the row rather than being abbreviated.
@@ -31,7 +32,7 @@
 
 import "./spatial.css";
 import { GlassCard } from "./GlassCard";
-import { HandChip } from "./chips";
+import { HandChip, TeamChip } from "./chips";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,9 @@ export interface DashRow {
   color?: string;
   /** Optional L / R / SW hand chip shown right after the name (batters/pitchers). */
   hand?: "R" | "L" | "SW";
+  /** Optional team abbreviation ("SF", "NYY") shown as a muted chip after the
+   *  hand chip — rendered on BOTH batter and pitcher leaderboard rows. */
+  team?: string;
   /** When true, the hand chip lights up (cyan platoon-advantage glow) — batters
    *  who bat opposite their matchup pitcher's throwing hand. Mirrors the board. */
   adv?: boolean;
@@ -87,6 +91,7 @@ function LeaderRow({ rank, r }: { rank: number; r: DashRow }) {
       <span className="sp-dnamewrap">
         <span className="sp-dname">{r.name}</span>
         {r.hand && <HandChip hand={r.hand} adv={r.adv} />}
+        {r.team && <TeamChip team={r.team} />}
       </span>
       {r.value && (
         <span className="sp-dval" style={r.color ? { color: r.color } : undefined}>
@@ -103,25 +108,27 @@ function LeaderRow({ rank, r }: { rank: number; r: DashRow }) {
  * laid out in TWO columns — ranks 1–3 on the left, ranks 4–6 on the right — so
  * each box is 3 rows tall and 2 wide (balanced).
  *
- * When `mobileTop3` is set (Top Pitchers), mobile (≤640px) hides the right
- * column and collapses to a single column via CSS — so only the top 3 show, as
- * one clean full-name column, while desktop still shows all 6 in two columns.
+ * When `mobileStack` is set (Top Pitchers), mobile (≤640px) collapses the two
+ * columns into a SINGLE tight column via CSS — both <ol>s stack (ranks 1–3 then
+ * 4–6), so all 5–6 pitchers show as one clean full-name column, while desktop
+ * still shows all 6 in two columns.
  */
 function LeaderBox({
   label,
   rows,
-  mobileTop3,
+  mobileStack,
 }: {
   label: string;
   rows: DashRow[];
-  /** Show only the top 3 (single column) on mobile; full 6 on desktop. */
-  mobileTop3?: boolean;
+  /** Collapse to a single tight column on mobile (all 5–6 rows visible); keeps
+   *  two columns on desktop. Used for Top Pitchers. */
+  mobileStack?: boolean;
 }) {
   const left = rows.slice(0, 3);
   const right = rows.slice(3, 6);
   return (
     <GlassCard
-      className={`sp-dbox sp-dbox--lead${mobileTop3 ? " sp-dbox--mtop3" : ""}`}
+      className={`sp-dbox sp-dbox--lead${mobileStack ? " sp-dbox--mstack" : ""}`}
     >
       <div className="sp-dlabel">{label}</div>
       {rows.length === 0 ? (
@@ -184,8 +191,9 @@ export function HeaderDash({ stats, games, batters, pitchers }: HeaderDashProps)
         {/* Box 3 — top batters across all batter props (full 6 on both) */}
         <LeaderBox label="Top batters" rows={batters} />
 
-        {/* Box 4 — top pitchers by projected Ks (top 3 on mobile, 6 on desktop) */}
-        <LeaderBox label="Top pitchers" rows={pitchers} mobileTop3 />
+        {/* Box 4 — top pitchers (top-6-proj pool, ordered by over %); single
+            tight column on mobile (5–6 rows), two columns on desktop */}
+        <LeaderBox label="Top pitchers" rows={pitchers} mobileStack />
       </div>
     </section>
   );

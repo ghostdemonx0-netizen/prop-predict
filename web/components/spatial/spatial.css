@@ -564,6 +564,22 @@
   box-shadow:   0 0 10px hsl(188 90% 55% / .3);
 }
 
+/* ---- TeamChip — compact muted team-abbreviation pill (SF / NYY / LAD) ----
+   A mini TagChip: small mono uppercase on a subtle fill. Used in the header
+   leaderboard rows (batters + pitchers) right after the hand chip. */
+.sp-root .sp-teamchip {
+  font-family:    var(--f-mono);
+  font-size:      .5rem;
+  font-weight:    700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding:        .1rem .3rem;
+  border-radius:  5px;
+  color:          var(--ink-faint);
+  background:     hsl(230 40% 70% / .1);
+  white-space:    nowrap;
+}
+
 /* ---- FormChip — hot / cold / steady ---- */
 .sp-root .sp-formchip {
   display:        inline-flex;
@@ -1283,6 +1299,13 @@
   padding:       .08rem .26rem;
 }
 
+/* Keep the leaderboard team chip tight against the name (no shrink/wrap). */
+.sp-root .sp-dnamewrap .sp-teamchip {
+  flex:          0 0 auto;
+  font-size:     .5rem;
+  padding:       .07rem .28rem;
+}
+
 .sp-root .sp-dval {
   flex:        0 0 auto;
   font-family: var(--f-mono);
@@ -1355,15 +1378,18 @@
   .sp-root .sp-dname              { font-size: .68rem; }
   .sp-root .sp-dnamewrap          { gap: 3px; }
   .sp-root .sp-dnamewrap .sp-hand { font-size: .48rem; padding: .05rem .2rem; }
+  .sp-root .sp-dnamewrap .sp-teamchip { font-size: .46rem; padding: .04rem .22rem; }
   .sp-root .sp-dval               { font-size: .62rem; gap: 3px; }
   .sp-root .sp-dval small         { font-size: .5rem; }
 
-  /* Top Pitchers on mobile: show only the TOP 3 as a single clean full-name
-     column. The right <ol> holds ranks 4–6 — hide it and collapse the grid to
-     one column, so the box is ~3 rows tall and balances the batters box
-     (3 rows × 2 cols). Batters keep all 6; desktop (>640px) shows all 6 here. */
-  .sp-root .sp-dbox--mtop3 .sp-dcols               { grid-template-columns: 1fr; }
-  .sp-root .sp-dbox--mtop3 .sp-dcols > ol:nth-child(2) { display: none; }
+  /* Top Pitchers on mobile: collapse to ONE tight column and keep BOTH <ol>s
+     visible so all 5–6 pitchers show (ranks 1–3 then 4–6, stacked). Tighten row
+     gaps so the full 6 fit cleanly. This box is taller than the batters box on
+     mobile by design — fitting ≥5 pitchers is the priority. Desktop (>640px)
+     still shows all 6 in two columns. */
+  .sp-root .sp-dbox--mstack .sp-dcols  { grid-template-columns: 1fr; gap: 3px; }
+  .sp-root .sp-dbox--mstack .sp-dlist  { gap: 4px; }
+  .sp-root .sp-dbox--mstack .sp-drow   { line-height: 1.1; }
 }
 
 /* ── Reduced-motion ──────────────────────────────────────── */

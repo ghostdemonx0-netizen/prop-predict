@@ -89,6 +89,16 @@ export function TagChip({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  TeamChip — compact muted team-abbreviation pill (e.g. "SF", "NYY", "LAD")
+//  A mini TagChip variant: small mono uppercase on a subtle background. Used in
+//  the header leaderboard rows (batters + pitchers) right after the hand chip.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function TeamChip({ team }: { team: string }) {
+  return <span className="sp-teamchip">{team}</span>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  HandChip — R / L / SW  (adv = platoon-advantage cyan glow)
 //  MUST stay visually distinct from the green conf TagChip:
 //    conf TagChip = mint  hsl(150 82% 60%)
