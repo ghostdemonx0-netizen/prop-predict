@@ -5,9 +5,13 @@
 import { LOGOS_SIGNAL } from "../../../components/spatial/logos/LogosSignal";
 import { LOGOS_BALLPARK } from "../../../components/spatial/logos/LogosBallpark";
 import { LOGOS_MARK } from "../../../components/spatial/logos/LogosMark";
+import { LOGOS_PRECISION } from "../../../components/spatial/logos/LogosPrecision";
+import { LOGOS_NEW } from "../../../components/spatial/logos/LogosNew";
 
 const SECTIONS = [
-  { title: "Signal — data / model (most on-brand)", logos: LOGOS_SIGNAL },
+  { title: "★ Precision family — target / crosshair / lock", logos: LOGOS_PRECISION },
+  { title: "Fresh new concepts", logos: LOGOS_NEW },
+  { title: "Signal — data / model", logos: LOGOS_SIGNAL },
   { title: "Ballpark — baseball / heritage", logos: LOGOS_BALLPARK },
   { title: "Mark — abstract / monogram", logos: LOGOS_MARK },
 ];
