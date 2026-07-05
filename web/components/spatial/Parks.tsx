@@ -15,7 +15,7 @@
 
 import type { Game } from "../../lib/types";
 import { arrowColor } from "../../lib/format";
-import { WindIcon, TempIcon } from "../Icons";
+import { WindIcon, TempIcon, RainIcon } from "../Icons";
 import { EnvDot } from "./GlassDot";
 import { FBox, envImpactColor, tempColor } from "./chips";
 import { GlassCard } from "./GlassCard";
@@ -121,6 +121,14 @@ export function Parks({ games }: { games: Game[] }) {
                   />
                 );
               })()}
+
+              {/* Rain chance (optional) — same threshold/field/styling as the board cards */}
+              {(g.precip_pct ?? 0) >= 20 && (
+                <FBox
+                  icon={<RainIcon size={12} style={{ color: "var(--iris-cyan)", flexShrink: 0 }} />}
+                  value={`${g.precip_pct}%`}
+                />
+              )}
 
             </div>
 
