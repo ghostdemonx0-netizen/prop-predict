@@ -27,7 +27,7 @@ import { LiveProvider } from "../../components/LiveProvider";
 import type { LiveGame } from "../../lib/live";
 import type { Projections } from "../../lib/types";
 import type { PropKind } from "../../lib/format";
-import { pct } from "../../lib/format";
+import { pct, platoonAdvantage } from "../../lib/format";
 import { toBoardRows, type Source } from "../../lib/weighting";
 import { envImpactColor } from "../../components/spatial/chips";
 
@@ -388,26 +388,37 @@ export default function NextPage() {
   // Rank internally by the avg-across-props metric, but DON'T display it — an
   // average across mixed props isn't a meaningful %. Show the batter's hand
   // chip instead (carried from the first row seen for that batter).
+  // `adv` = batter has the platoon edge over their matchup pitcher (bats
+  // opposite the pitcher's throwing hand). Computed EXACTLY as the board does —
+  // platoonAdvantage(playerHand, opponent.hand) — captured from the first row
+  // seen for the batter (same game/pitcher across every prop), then passed to
+  // the header HandChip so it lights up (cyan glow) just like on the board.
   const batterAcc = new Map<
     number,
-    { name: string; hand?: "R" | "L" | "SW"; sum: number; n: number }
+    { name: string; hand?: "R" | "L" | "SW"; adv: boolean; sum: number; n: number }
   >();
   for (const [kind, thr] of BATTER_BASES) {
     for (const r of toBoardRows(data, kind, thr, source)) {
       if (r.player_id == null) continue;
       const e =
         batterAcc.get(r.player_id) ??
-        { name: r.player, hand: handGlyph(r.playerHand), sum: 0, n: 0 };
+        {
+          name: r.player,
+          hand: handGlyph(r.playerHand),
+          adv: platoonAdvantage(r.playerHand, r.opponent?.hand),
+          sum: 0,
+          n: 0,
+        };
       e.sum += r.prob;
       e.n += 1;
       batterAcc.set(r.player_id, e);
     }
   }
   const topBatters: DashRow[] = [...batterAcc.values()]
-    .map((e) => ({ name: e.name, hand: e.hand, avg: e.sum / e.n }))
+    .map((e) => ({ name: e.name, hand: e.hand, adv: e.adv, avg: e.sum / e.n }))
     .sort((a, b) => b.avg - a.avg)
     .slice(0, 6)
-    .map((e) => ({ name: e.name, hand: e.hand }));
+    .map((e) => ({ name: e.name, hand: e.hand, adv: e.adv }));
 
   // ── Box 4 — Top 6 pitchers by strikeout over-line probability ──
   // toBoardRows("k") is already sorted by over_prob desc; show the K % plus the

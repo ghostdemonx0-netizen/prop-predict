@@ -53,6 +53,22 @@ export interface DashRow {
   color?: string;
   /** Optional L / R / SW hand chip shown right after the name (batters/pitchers). */
   hand?: "R" | "L" | "SW";
+  /** When true, the hand chip lights up (cyan platoon-advantage glow) — batters
+   *  who bat opposite their matchup pitcher's throwing hand. Mirrors the board. */
+  adv?: boolean;
+}
+
+/** Abbreviate a full player name to first-initial + last name for the tight
+ *  mobile leaderboards: "Sonny Gray" → "S. Gray", "Christian Yelich" →
+ *  "C. Yelich". Single-token names (or matchups) are returned unchanged; the
+ *  abbreviated form is only ever SHOWN on mobile (CSS toggles it in). */
+export function abbrevName(full: string): string {
+  const parts = full.trim().split(/\s+/);
+  if (parts.length < 2) return full;
+  const first = parts[0];
+  const last = parts[parts.length - 1];
+  if (!first) return full;
+  return `${first[0]}. ${last}`;
 }
 
 export interface HeaderDashProps {
@@ -70,13 +86,30 @@ export interface HeaderDashProps {
 /** One numbered leaderboard row (rank + name + optional hand chip + value).
  *  Batters carry a hand chip and no value; pitchers carry a hand chip, a K %
  *  value, and a `sub` ("O X.XK") shown to the right of the %. */
-function LeaderRow({ rank, r }: { rank: number; r: DashRow }) {
+function LeaderRow({
+  rank,
+  r,
+  abbrev,
+}: {
+  rank: number;
+  r: DashRow;
+  /** When true, render an extra mobile-only abbreviated name (CSS toggles which
+   *  one shows). Used for player leaderboards; NOT for matchup rows. */
+  abbrev?: boolean;
+}) {
   return (
     <li className="sp-drow">
       <span className="sp-drank">{rank}</span>
       <span className="sp-dnamewrap">
-        <span className="sp-dname">{r.name}</span>
-        {r.hand && <HandChip hand={r.hand} />}
+        {abbrev ? (
+          <span className="sp-dname">
+            <span className="sp-dname-full">{r.name}</span>
+            <span className="sp-dname-abbr">{abbrevName(r.name)}</span>
+          </span>
+        ) : (
+          <span className="sp-dname">{r.name}</span>
+        )}
+        {r.hand && <HandChip hand={r.hand} adv={r.adv} />}
       </span>
       {r.value && (
         <span className="sp-dval" style={r.color ? { color: r.color } : undefined}>
@@ -93,7 +126,16 @@ function LeaderRow({ rank, r }: { rank: number; r: DashRow }) {
  * laid out in TWO columns — ranks 1–3 on the left, ranks 4–6 on the right — so
  * each box is 3 rows tall and 2 wide (balanced).
  */
-function LeaderBox({ label, rows }: { label: string; rows: DashRow[] }) {
+function LeaderBox({
+  label,
+  rows,
+  abbrev,
+}: {
+  label: string;
+  rows: DashRow[];
+  /** Abbreviate names on mobile (player leaderboards only, not matchups). */
+  abbrev?: boolean;
+}) {
   const left = rows.slice(0, 3);
   const right = rows.slice(3, 6);
   return (
@@ -105,13 +147,13 @@ function LeaderBox({ label, rows }: { label: string; rows: DashRow[] }) {
         <div className="sp-dcols">
           <ol className="sp-dlist">
             {left.map((r, i) => (
-              <LeaderRow key={i} rank={i + 1} r={r} />
+              <LeaderRow key={i} rank={i + 1} r={r} abbrev={abbrev} />
             ))}
           </ol>
           {right.length > 0 && (
             <ol className="sp-dlist">
               {right.map((r, i) => (
-                <LeaderRow key={i} rank={i + 4} r={r} />
+                <LeaderRow key={i} rank={i + 4} r={r} abbrev={abbrev} />
               ))}
             </ol>
           )}
@@ -153,14 +195,14 @@ export function HeaderDash({ stats, games, batters, pitchers }: HeaderDashProps)
           </div>
         </GlassCard>
 
-        {/* Box 2 — top games by park+weather boost */}
+        {/* Box 2 — top games by park+weather boost (matchups: no name abbrev) */}
         <LeaderBox label="Top games" rows={games} />
 
-        {/* Box 3 — top batters across all batter props */}
-        <LeaderBox label="Top batters" rows={batters} />
+        {/* Box 3 — top batters across all batter props (abbrev names on mobile) */}
+        <LeaderBox label="Top batters" rows={batters} abbrev />
 
-        {/* Box 4 — top pitchers by strikeout chance */}
-        <LeaderBox label="Top pitchers" rows={pitchers} />
+        {/* Box 4 — top pitchers by strikeout chance (abbrev names on mobile) */}
+        <LeaderBox label="Top pitchers" rows={pitchers} abbrev />
       </div>
     </section>
   );

@@ -1276,6 +1276,12 @@
   text-overflow: ellipsis;
 }
 
+/* Mobile-only abbreviated player name ("S. Gray"); full name shows on desktop.
+   The 640px block below flips these — abbreviated names keep the tight mobile
+   leaderboard rows from running off the box. */
+.sp-root .sp-dname-full { display: inline; }
+.sp-root .sp-dname-abbr { display: none; }
+
 /* Keep the leaderboard hand chip from shrinking / wrapping. */
 .sp-root .sp-dnamewrap .sp-hand {
   flex:          0 0 auto;
@@ -1323,6 +1329,44 @@
   .sp-root .sp-drank  { font-size: .58rem; }
   .sp-root .sp-dname  { font-size: .7rem; }
   .sp-root .sp-dval   { font-size: .68rem; }
+}
+
+/* ── Mobile header dashboard fit (≤640px) ────────────────────
+   Each 2×2 dashboard cell is roughly half of a 600px phone viewport (~290px),
+   so Box 1's three side-by-side stats and the leaderboard rows must tighten to
+   fit with NO collision or run-off. Placed after the 600px block so it also
+   covers the 600–640px range (self-sufficient). Desktop (>640px) is untouched. */
+@media (max-width: 640px) {
+  /* Box 1 — three even sections; stack each value OVER its unit so the numbers
+     and labels ("12/15" / "confirmed", "1650" / "props") never collide side-by-side. */
+  .sp-root .sp-dbox--stats        { padding: 10px 6px; }
+  .sp-root .sp-dstat              { flex: 1 1 0; min-width: 0; padding: 2px 5px; }
+  .sp-root .sp-dstat:first-child  { padding-left: 2px; }
+  .sp-root .sp-dstat:last-child   { padding-right: 2px; }
+  .sp-root .sp-dlabel             { font-size: .46rem; letter-spacing: .1em; }
+  .sp-root .sp-dstat-v {
+    flex-direction: column;
+    align-items:    center;
+    gap:            1px;
+    font-size:      1.05rem;
+    margin-top:     3px;
+  }
+  .sp-root .sp-dstat-v small      { font-size: .5rem; }
+
+  /* Leaderboard boxes — tighten rows + share the two columns evenly so nothing
+     runs off the box; abbreviated names + ellipsis fallback keep them in-bounds. */
+  .sp-root .sp-dcols              { grid-template-columns: 1fr 1fr; gap: 5px 7px; }
+  .sp-root .sp-drow               { gap: 5px; }
+  .sp-root .sp-drank              { font-size: .55rem; width: 1em; }
+  .sp-root .sp-dname              { font-size: .68rem; }
+  .sp-root .sp-dnamewrap          { gap: 3px; }
+  .sp-root .sp-dnamewrap .sp-hand { font-size: .48rem; padding: .05rem .2rem; }
+  .sp-root .sp-dval               { font-size: .62rem; gap: 3px; }
+  .sp-root .sp-dval small         { font-size: .5rem; }
+
+  /* Show the abbreviated player name ("S. Gray"), hide the full one. */
+  .sp-root .sp-dname-full         { display: none; }
+  .sp-root .sp-dname-abbr         { display: inline; }
 }
 
 /* ── Reduced-motion ──────────────────────────────────────── */
