@@ -7,9 +7,13 @@ import { LOGOS_BALLPARK } from "../../../components/spatial/logos/LogosBallpark"
 import { LOGOS_MARK } from "../../../components/spatial/logos/LogosMark";
 import { LOGOS_PRECISION } from "../../../components/spatial/logos/LogosPrecision";
 import { LOGOS_NEW } from "../../../components/spatial/logos/LogosNew";
+import { LOGOS_BOLTDIAMOND } from "../../../components/spatial/logos/LogosBoltDiamond";
+import { LOGOS_NEW2 } from "../../../components/spatial/logos/LogosNew2";
 
 const SECTIONS = [
-  { title: "★ Precision family — target / crosshair / lock", logos: LOGOS_PRECISION },
+  { title: "★ Bolt Diamond family (incl. Bolt Lock = bolt × precision)", logos: LOGOS_BOLTDIAMOND },
+  { title: "More new concepts", logos: LOGOS_NEW2 },
+  { title: "Precision family — target / crosshair / lock", logos: LOGOS_PRECISION },
   { title: "Fresh new concepts", logos: LOGOS_NEW },
   { title: "Signal — data / model", logos: LOGOS_SIGNAL },
   { title: "Ballpark — baseball / heritage", logos: LOGOS_BALLPARK },
