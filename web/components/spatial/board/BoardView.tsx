@@ -87,9 +87,15 @@ function nameMatchup(r: SpatialRow): string {
  * "1+ H", "2+ TB", "1+ R", "1+ RBI", "2+ HRR". Abbreviated so it can sit under
  * the sphere without widening the table. Derived from the active prop kind (the
  * numeric threshold is encoded in it), never hardcoded.
- * Returns null for Home Runs and Strikeouts (no single threshold to name).
+ *
+ * Strikeouts have no single threshold, so we name the pitcher's book line
+ * instead — "O4.5 K" (over the model book line, from the row's `line` field),
+ * consistent with the Game Hub / table Model Book Line. Needs the row for the
+ * per-pitcher line, so callers pass it for the K prop.
+ * Returns null for Home Runs (HR stays unlabeled).
  */
-function propTrackLabel(prop: PropKind): string | null {
+function propTrackLabel(prop: PropKind, r?: SpatialRow): string | null {
+  if (prop === "k") return r?.line ? `O${r.line} K` : null;
   if (prop.startsWith("hits")) return `${prop.slice(4)}+ H`;
   if (prop.startsWith("tb")) return `${prop.slice(2)}+ TB`;
   if (prop.startsWith("runs")) return `${prop.slice(4)}+ R`;
@@ -217,6 +223,7 @@ function PropCard({
   const pHand = handGlyph(r.playerHand);
   const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
   const isK = prop === "k";
+  const trackLabel = propTrackLabel(prop, r);
 
   return (
     <ClickableCard onOpen={() => r.player_id != null && onOpenPlayer(r.player_id, prop)}>
@@ -231,7 +238,12 @@ function PropCard({
         </div>
         <div className="sp-orb-live">
           <ProbabilityOrb prob={r.prob} kind={prop} size={72} />
-          {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} />}
+          {(trackLabel || lv) && (
+            <div className="sp-track-row">
+              {trackLabel && <span className="sp-track-lbl">{trackLabel}</span>}
+              {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} />}
+            </div>
+          )}
         </div>
       </div>
 
@@ -243,7 +255,11 @@ function PropCard({
 
         <div className="sp-prow">
           {isK
-            ? r.projection && <span>proj {r.projection} K</span>
+            ? r.projection && (
+                <span>
+                  {r.line ? `line ${r.line} · ` : ""}proj {r.projection} K
+                </span>
+              )
             : r.opponent && <OppFragment opponent={r.opponent} />}
           {!isK && r.bvp && r.bvp.pa > 0 && (
             <Bvp hits={r.bvp.hits} ab={r.bvp.ab} hr={r.bvp.hr} />
@@ -289,7 +305,6 @@ function BoardTable({
 }) {
   const liveFor = useLiveFor();
   const isK = prop === "k";
-  const trackLabel = propTrackLabel(prop);
 
   return (
     <div className="sp-board-tablewrap sp-float">
@@ -317,6 +332,7 @@ function BoardTable({
             const pHand = handGlyph(r.playerHand);
             const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
             const oppHand = handGlyph(r.opponent?.hand);
+            const trackLabel = propTrackLabel(prop, r);
             return (
               <tr
                 key={r.id}
