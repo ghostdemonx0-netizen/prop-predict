@@ -1359,15 +1359,45 @@
 
 /* ── Responsive ──────────────────────────────────────────── */
 
-@media (max-width: 880px) {
-  .sp-root .sp-dash { grid-template-columns: repeat(2, 1fr); }
+/* ── Below desktop: ≤900px catches BOTH phone portrait (~600px) AND phone
+   landscape (~800px, where /next runs at device-width). The top row stays 2-up
+   (compact Box 1 + Top games), but the two leaderboards each STRETCH to the
+   full container width on their own row so the 3-col batters and the pitcher
+   rows get room to breathe. Desktop (>900px) keeps the current 2×2 grid. */
+@media (max-width: 900px) {
+  /* Grid: Box 1 + Top games share the top row; each leaderboard spans full. */
+  .sp-root .sp-dash            { grid-template-columns: repeat(2, 1fr); }
+  .sp-root .sp-dbox--stackteam { grid-column: 1 / -1; }  /* Top batters — full width */
+  .sp-root .sp-dbox--mstack    { grid-column: 1 / -1; }  /* Top pitchers — full width */
+
+  /* Top pitchers, now full width, keeps TWO balanced columns (ranks 1–3 | 4–6),
+     and every row becomes TWO lines so the stats never run off the box:
+       line 1: rank + name + hand chip + team chip
+       line 2: (indented under the name) live tracker + "X.X K" (proj) + "%".
+     Desktop (>900px) keeps the single-line row untouched. */
+  .sp-root .sp-dbox--mstack .sp-dcols {
+    grid-template-columns: 1fr 1fr;
+    gap:                   6px 22px;
+  }
+  .sp-root .sp-dbox--mstack .sp-drow {
+    display:               grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:   "rank name"
+                           ".    val";
+    align-items:           baseline;
+    column-gap:            6px;
+    row-gap:               2px;
+  }
+  .sp-root .sp-dbox--mstack .sp-drank     { grid-area: rank; }
+  .sp-root .sp-dbox--mstack .sp-dnamewrap { grid-area: name; }
+  .sp-root .sp-dbox--mstack .sp-dval      { grid-area: val; justify-self: start; }
 }
 
 @media (max-width: 600px) {
   .sp-root .sp-cmd    { gap: 10px; padding: 0 10px; }
   .sp-root .sp-lt     { display: none; }
   .sp-root .sp-htitle { font-size: clamp(1.6rem, 7vw, 2.4rem); }
-  /* keep a tidy 2×2 (Box1 + 3 leaderboards) on phones — no overflow */
+  /* Top row stays 2-up (Box1 + Top games); leaderboards span full width (≤900). */
   .sp-root .sp-dash   { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .sp-root .sp-dbox   { padding: 12px 12px; }
   .sp-root .sp-dcols  { gap: 5px 8px; }
@@ -1410,14 +1440,13 @@
   .sp-root .sp-dval               { font-size: .62rem; gap: 3px; }
   .sp-root .sp-dval small         { font-size: .5rem; }
 
-  /* Top Pitchers on mobile: collapse to ONE tight column and keep BOTH <ol>s
-     visible so all 5–6 pitchers show (ranks 1–3 then 4–6, stacked). Tighten row
-     gaps so the full 6 fit cleanly. This box is taller than the batters box on
-     mobile by design — fitting ≥5 pitchers is the priority. Desktop (>640px)
-     still shows all 6 in two columns. */
-  .sp-root .sp-dbox--mstack .sp-dcols  { grid-template-columns: 1fr; gap: 3px; }
-  .sp-root .sp-dbox--mstack .sp-dlist  { gap: 4px; }
-  .sp-root .sp-dbox--mstack .sp-drow   { line-height: 1.1; }
+  /* Top Pitchers is now FULL WIDTH on mobile/landscape (≤900px rule above), so
+     it keeps TWO balanced columns (ranks 1–3 | 4–6) with the two-line rows
+     defined in the ≤900 block. Just tighten the column gaps for the ~600px
+     portrait width. */
+  .sp-root .sp-dbox--mstack .sp-dcols  { grid-template-columns: 1fr 1fr; gap: 5px 16px; }
+  .sp-root .sp-dbox--mstack .sp-dlist  { gap: 5px; }
+  .sp-root .sp-dbox--mstack .sp-drow   { line-height: 1.15; }
 
   /* Top Batters keeps its THREE columns on mobile (team stacked under each
      name). Placed AFTER the generic 2-col .sp-dcols rule above so it wins for
