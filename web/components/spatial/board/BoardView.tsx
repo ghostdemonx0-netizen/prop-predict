@@ -89,13 +89,15 @@ function nameMatchup(r: SpatialRow): string {
  * numeric threshold is encoded in it), never hardcoded.
  *
  * Strikeouts have no single threshold, so we name the pitcher's book line
- * instead — "O4.5 K" (over the model book line, from the row's `line` field),
- * consistent with the Game Hub / table Model Book Line. Needs the row for the
- * per-pitcher line, so callers pass it for the K prop.
+ * instead — "O 2.5" (over the model book line, from the row's `line` field),
+ * consistent with the Game Hub / table Model Book Line. A real space separates
+ * the "O" from the number; the K suffix is dropped so the number stays tight
+ * (the render site tags this label so its letter-spacing is zeroed). Needs the
+ * row for the per-pitcher line, so callers pass it for the K prop.
  * Returns null for Home Runs (HR stays unlabeled).
  */
 function propTrackLabel(prop: PropKind, r?: SpatialRow): string | null {
-  if (prop === "k") return r?.line ? `O${r.line} K` : null;
+  if (prop === "k") return r?.line ? `O ${r.line}` : null;
   if (prop.startsWith("hits")) return `${prop.slice(4)}+ H`;
   if (prop.startsWith("tb")) return `${prop.slice(2)}+ TB`;
   if (prop.startsWith("runs")) return `${prop.slice(4)}+ R`;
@@ -240,7 +242,11 @@ function PropCard({
           <ProbabilityOrb prob={r.prob} kind={prop} size={72} />
           {(trackLabel || lv) && (
             <div className="sp-track-row">
-              {trackLabel && <span className="sp-track-lbl">{trackLabel}</span>}
+              {trackLabel && (
+                <span className={`sp-track-lbl${prop === "k" ? " sp-track-lbl--k" : ""}`}>
+                  {trackLabel}
+                </span>
+              )}
               {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} />}
             </div>
           )}
@@ -386,7 +392,11 @@ function BoardTable({
                       <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
                       {(trackLabel || lv) && (
                         <div className="sp-track-row">
-                          {trackLabel && <span className="sp-track-lbl">{trackLabel}</span>}
+                          {trackLabel && (
+                            <span className={`sp-track-lbl${prop === "k" ? " sp-track-lbl--k" : ""}`}>
+                              {trackLabel}
+                            </span>
+                          )}
                           {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
                         </div>
                       )}

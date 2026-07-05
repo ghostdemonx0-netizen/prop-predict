@@ -26,9 +26,9 @@ import { GlassCard } from "./GlassCard";
 
 /** The three numbers shown in Box 1. */
 export interface DashStats {
-  /** Today's game count (the old "Slate" value). */
+  /** Today's game count (the old "Slate" value); also the Lineups denominator. */
   games: number;
-  /** Confirmed-lineups value (the old "Lineups … confirmed" number). */
+  /** Number of GAMES whose lineups are confirmed (shown as "confirmed/games"). */
   confirmed: number;
   /** Total props scored across every board (the old "Plays scored" value). */
   plays: number;
@@ -58,26 +58,48 @@ export interface HeaderDashProps {
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
-/** A numbered leaderboard box (Boxes 2–4): header label + up to 6 ranked rows. */
+/** One numbered leaderboard row (rank + name + value). */
+function LeaderRow({ rank, r }: { rank: number; r: DashRow }) {
+  return (
+    <li className="sp-drow">
+      <span className="sp-drank">{rank}</span>
+      <span className="sp-dname">{r.name}</span>
+      <span className="sp-dval" style={r.color ? { color: r.color } : undefined}>
+        {r.value}
+        {r.sub && <small>{r.sub}</small>}
+      </span>
+    </li>
+  );
+}
+
+/**
+ * A numbered leaderboard box (Boxes 2–4): header label + up to 6 ranked rows,
+ * laid out in TWO columns — ranks 1–3 on the left, ranks 4–6 on the right — so
+ * each box is 3 rows tall and 2 wide (balanced).
+ */
 function LeaderBox({ label, rows }: { label: string; rows: DashRow[] }) {
+  const left = rows.slice(0, 3);
+  const right = rows.slice(3, 6);
   return (
     <GlassCard className="sp-dbox sp-dbox--lead">
       <div className="sp-dlabel">{label}</div>
       {rows.length === 0 ? (
         <div className="sp-drow-empty">—</div>
       ) : (
-        <ol className="sp-dlist">
-          {rows.map((r, i) => (
-            <li key={i} className="sp-drow">
-              <span className="sp-drank">{i + 1}</span>
-              <span className="sp-dname">{r.name}</span>
-              <span className="sp-dval" style={r.color ? { color: r.color } : undefined}>
-                {r.value}
-                {r.sub && <small>{r.sub}</small>}
-              </span>
-            </li>
-          ))}
-        </ol>
+        <div className="sp-dcols">
+          <ol className="sp-dlist">
+            {left.map((r, i) => (
+              <LeaderRow key={i} rank={i + 1} r={r} />
+            ))}
+          </ol>
+          {right.length > 0 && (
+            <ol className="sp-dlist">
+              {right.map((r, i) => (
+                <LeaderRow key={i} rank={i + 4} r={r} />
+              ))}
+            </ol>
+          )}
+        </div>
       )}
     </GlassCard>
   );
@@ -101,7 +123,7 @@ export function HeaderDash({ stats, games, batters, pitchers }: HeaderDashProps)
           <div className="sp-dstat">
             <div className="sp-dlabel">Lineups</div>
             <div className="sp-dstat-v">
-              {stats.confirmed}
+              {stats.confirmed}/{stats.games}
               <small>confirmed</small>
             </div>
           </div>

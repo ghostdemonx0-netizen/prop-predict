@@ -337,9 +337,13 @@ export default function NextPage() {
     (data.runs?.length ?? 0) +
     (data.rbi?.length ?? 0) +
     (data.hrr?.length ?? 0);
-  const confirmedLineups =
-    data.hr.filter((r) => r.lineup_status === "confirmed").length +
-    data.strikeouts.filter((r) => r.pitcher_status === "confirmed").length;
+  // Lineups stat = COUNT OF GAMES whose lineups are confirmed, out of the slate.
+  // A game counts once when BOTH sides' lineups are set (home + away lineup_status
+  // === "confirmed" on the Game object), so a 15-game slate reads e.g. "12/15".
+  const confirmedGames = (data.games ?? []).filter(
+    (g) =>
+      g.home_lineup_status === "confirmed" && g.away_lineup_status === "confirmed",
+  ).length;
 
   // ── Box 2 — Top 6 games by combined park+weather env boost ──
   // Reuses the same `env` multiplier Parks ranks by (park_mult × weather_mult,
@@ -405,7 +409,7 @@ export default function NextPage() {
       <main className="sp-wrap" style={{ paddingBottom: 80 }}>
         {/* ── Header dashboard (stats box + game/batter/pitcher leaderboards) ── */}
         <HeaderDash
-          stats={{ games: gameCount, confirmed: confirmedLineups, plays: totalPlays }}
+          stats={{ games: gameCount, confirmed: confirmedGames, plays: totalPlays }}
           games={topGames}
           batters={topBatters}
           pitchers={topPitchers}

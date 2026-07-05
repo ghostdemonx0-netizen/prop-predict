@@ -1150,7 +1150,7 @@
 
 .sp-root .sp-dash {
   display:               grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap:                   14px;
   align-items:           stretch;
 }
@@ -1204,6 +1204,15 @@
 
 /* ---- Boxes 2–4: numbered leaderboards ---- */
 .sp-root .sp-dbox--lead { gap: 8px; }
+
+/* Two balanced columns inside a leaderboard box: ranks 1–3 | 4–6. */
+.sp-root .sp-dcols {
+  display:               grid;
+  grid-template-columns: 1fr 1fr;
+  gap:                   6px 18px;
+  flex:                  1 1 auto;
+  min-width:             0;
+}
 
 .sp-root .sp-dlist {
   list-style:     none;
@@ -1278,8 +1287,11 @@
   .sp-root .sp-htitle { font-size: clamp(1.6rem, 7vw, 2.4rem); }
   /* keep a tidy 2×2 (Box1 + 3 leaderboards) on phones — no overflow */
   .sp-root .sp-dash   { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .sp-root .sp-dname  { font-size: .74rem; }
-  .sp-root .sp-dval   { font-size: .72rem; }
+  .sp-root .sp-dbox   { padding: 12px 12px; }
+  .sp-root .sp-dcols  { gap: 5px 8px; }
+  .sp-root .sp-drank  { font-size: .58rem; }
+  .sp-root .sp-dname  { font-size: .7rem; }
+  .sp-root .sp-dval   { font-size: .68rem; }
 }
 
 /* ── Reduced-motion ──────────────────────────────────────── */
@@ -1523,6 +1535,9 @@
   color:          var(--ink-faint);
   white-space:    nowrap;
 }
+/* Strikeouts book line ("O 2.5"): kill the tracking so the decimal sits snug
+   between digits and the single space after "O" is the only separation. */
+.sp-root .sp-track-lbl--k { letter-spacing: 0; }
 
 /* ---- matchups ---- */
 .sp-root .sp-mgroup { margin-bottom: 1.1rem; }
