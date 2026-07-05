@@ -1,83 +1,226 @@
+/**
+ * app/page.tsx — The Mock 7 "Spatial Depth" app shell (site ROOT).
+ *
+ * Promoted from app/next/page.tsx. The fully-navigable app shell wired to
+ * live data. It mirrors the state model + URL-sync of the previous production
+ * shell exactly:
+ *
+ *   • state: section, prop, per-prop threshold object, source (weighting),
+ *     selectedDate, board view, and the modal's player/prop (via the URL).
+ *   • URL params: ?date=&prop=&threshold=&source= (board state, read on load /
+ *     written on change) + ?player= (modal, owned by usePlayerModalUrl).
+ *   • data: loadIndex / loadProjections; the same liveGames list feeds
+ *     <LiveProvider>.
+ *
+ * The spatial layout wrapper (previously app/next/layout.tsx) is folded in
+ * here: the app is wrapped in <div className="sp-root"> with <DepthField/>,
+ * and spatial.css is imported at the top. No viewport override — the root
+ * layout (app/layout.tsx) still owns the phone-fit viewport + orientation
+ * script, which this app inherits.
+ *
+ * Surfaces (NavDock sections):
+ *   board → BoardView   (prop selector + threshold + view switch sub-controls)
+ *   hub   → GameHub      (5 column-threshold pickers as sub-controls)
+ *   top   → TopPlays     (inline threshold pillbars, no sub-controls)
+ *   parks → Parks
+ */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { loadProjections, loadIndex } from "../lib/data";
+import "../components/spatial/spatial.css";
+import { useEffect, useState } from "react";
+import { loadIndex, loadProjections } from "../lib/data";
 import { LiveProvider } from "../components/LiveProvider";
 import type { LiveGame } from "../lib/live";
-import type { Projections, HitsRow, TbRow, RunsRow, RbiRow, HrrRow, Matchup } from "../lib/types";
-import { ViewSwitcher, type ViewMode } from "../components/ViewSwitcher";
-import { PropBoard, type BoardRow } from "../components/PropBoard";
-import { TopPlays } from "../components/TopPlays";
-import { gameTimeLabel } from "../lib/format";
-import { ParksBoard } from "../components/ParksBoard";
-import { PPHex } from "../components/Marks";
-import { UserButton } from "@clerk/nextjs";
+import type { Projections } from "../lib/types";
+import type { PropKind } from "../lib/format";
+import { pct, platoonAdvantage } from "../lib/format";
+import { toBoardRows, type Source } from "../lib/weighting";
+import { envImpactColor } from "../components/spatial/chips";
 
-function batHand(b?: string) {
-  return b === "L" ? "LHB" : b === "S" ? "SW" : b ? "RHB" : undefined;
-}
-function pitchHand(t?: string) {
-  return t === "L" ? "LHP" : t ? "RHP" : undefined;
-}
-function oppTeam(matchup?: string, team?: string) {
-  const parts = matchup?.split(" @ ");
-  if (!parts || parts.length !== 2) return undefined;
-  const [away, home] = parts;
-  return team === home ? away : home;
-}
-// Standard notation: home batters read "vs AWAY", away batters read "@ HOME".
-function gameLabel(matchup?: string, team?: string) {
-  const parts = matchup?.split(" @ ");
-  if (!parts || parts.length !== 2) return undefined;
-  const [away, home] = parts;
-  return team === home ? `vs ${away}` : `@ ${home}`;
-}
+import { DepthField } from "../components/spatial/DepthField";
+import { CommandBar } from "../components/spatial/CommandBar";
+import { HeaderDash, type DashRow } from "../components/spatial/HeroTiles";
+import { NavDock, type NavSection } from "../components/spatial/NavDock";
+import { SegmentedControl } from "../components/spatial/SegmentedControl";
+import { BoardView, type BoardViewMode } from "../components/spatial/board/BoardView";
+import { GameHub } from "../components/spatial/GameHub";
+import { TopPlays, type TopPlaysThresholds } from "../components/spatial/TopPlays";
+import { Parks } from "../components/spatial/Parks";
+import {
+  PlayerModal,
+  usePlayerModalUrl,
+  type ModalProp,
+} from "../components/spatial/PlayerModal";
 
-// Top-level sections. "props" carries the HR/K (and future) prop boards with
-// their own view switcher; the rest are standalone views.
-type Section = "props" | "parks" | "hub" | "topplays";
-const SECTIONS: { id: Section; label: string }[] = [
-  { id: "props", label: "Props" },
-  { id: "parks", label: "Parks" },
-  { id: "hub", label: "Game Hub" },
-  { id: "topplays", label: "Top Plays" },
+// ─────────────────────────────────────────────────────────────────────────────
+//  Local types + static config
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Base prop names (the props-section selector), matching app/page.tsx. */
+type BoardProp = "hr" | "k" | "hits" | "tb" | "runs" | "rbi" | "hrr";
+
+/** Threshold-carrying prop names (exclude hr/k). */
+type ThresholdKey = "hits" | "tb" | "runs" | "rbi" | "hrr";
+
+/** Shared per-prop threshold object — the shape GameHub/TopPlays consume. */
+type Thresholds = { hits: 1 | 2 | 3; tb: 2 | 3 | 4; runs: 1 | 2; rbi: 1 | 2; hrr: 2 | 3 | 4 };
+
+const PROP_OPTIONS = [
+  { value: "hr", label: "Home Runs" },
+  { value: "k", label: "Strikeouts" },
+  { value: "hits", label: "Hits" },
+  { value: "tb", label: "Total Bases" },
+  { value: "runs", label: "Runs" },
+  { value: "rbi", label: "RBI" },
+  { value: "hrr", label: "H+R+RBI" },
 ];
+
+const VIEW_OPTIONS: { value: BoardViewMode; label: string }[] = [
+  { value: "cards", label: "Cards" },
+  { value: "split", label: "Split" },
+  { value: "table", label: "Table" },
+  { value: "matchups", label: "Matchups" },
+];
+
+/** Threshold pill values per prop (mirrors app/page.tsx setThreshold ranges). */
+const THRESHOLD_OPTIONS: Record<ThresholdKey, number[]> = {
+  hits: [1, 2, 3],
+  tb: [2, 3, 4],
+  runs: [1, 2],
+  rbi: [1, 2],
+  hrr: [2, 3, 4],
+};
+
+/** The 5 Game-Hub column pickers. */
+const COLUMN_PICKERS: { key: ThresholdKey; label: string }[] = [
+  { key: "hits", label: "Hits column" },
+  { key: "tb", label: "Bases column" },
+  { key: "runs", label: "Runs column" },
+  { key: "rbi", label: "RBI column" },
+  { key: "hrr", label: "HRR column" },
+];
+
+/** Weighting options (mirrors CommandBar's previous SOURCE_OPTIONS). */
+const SOURCE_OPTIONS = [
+  { value: "current", label: "Current szn" },
+  { value: "blend",   label: "Blend" },
+  { value: "hist",    label: "History 3yr" },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Threshold reconciliation helpers
+//
+//  ONE threshold object drives the Board's active-prop threshold, TopPlays'
+//  inline pillbars, AND GameHub's column pickers.  These map the base prop name +
+//  the shared object down to the single (kind, number) the Board needs.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Active board PropKind (threshold-encoded), e.g. hits + {hits:2} → "hits2". */
+function activePropKind(prop: BoardProp, t: Thresholds): PropKind {
+  switch (prop) {
+    case "hr":
+      return "hr";
+    case "k":
+      return "k";
+    case "hits":
+      return `hits${t.hits}` as PropKind;
+    case "tb":
+      return `tb${t.tb}` as PropKind;
+    case "runs":
+      return `runs${t.runs}` as PropKind;
+    case "rbi":
+      return `rbi${t.rbi}` as PropKind;
+    case "hrr":
+      return `hrr${t.hrr}` as PropKind;
+  }
+}
+
+/** Numeric threshold for toBoardRows (hr/k ignore it → 0). */
+function activeThresholdNum(prop: BoardProp, t: Thresholds): number {
+  switch (prop) {
+    case "hits":
+      return t.hits;
+    case "tb":
+      return t.tb;
+    case "runs":
+      return t.runs;
+    case "rbi":
+      return t.rbi;
+    case "hrr":
+      return t.hrr;
+    default:
+      return 0;
+  }
+}
+
+/** URL ?threshold= value for the active board prop (null for hr/k). */
+function urlThreshold(prop: BoardProp, t: Thresholds): number | null {
+  switch (prop) {
+    case "hits":
+      return t.hits;
+    case "tb":
+      return t.tb;
+    case "runs":
+      return t.runs;
+    case "rbi":
+      return t.rbi;
+    case "hrr":
+      return t.hrr;
+    default:
+      return null;
+  }
+}
+
+/** Batter/pitcher hand string ("RHB"/"LHB"/"SW"/"RHP"/"LHP") → HandChip glyph.
+ *  Mirrors BoardView's handGlyph so the header leaderboards render the same
+ *  L / R / SW chip as the board. */
+function handGlyph(h?: string): "R" | "L" | "SW" | undefined {
+  if (!h) return undefined;
+  if (h === "SW" || h[0] === "S") return "SW";
+  if (h[0] === "L") return "L";
+  if (h[0] === "R") return "R";
+  return undefined;
+}
+
+/** Board onOpenPlayer PropKind → the modal's (ModalProp, threshold?). */
+function toModalTarget(kind: PropKind): { prop: ModalProp; threshold?: number } {
+  if (kind === "hr") return { prop: "hr" };
+  if (kind === "k") return { prop: "k" };
+  if (kind.startsWith("hits")) return { prop: "hits", threshold: Number(kind.slice(4)) };
+  if (kind.startsWith("tb")) return { prop: "tb", threshold: Number(kind.slice(2)) };
+  if (kind.startsWith("runs")) return { prop: "runs", threshold: Number(kind.slice(4)) };
+  if (kind.startsWith("rbi")) return { prop: "rbi", threshold: Number(kind.slice(3)) };
+  return { prop: "hrr", threshold: Number(kind.slice(3)) };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Page
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const [data, setData] = useState<Projections | null>(null);
-  const [section, setSection] = useState<Section>("props");
-  const [view, setView] = useState<ViewMode>("hybrid");
-  const [prop, setProp] = useState<"hr" | "k" | "hits" | "tb" | "runs" | "rbi" | "hrr">("hr");
-  const [threshold, setThreshold] = useState<{ hits: 1 | 2 | 3; tb: 2 | 3 | 4; runs: 1 | 2; rbi: 1 | 2; hrr: 2 | 3 | 4 }>({ hits: 1, tb: 2, runs: 1, rbi: 1, hrr: 2 });
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [source, setSource] = useState<"current" | "blend" | "hist">("current");
+  const [source, setSource] = useState<Source>("current");
+  const [section, setSection] = useState<NavSection>("board");
+  const [prop, setProp] = useState<BoardProp>("hr");
+  const [view, setView] = useState<BoardViewMode>("cards");
+  const [threshold, setThreshold] = useState<Thresholds>({
+    hits: 1,
+    tb: 2,
+    runs: 1,
+    rbi: 1,
+    hrr: 2,
+  });
 
-  // Scroll-hint for the prop selector row: only shows when the row overflows
-  // (i.e. on narrow phones), with a thumb that tracks scroll position.
-  const propScrollRef = useRef<HTMLDivElement>(null);
-  const [propHint, setPropHint] = useState({ show: false, thumb: 1, pos: 0 });
-  const syncPropHint = () => {
-    const el = propScrollRef.current;
-    if (!el) return;
-    const overflow = el.scrollWidth - el.clientWidth;
-    setPropHint({
-      show: overflow > 4,
-      thumb: el.scrollWidth > 0 ? el.clientWidth / el.scrollWidth : 1,
-      pos: overflow > 0 ? el.scrollLeft / overflow : 0,
-    });
-  };
-  useEffect(() => {
-    syncPropHint();
-    window.addEventListener("resize", syncPropHint);
-    return () => window.removeEventListener("resize", syncPropHint);
-  }, []);
-  // re-measure when the row (re)mounts on returning to the Props tab or data loads
-  useEffect(() => { syncPropHint(); }, [section, data]);
+  // URL-addressable player/pitcher modal (?player=&prop=&threshold=).
+  const { selection, openPlayer, closePlayer } = usePlayerModalUrl();
 
+  // ── Read URL params + load the date index once on mount (mirror page.tsx). ──
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const want = params.get("date");
+
     const propParam = params.get("prop");
     if (propParam === "k") setProp("k");
     else if (propParam === "hits") setProp("hits");
@@ -85,7 +228,7 @@ export default function Home() {
     else if (propParam === "runs") setProp("runs");
     else if (propParam === "rbi") setProp("rbi");
     else if (propParam === "hrr") setProp("hrr");
-    // back-link from player pages: restore threshold
+
     const tp = params.get("threshold");
     if (propParam === "hits" && (tp === "1" || tp === "2" || tp === "3")) {
       setThreshold((t) => ({ ...t, hits: Number(tp) as 1 | 2 | 3 }));
@@ -93,601 +236,394 @@ export default function Home() {
     if (propParam === "tb" && (tp === "2" || tp === "3" || tp === "4")) {
       setThreshold((t) => ({ ...t, tb: Number(tp) as 2 | 3 | 4 }));
     }
-    if (propParam === "runs" && (tp === "1" || tp === "2")) setThreshold((t) => ({ ...t, runs: Number(tp) as 1 | 2 }));
-    if (propParam === "rbi" && (tp === "1" || tp === "2")) setThreshold((t) => ({ ...t, rbi: Number(tp) as 1 | 2 }));
-    if (propParam === "hrr" && (tp === "2" || tp === "3" || tp === "4")) setThreshold((t) => ({ ...t, hrr: Number(tp) as 2 | 3 | 4 }));
-    // back-link from player pages
+    if (propParam === "runs" && (tp === "1" || tp === "2")) {
+      setThreshold((t) => ({ ...t, runs: Number(tp) as 1 | 2 }));
+    }
+    if (propParam === "rbi" && (tp === "1" || tp === "2")) {
+      setThreshold((t) => ({ ...t, rbi: Number(tp) as 1 | 2 }));
+    }
+    if (propParam === "hrr" && (tp === "2" || tp === "3" || tp === "4")) {
+      setThreshold((t) => ({ ...t, hrr: Number(tp) as 2 | 3 | 4 }));
+    }
+
     const src = params.get("source");
     if (src === "hist") setSource("hist");
     else if (src === "blend") setSource("blend");
+
+    const sectionParam = params.get("section");
+    if (
+      sectionParam === "board" ||
+      sectionParam === "hub" ||
+      sectionParam === "top" ||
+      sectionParam === "parks"
+    ) {
+      setSection(sectionParam);
+    }
+
+    const viewParam = params.get("view");
+    if (
+      viewParam === "cards" ||
+      viewParam === "split" ||
+      viewParam === "table" ||
+      viewParam === "matchups"
+    ) {
+      setView(viewParam);
+    }
+
     loadIndex().then((ds) => {
       setDates(ds);
       setSelectedDate(want && ds.includes(want) ? want : ds[0] ?? "");
     });
   }, []);
 
+  // ── Reload projections whenever the selected date changes. ──
   useEffect(() => {
-    loadProjections(selectedDate || undefined).then(setData).catch(console.error);
+    loadProjections(selectedDate || undefined)
+      .then(setData)
+      .catch(console.error);
   }, [selectedDate]);
+
+  // ── Write board state to the URL on change (shareable / refresh-safe). ──
+  // The modal owns ?player=&prop=&threshold= while it is open, so we skip the
+  // board write whenever a ?player= param is present to avoid clobbering it.
+  // Depending on `selection` re-asserts the board URL right after the modal
+  // closes (?player= gone), restoring the board's own prop/threshold.
+  useEffect(() => {
+    if (!selectedDate) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("player")) return;
+    params.set("date", selectedDate);
+    params.set("prop", prop);
+    const t = urlThreshold(prop, threshold);
+    if (t != null) params.set("threshold", String(t));
+    else params.delete("threshold");
+    if (source === "current") params.delete("source");
+    else params.set("source", source);
+    params.set("section", section);
+    params.set("view", view);
+    window.history.replaceState(null, "", `?${params.toString()}`);
+  }, [selectedDate, prop, threshold, source, section, view, selection]);
+
+  // ── Handlers ──
+  const handleOpenPlayer = (playerId: number, kind: PropKind) => {
+    const { prop: mp, threshold: mt } = toModalTarget(kind);
+    openPlayer(String(playerId), mp, mt);
+  };
+
+  const onThreshold = (p: keyof TopPlaysThresholds, n: number) =>
+    setThreshold((t) => ({ ...t, [p]: n }) as Thresholds);
 
   if (!data) {
     return (
-      <main className="mx-auto max-w-3xl px-5 py-16">
-        <p className="eyebrow">
-          <span className="live-dot" /> &nbsp;loading the board…
-        </p>
-      </main>
+      <div className="sp-root">
+        <DepthField />
+        <main className="mx-auto max-w-3xl px-5 py-16">
+          <p>loading the board…</p>
+        </main>
+      </div>
     );
   }
 
-  const updatedAt = data.updated ? new Date(data.updated) : null;
-  const updatedLabel = updatedAt
-    ? (updatedAt.toDateString() === new Date().toDateString()
-        ? updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" })
-        : updatedAt.toLocaleDateString([], { month: "short", day: "numeric" }) +
-          " " +
-          updatedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" }))
-    : null;
-
-  // weighting: current = this season · hist = 3yr Marcel blend · blend = equal 50/50
-  // average of the two (computed here from the numbers the board already ships).
-  const srcParam = source === "current" ? "" : `source=${source}`;
-  const pickN = (cur?: number, hist?: number): number =>
-    source === "current" ? (cur as number)
-    : source === "hist" ? (hist ?? (cur as number))
-    : (typeof cur === "number" && typeof hist === "number" ? (cur + hist) / 2 : (cur as number));
-  const leanFor = (vs: Matchup | undefined) => {
-    if (!vs) return null;
-    if (source === "current") return { lean: vs.lean, prob: vs.prob };
-    if (source === "hist") return vs.lean_hist != null && vs.prob_hist != null ? { lean: vs.lean_hist, prob: vs.prob_hist } : { lean: vs.lean, prob: vs.prob };
-    const kb = pickN(vs.k_prob, vs.k_prob_hist);
-    const hb = pickN(vs.hit_prob, vs.hit_prob_hist);
-    const lean = Math.abs(kb - hb) < 0.04 ? "NEU" : kb > hb ? "K" : "H";
-    return { lean, prob: Math.max(kb, hb) };
-  };
-
-  const dateQ = `${selectedDate ? `?date=${selectedDate}` : ""}${srcParam ? `${selectedDate ? "&" : "?"}${srcParam}` : ""}`;
-
-  const hrRows: BoardRow[] = data.hr.map((r) => ({
-    id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
-    player: r.player,
-    team: r.team,
-    prob: pickN(r.probability, r.probability_hist),
-    detail: gameLabel(r.matchup, r.team) ?? `@ ${r.park}`,
-    href: `/player/hr/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
-    player_id: r.player_id,
-    time: gameTimeLabel(r.game_time),
-    timeSort: r.game_time,
-    matchup: r.matchup,
-    gameId: r.game_id != null ? String(r.game_id) : undefined,
-    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
-    playerHand: batHand(r.bats),
-    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
-    bvp: r.vs?.bvp,
-    lean: leanFor(r.vs),
-    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
-    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
-    status: r.lineup_status,
-    bat_order: r.bat_order,
-    windOut: r.wind_out_mph,
-    windMph: r.wind_mph,
-    windDir: r.wind_dir,
-    tempF: r.temp_f,
-    precipPct: r.precip_pct,
-  }));
-  const kRows: BoardRow[] = data.strikeouts.map((r) => ({
-    id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
-    player: r.player,
-    team: r.team,
-    prob: pickN(r.over_prob, r.over_prob_hist),
-    detail: `line ${r.line.toFixed(1)}`,
-    projection: pickN(r.expected_ks, r.expected_ks_hist).toFixed(1),
-    line: r.line.toFixed(1),
-    href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}${dateQ}`,
-    player_id: r.player_id,
-    time: gameTimeLabel(r.game_time),
-    timeSort: r.game_time,
-    matchup: r.matchup,
-    gameId: r.game_id != null ? String(r.game_id) : undefined,
-    hand: pitchHand(r.throws),
-    playerHand: pitchHand(r.throws),
-    opponent: oppTeam(r.matchup, r.team) ? { name: oppTeam(r.matchup, r.team)! } : undefined,
-    status: r.pitcher_status,
-    windOut: r.wind_out_mph,
-    windMph: r.wind_mph,
-    windDir: r.wind_dir,
-    tempF: r.temp_f,
-    precipPct: r.precip_pct,
-  }));
-
-  // Helper: pick p_geN source-aware (hist fallback to current)
-  function hitsProb(r: HitsRow, n: 1 | 2 | 3): number {
-    const base = n === 1 ? r.p_ge1 : n === 2 ? r.p_ge2 : r.p_ge3;
-    const hist = n === 1 ? r.p_ge1_hist : n === 2 ? r.p_ge2_hist : r.p_ge3_hist;
-    return pickN(base, hist);
-  }
-  function tbProb(r: TbRow, n: 2 | 3 | 4): number {
-    const base = n === 2 ? r.p_ge2 : n === 3 ? r.p_ge3 : r.p_ge4;
-    const hist = n === 2 ? r.p_ge2_hist : n === 3 ? r.p_ge3_hist : r.p_ge4_hist;
-    return pickN(base, hist);
-  }
-
-  const hitsDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=hits&threshold=${threshold.hits}${srcParam ? `&${srcParam}` : ""}`;
-  const tbDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=tb&threshold=${threshold.tb}${srcParam ? `&${srcParam}` : ""}`;
-
-  function runsProb(r: RunsRow, n: 1 | 2): number {
-    return pickN(n === 1 ? r.p_ge1 : r.p_ge2, n === 1 ? r.p_ge1_hist : r.p_ge2_hist);
-  }
-  function rbiProb(r: RbiRow, n: 1 | 2): number {
-    return pickN(n === 1 ? r.p_ge1 : r.p_ge2, n === 1 ? r.p_ge1_hist : r.p_ge2_hist);
-  }
-  function hrrProb(r: HrrRow, n: 2 | 3 | 4): number {
-    const base = n === 2 ? r.p_ge2 : n === 3 ? r.p_ge3 : r.p_ge4;
-    const hist = n === 2 ? r.p_ge2_hist : n === 3 ? r.p_ge3_hist : r.p_ge4_hist;
-    return pickN(base, hist);
-  }
-  const runsDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=runs&threshold=${threshold.runs}${srcParam ? `&${srcParam}` : ""}`;
-  const rbiDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=rbi&threshold=${threshold.rbi}${srcParam ? `&${srcParam}` : ""}`;
-  const hrrDateQ = `${selectedDate ? `?date=${selectedDate}&` : "?"}prop=hrr&threshold=${threshold.hrr}${srcParam ? `&${srcParam}` : ""}`;
-
-  const hitsRows: BoardRow[] = (data.hits ?? []).map((r) => ({
-    id: `hits-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
-    player: r.player,
-    team: r.team,
-    prob: hitsProb(r, threshold.hits),
-    detail: `${threshold.hits}+ hits`,
-    href: `/player/hits/${r.player_id ?? encodeURIComponent(r.player)}${hitsDateQ}`,
-    player_id: r.player_id,
-    time: gameTimeLabel(r.game_time),
-    timeSort: r.game_time,
-    matchup: r.matchup,
-    gameId: r.game_id != null ? String(r.game_id) : undefined,
-    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
-    playerHand: batHand(r.bats),
-    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
-    bvp: r.vs?.bvp,
-    lean: leanFor(r.vs),
-    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
-    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
-    status: r.lineup_status,
-    bat_order: r.bat_order,
-    windOut: r.wind_out_mph,
-    windMph: r.wind_mph,
-    windDir: r.wind_dir,
-    tempF: r.temp_f,
-    precipPct: r.precip_pct,
-  }));
-
-  const tbRows: BoardRow[] = (data.total_bases ?? []).map((r) => ({
-    id: `tb-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
-    player: r.player,
-    team: r.team,
-    prob: tbProb(r, threshold.tb),
-    detail: `${threshold.tb}+ bases`,
-    href: `/player/tb/${r.player_id ?? encodeURIComponent(r.player)}${tbDateQ}`,
-    player_id: r.player_id,
-    time: gameTimeLabel(r.game_time),
-    timeSort: r.game_time,
-    matchup: r.matchup,
-    gameId: r.game_id != null ? String(r.game_id) : undefined,
-    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
-    playerHand: batHand(r.bats),
-    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
-    bvp: r.vs?.bvp,
-    lean: leanFor(r.vs),
-    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
-    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
-    status: r.lineup_status,
-    bat_order: r.bat_order,
-    windOut: r.wind_out_mph,
-    windMph: r.wind_mph,
-    windDir: r.wind_dir,
-    tempF: r.temp_f,
-    precipPct: r.precip_pct,
-  }));
-
-  const runsRows: BoardRow[] = (data.runs ?? []).map((r) => ({
-    id: `runs-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
-    player: r.player,
-    team: r.team,
-    prob: runsProb(r, threshold.runs),
-    detail: `${threshold.runs}+ runs`,
-    href: `/player/runs/${r.player_id ?? encodeURIComponent(r.player)}${runsDateQ}`,
-    player_id: r.player_id,
-    time: gameTimeLabel(r.game_time),
-    timeSort: r.game_time,
-    matchup: r.matchup,
-    gameId: r.game_id != null ? String(r.game_id) : undefined,
-    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
-    playerHand: batHand(r.bats),
-    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
-    bvp: r.vs?.bvp,
-    lean: leanFor(r.vs),
-    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
-    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
-    status: r.lineup_status,
-    bat_order: r.bat_order,
-    windOut: r.wind_out_mph,
-    windMph: r.wind_mph,
-    windDir: r.wind_dir,
-    tempF: r.temp_f,
-    precipPct: r.precip_pct,
-  }));
-
-  const rbiRows: BoardRow[] = (data.rbi ?? []).map((r) => ({
-    id: `rbi-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
-    player: r.player,
-    team: r.team,
-    prob: rbiProb(r, threshold.rbi),
-    detail: `${threshold.rbi}+ RBI`,
-    href: `/player/rbi/${r.player_id ?? encodeURIComponent(r.player)}${rbiDateQ}`,
-    player_id: r.player_id,
-    time: gameTimeLabel(r.game_time),
-    timeSort: r.game_time,
-    matchup: r.matchup,
-    gameId: r.game_id != null ? String(r.game_id) : undefined,
-    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
-    playerHand: batHand(r.bats),
-    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
-    bvp: r.vs?.bvp,
-    lean: leanFor(r.vs),
-    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
-    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
-    status: r.lineup_status,
-    bat_order: r.bat_order,
-    windOut: r.wind_out_mph,
-    windMph: r.wind_mph,
-    windDir: r.wind_dir,
-    tempF: r.temp_f,
-    precipPct: r.precip_pct,
-  }));
-
-  const hrrRows: BoardRow[] = (data.hrr ?? []).map((r) => ({
-    id: `hrr-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
-    player: r.player,
-    team: r.team,
-    prob: hrrProb(r, threshold.hrr),
-    detail: `${threshold.hrr}+ H+R+RBI`,
-    href: `/player/hrr/${r.player_id ?? encodeURIComponent(r.player)}${hrrDateQ}`,
-    player_id: r.player_id,
-    time: gameTimeLabel(r.game_time),
-    timeSort: r.game_time,
-    matchup: r.matchup,
-    gameId: r.game_id != null ? String(r.game_id) : undefined,
-    hand: r.bats ? `${batHand(r.bats)}${r.vs ? ` vs ${pitchHand(r.vs.throws)}` : ""}` : undefined,
-    playerHand: batHand(r.bats),
-    opponent: r.vs ? { name: r.vs.name, hand: pitchHand(r.vs.throws) } : undefined,
-    bvp: r.vs?.bvp,
-    lean: leanFor(r.vs),
-    hitProb: r.vs ? pickN(r.vs.hit_prob, r.vs.hit_prob_hist) : undefined,
-    kProb: r.vs ? pickN(r.vs.k_prob, r.vs.k_prob_hist) : undefined,
-    status: r.lineup_status,
-    bat_order: r.bat_order,
-    windOut: r.wind_out_mph,
-    windMph: r.wind_mph,
-    windDir: r.wind_dir,
-    tempF: r.temp_f,
-    precipPct: r.precip_pct,
-  }));
-
-  // Re-sort by the displayed probability so History mode reorders the list to
-  // match its numbers (current mode is already in this order, so it's unchanged).
-  hrRows.sort((a, b) => b.prob - a.prob);
-  kRows.sort((a, b) => b.prob - a.prob);
-  hitsRows.sort((a, b) => b.prob - a.prob);
-  tbRows.sort((a, b) => b.prob - a.prob);
-  runsRows.sort((a, b) => b.prob - a.prob);
-  rbiRows.sort((a, b) => b.prob - a.prob);
-  hrrRows.sort((a, b) => b.prob - a.prob);
+  // ── Derived data ──
+  const activeKind = activePropKind(prop, threshold);
+  const boardRows = toBoardRows(
+    data,
+    activeKind,
+    activeThresholdNum(prop, threshold),
+    source,
+  );
 
   // Unique games (id + first-pitch ms) for the live poller's active-window gate.
-  const liveGames: LiveGame[] = Array.from(new Map(
-    [...data.hr, ...data.strikeouts]
-      .filter((r) => r.game_id != null)
-      .map((r) => [String(r.game_id), { id: String(r.game_id), startMs: r.game_time ? Date.parse(r.game_time) : undefined }])
-  ).values());
+  const liveGames: LiveGame[] = Array.from(
+    new Map(
+      [...data.hr, ...data.strikeouts]
+        .filter((r) => r.game_id != null)
+        .map((r) => [
+          String(r.game_id),
+          {
+            id: String(r.game_id),
+            startMs: r.game_time ? Date.parse(r.game_time) : undefined,
+          },
+        ]),
+    ).values(),
+  );
+
+  // ── Header dashboard: Box 1 stats (unchanged values from the old KPI tiles) ──
+  const gameCount = data.games?.length ?? 0;
+  const totalPlays =
+    data.hr.length +
+    data.strikeouts.length +
+    (data.hits?.length ?? 0) +
+    (data.total_bases?.length ?? 0) +
+    (data.runs?.length ?? 0) +
+    (data.rbi?.length ?? 0) +
+    (data.hrr?.length ?? 0);
+  // Lineups stat = COUNT OF TEAMS whose lineup is confirmed, out of every team on
+  // the slate. Each game has TWO sides (home + away), counted independently, so
+  // the denominator is 2 × game count and a 15-game slate reads e.g. "18/30".
+  const confirmedTeams = (data.games ?? []).reduce(
+    (acc, g) =>
+      acc +
+      (g.home_lineup_status === "confirmed" ? 1 : 0) +
+      (g.away_lineup_status === "confirmed" ? 1 : 0),
+    0,
+  );
+
+  // ── Box 2 — Top 6 games by combined park+weather env boost ──
+  // Reuses the same `env` multiplier Parks ranks by (park_mult × weather_mult,
+  // 1.0 = neutral), sorted best-first, and the shared envImpactColor scale.
+  const signedPct = (mult: number): string => {
+    const v = Math.round((mult - 1) * 100);
+    return (v >= 0 ? "+" : "") + v + "%";
+  };
+  const topGames: DashRow[] = [...(data.games ?? [])]
+    .sort((a, b) => b.env - a.env)
+    .slice(0, 6)
+    .map((g) => ({
+      name: g.matchup,
+      value: signedPct(g.env),
+      color: envImpactColor(g.env),
+    }));
+
+  // ── Box 3 — Top 10 batters across ALL batter props ──
+  // METRIC: for each unique batter (keyed by player_id), average their
+  // source-weighted probability across every batter prop they appear in, taken
+  // at that prop's base/lowest threshold, then rank descending and take 10.
+  // The header shows 3 columns of 3 (top 9) on desktop/landscape and 2 columns
+  // of 5 (top 10) on phone portrait — the 10th is portrait-only (CSS-hidden >640).
+  // Base thresholds per prop — edit this list to re-tune the composite metric:
+  const BATTER_BASES: [PropKind, number][] = [
+    ["hr", 1],
+    ["hits1", 1],
+    ["tb2", 2],
+    ["runs1", 1],
+    ["rbi1", 1],
+    ["hrr2", 2],
+  ];
+  // Rank internally by the avg-across-props metric, but DON'T display it — an
+  // average across mixed props isn't a meaningful %. Show the batter's hand
+  // chip instead (carried from the first row seen for that batter).
+  // `adv` = batter has the platoon edge over their matchup pitcher (bats
+  // opposite the pitcher's throwing hand). Computed EXACTLY as the board does —
+  // platoonAdvantage(playerHand, opponent.hand) — captured from the first row
+  // seen for the batter (same game/pitcher across every prop), then passed to
+  // the header HandChip so it lights up (cyan glow) just like on the board.
+  const batterAcc = new Map<
+    number,
+    { name: string; hand?: "R" | "L" | "SW"; team?: string; adv: boolean; sum: number; n: number }
+  >();
+  for (const [kind, thr] of BATTER_BASES) {
+    for (const r of toBoardRows(data, kind, thr, source)) {
+      if (r.player_id == null) continue;
+      const e =
+        batterAcc.get(r.player_id) ??
+        {
+          name: r.player,
+          hand: handGlyph(r.playerHand),
+          team: r.team,
+          adv: platoonAdvantage(r.playerHand, r.opponent?.hand),
+          sum: 0,
+          n: 0,
+        };
+      e.sum += r.prob;
+      e.n += 1;
+      batterAcc.set(r.player_id, e);
+    }
+  }
+  const topBatters: DashRow[] = [...batterAcc.values()]
+    .map((e) => ({ name: e.name, hand: e.hand, team: e.team, adv: e.adv, avg: e.sum / e.n }))
+    .sort((a, b) => b.avg - a.avg)
+    .slice(0, 10)
+    .map((e) => ({ name: e.name, hand: e.hand, team: e.team, adv: e.adv }));
+
+  // ── Box 4 — Top pitchers: TWO-STEP rank (top-6-proj pool, ordered by over %) ──
+  // STEP 1 — candidate pool: take the top 6 pitchers by PROJECTED strikeouts
+  //   (KRow.expected_ks, source-weighted → the board row's `projection`, the same
+  //   "proj X.X K" the Game Hub shows), highest proj K first.
+  // STEP 2 — within that 6-pitcher pool, ORDER by the K over-line probability
+  //   (`prob`, i.e. over_prob) DESCENDING — so the pitcher most likely to hit
+  //   their (already-high) projection lands at #1.
+  // Display is unchanged: proj K is the HEADLINE value ("X.X K"); the over-line
+  // probability rides along as a smaller secondary %. Only the ORDER changed.
+  // playerId/gameId/line are threaded through so each row can render the SAME
+  // live K tracker the board uses (LiveChip fed by useLiveFor(row, "k")), shown
+  // to the LEFT of the proj-K value.
+  // TRACKER TARGET: the header box HEADLINES the PROJECTED strikeouts ("X.X K"),
+  // so the tracker's `need` must derive from that PROJ — not the book line. We
+  // feed `r.projection` (the same value shown) into the `line` slot useLiveFor
+  // reads; propNeed("k", …) → floor(proj)+1 (e.g. 5.7 → 6). Only the HEADER
+  // tracker changes; the board / Top Plays / Game Hub still track the book line.
+  const topPitchers: DashRow[] = toBoardRows(data, "k", 0, source)
+    .sort((a, b) => Number(b.projection ?? 0) - Number(a.projection ?? 0)) // step 1
+    .slice(0, 6)
+    .sort((a, b) => Number(b.prob) - Number(a.prob)) // step 2: order pool by over %
+    .map((r) => ({
+      name: r.player,
+      value: r.projection ? `${r.projection} K` : pct(r.prob),
+      sub: pct(r.prob),
+      hand: handGlyph(r.playerHand),
+      team: r.team,
+      playerId: r.player_id,
+      gameId: r.gameId,
+      line: r.projection ?? r.line,
+    }));
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">
-      <header className="mb-9 rise">
-        <p className="eyebrow mb-2">MLB player props · model-driven</p>
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <PPHex size={52} />
-          <h1 className="wordmark" style={{ fontFamily: "var(--font-orb), sans-serif", fontStyle: "italic", fontSize: "clamp(1.6rem, 4.5vw, 2.3rem)", letterSpacing: "-0.02em" }}>
-            <span className="lo">Prop </span><span className="hi">Predict</span>
-          </h1>
-          <span style={{ marginLeft: "auto" }}>
-            <UserButton />
-          </span>
-        </div>
-        <div className="mt-3 flex items-center gap-2" style={{ color: "var(--muted)", fontSize: "0.82rem" }}>
-          <span className="live-dot" />
-          {dates.length > 1 ? (
-            <select
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="num"
-              style={{
-                background: "var(--bg-2)", color: "var(--text)",
-                border: "1px solid var(--line)", borderRadius: 8, padding: "0.25rem 0.5rem",
-              }}
-            >
-              {dates.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          ) : (
-            <span className="num">{data.date}</span>
-          )}
-          {dates.length > 1 && <span style={{ opacity: 0.6 }}>· last {dates.length} days</span>}
-          {updatedLabel && <span style={{ opacity: 0.6 }}>· updated {updatedLabel}</span>}
-        </div>
-      </header>
+    <div className="sp-root">
+      {/* Volumetric depth-field layers + parallax — handled by DepthField */}
+      <DepthField />
 
-      <div className="mb-6 rise" style={{ animationDelay: "60ms" }}>
-        <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.625rem" }}>
-          {/* compact weighting toggle: stacked+centered on phones, pinned far-left on wider screens */}
+      {/* ── Sticky command bar (owns the date selector) ── */}
+      <CommandBar dates={dates} selectedDate={selectedDate} onDate={setSelectedDate} />
+
+      {/* ONE LiveProvider wraps the header AND the board so the header's Top
+          Pitchers live-K trackers share the same live context as the board /
+          Top Plays (single provider, no duplication). */}
+      <LiveProvider date={selectedDate} games={liveGames}>
+      <main className="sp-wrap" style={{ paddingBottom: 80 }}>
+        {/* ── Header dashboard (stats box + game/batter/pitcher leaderboards) ── */}
+        <HeaderDash
+          stats={{ games: gameCount, confirmed: confirmedTeams, plays: totalPlays }}
+          games={topGames}
+          batters={topBatters}
+          pitchers={topPitchers}
+        />
+
+        {/* ── Weighting row — centered between KPI tiles and NavDock ── */}
+        <div className="sp-weighting-row">
+          <span className="sp-eyebrow">WEIGHTING</span>
+          <SegmentedControl
+            options={SOURCE_OPTIONS}
+            value={source}
+            onChange={(v) => setSource(v as Source)}
+            variant="ghost"
+          />
+        </div>
+
+        {/* ── Nav dock ── */}
+        <NavDock section={section} onSection={setSection} />
+
+        {/* ── Per-section sub-controls ── */}
+        {section === "board" && (
           <div
-            className="weighting-toggle"
-            title="Current = this season only. Blend = an equal 50/50 average of Current and History. History = the last 3 seasons blended 5/4/3 for a steadier baseline. Park, weather, matchup and recent form stay live either way."
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              alignItems: "center",
+              margin: "18px 0",
+            }}
           >
-            <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Weighting</span>
-            <div className="pillbar">
-              {([["current", "Current szn"], ["blend", "Blend"], ["hist", "History 3yr"]] as const).map(([v, label]) => (
-                <button
-                  key={v}
-                  onClick={() => setSource(v)}
-                  data-active={source === v}
-                  className="pill"
-                  style={{ padding: "0.16rem 0.4rem", fontSize: "0.58rem" }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              options={PROP_OPTIONS}
+              value={prop}
+              onChange={(v) => setProp(v as BoardProp)}
+              scroll
+            />
+            {prop !== "hr" && prop !== "k" && (
+              <SegmentedControl
+                options={THRESHOLD_OPTIONS[prop].map((n) => ({
+                  value: String(n),
+                  label: `${n}+`,
+                }))}
+                value={String(threshold[prop])}
+                onChange={(v) =>
+                  setThreshold((t) => ({ ...t, [prop]: Number(v) }) as Thresholds)
+                }
+                variant="sm"
+              />
+            )}
+            <SegmentedControl
+              options={VIEW_OPTIONS}
+              value={view}
+              onChange={(v) => setView(v as BoardViewMode)}
+              variant="ghost"
+            />
           </div>
+        )}
 
-          {/* top level: Props · Parks · Game Hub · Top Plays (centered) */}
-          <div className="pillbar">
-            {SECTIONS.map((s) => (
-              <button key={s.id} onClick={() => setSection(s.id)} data-active={section === s.id} className="pill">
-                {s.label}
-              </button>
+        {section === "hub" && (
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              flexWrap: "wrap",
+              justifyContent: "center",
+              margin: "18px 0",
+            }}
+          >
+            {COLUMN_PICKERS.map(({ key, label }) => (
+              <div
+                key={key}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  alignItems: "center",
+                }}
+              >
+                <span className="sp-eyebrow">{label}</span>
+                <SegmentedControl
+                  options={THRESHOLD_OPTIONS[key].map((n) => ({
+                    value: String(n),
+                    label: `${n}+`,
+                  }))}
+                  value={String(threshold[key])}
+                  onChange={(v) =>
+                    setThreshold((t) => ({ ...t, [key]: Number(v) }) as Thresholds)
+                  }
+                  variant="sm"
+                />
+              </div>
             ))}
           </div>
-          {/* under Props: which prop, then which view */}
-          {section === "props" && (
-            <>
-              <div className="pillbar-scroll" ref={propScrollRef} onScroll={syncPropHint}>
-                <div className="pillbar">
-                  {([
-                    ["hr", "Home Runs"],
-                    ["k", "Strikeouts"],
-                    ["hits", "Hits"],
-                    ["tb", "Total Bases"],
-                    ["runs", "Runs"],
-                    ["rbi", "RBI"],
-                    ["hrr", "H+R+RBI"],
-                  ] as const).map(([p, label]) => (
-                    <button key={p} onClick={() => setProp(p)} data-active={prop === p} className="pill">
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {propHint.show && (
-                <div className="scroll-hint" aria-hidden="true">
-                  <div
-                    className="scroll-hint-thumb"
-                    style={{
-                      width: `${propHint.thumb * 100}%`,
-                      left: `${propHint.pos * (100 - propHint.thumb * 100)}%`,
-                    }}
-                  />
-                </div>
-              )}
-              {prop === "hits" && (
-                <div className="pillbar">
-                  {([1, 2, 3] as const).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setThreshold((t) => ({ ...t, hits: n }))}
-                      data-active={threshold.hits === n}
-                      className="pill"
-                    >
-                      {n}+
-                    </button>
-                  ))}
-                </div>
-              )}
-              {prop === "tb" && (
-                <div className="pillbar">
-                  {([2, 3, 4] as const).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setThreshold((t) => ({ ...t, tb: n }))}
-                      data-active={threshold.tb === n}
-                      className="pill"
-                    >
-                      {n}+
-                    </button>
-                  ))}
-                </div>
-              )}
-              {prop === "runs" && (
-                <div className="pillbar">
-                  {([1, 2] as const).map((n) => (
-                    <button key={n} onClick={() => setThreshold((t) => ({ ...t, runs: n }))} data-active={threshold.runs === n} className="pill">
-                      {n}+
-                    </button>
-                  ))}
-                </div>
-              )}
-              {prop === "rbi" && (
-                <div className="pillbar">
-                  {([1, 2] as const).map((n) => (
-                    <button key={n} onClick={() => setThreshold((t) => ({ ...t, rbi: n }))} data-active={threshold.rbi === n} className="pill">
-                      {n}+
-                    </button>
-                  ))}
-                </div>
-              )}
-              {prop === "hrr" && (
-                <div className="pillbar">
-                  {([2, 3, 4] as const).map((n) => (
-                    <button key={n} onClick={() => setThreshold((t) => ({ ...t, hrr: n }))} data-active={threshold.hrr === n} className="pill">
-                      {n}+
-                    </button>
-                  ))}
-                </div>
-              )}
-              <ViewSwitcher mode={view} onChange={setView} />
-            </>
-          )}
-          {/* Game Hub: choose which Hits / Total Bases threshold the breakdown columns show */}
-          {section === "hub" && (
-            <div style={{ display: "flex", gap: "1.4rem", flexWrap: "wrap", justifyContent: "center" }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
-                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Hits column</span>
-                <div className="pillbar">
-                  {([1, 2, 3] as const).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setThreshold((t) => ({ ...t, hits: n }))}
-                      data-active={threshold.hits === n}
-                      className="pill"
-                      style={{ padding: "0.16rem 0.5rem", fontSize: "0.62rem" }}
-                    >
-                      {n}+
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
-                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Bases column</span>
-                <div className="pillbar">
-                  {([2, 3, 4] as const).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setThreshold((t) => ({ ...t, tb: n }))}
-                      data-active={threshold.tb === n}
-                      className="pill"
-                      style={{ padding: "0.16rem 0.5rem", fontSize: "0.62rem" }}
-                    >
-                      {n}+
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
-                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>Runs column</span>
-                <div className="pillbar">
-                  {([1, 2] as const).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setThreshold((t) => ({ ...t, runs: n }))}
-                      data-active={threshold.runs === n}
-                      className="pill"
-                      style={{ padding: "0.16rem 0.5rem", fontSize: "0.62rem" }}
-                    >
-                      {n}+
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
-                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>RBI column</span>
-                <div className="pillbar">
-                  {([1, 2] as const).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setThreshold((t) => ({ ...t, rbi: n }))}
-                      data-active={threshold.rbi === n}
-                      className="pill"
-                      style={{ padding: "0.16rem 0.5rem", fontSize: "0.62rem" }}
-                    >
-                      {n}+
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
-                <span className="eyebrow" style={{ fontSize: "0.5rem", letterSpacing: "0.12em" }}>HRR column</span>
-                <div className="pillbar">
-                  {([2, 3, 4] as const).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setThreshold((t) => ({ ...t, hrr: n }))}
-                      data-active={threshold.hrr === n}
-                      className="pill"
-                      style={{ padding: "0.16rem 0.5rem", fontSize: "0.62rem" }}
-                    >
-                      {n}+
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        )}
 
-      <LiveProvider date={selectedDate} games={liveGames}>
-      {section === "parks" || section === "hub" ? (
-        <ParksBoard
-          games={data.games ?? []}
-          hrRows={hrRows}
-          kRows={kRows}
-          hitsRows={hitsRows}
-          tbRows={tbRows}
-          runsRows={runsRows}
-          rbiRows={rbiRows}
-          hrrRows={hrrRows}
-          hitsKind={`hits${threshold.hits}` as "hits1" | "hits2" | "hits3"}
-          tbKind={`tb${threshold.tb}` as "tb2" | "tb3" | "tb4"}
-          runsKind={`runs${threshold.runs}` as "runs1" | "runs2"}
-          rbiKind={`rbi${threshold.rbi}` as "rbi1" | "rbi2"}
-          hrrKind={`hrr${threshold.hrr}` as "hrr2" | "hrr3" | "hrr4"}
-          expandable={section === "hub"}
-        />
-      ) : section === "topplays" ? (
-        <TopPlays
-          hrRows={hrRows}
-          kRows={kRows}
-          hitsRows={hitsRows}
-          tbRows={tbRows}
-          runsRows={runsRows}
-          rbiRows={rbiRows}
-          hrrRows={hrrRows}
-          hitsKind={`hits${threshold.hits}` as "hits1" | "hits2" | "hits3"}
-          tbKind={`tb${threshold.tb}` as "tb2" | "tb3" | "tb4"}
-          runsKind={`runs${threshold.runs}` as "runs1" | "runs2"}
-          rbiKind={`rbi${threshold.rbi}` as "rbi1" | "rbi2"}
-          hrrKind={`hrr${threshold.hrr}` as "hrr2" | "hrr3" | "hrr4"}
-          threshold={threshold}
-          setThreshold={setThreshold}
-        />
-      ) : (
-        <PropBoard
-          rows={prop === "hr" ? hrRows : prop === "k" ? kRows : prop === "hits" ? hitsRows : prop === "tb" ? tbRows
-                : prop === "runs" ? runsRows : prop === "rbi" ? rbiRows : hrrRows}
-          mode={view}
-          kind={
-            prop === "k" ? "k"
-            : prop === "hits" ? (`hits${threshold.hits}` as "hits1" | "hits2" | "hits3")
-            : prop === "tb"   ? (`tb${threshold.tb}`   as "tb2"   | "tb3"   | "tb4")
-            : prop === "runs" ? (`runs${threshold.runs}` as "runs1" | "runs2")
-            : prop === "rbi"  ? (`rbi${threshold.rbi}`  as "rbi1"  | "rbi2")
-            : prop === "hrr"  ? (`hrr${threshold.hrr}`  as "hrr2"  | "hrr3"  | "hrr4")
-            : "hr"
-          }
-        />
-      )}
+        {/* ── Active surface ── */}
+          {section === "board" && (
+            <BoardView
+              rows={boardRows}
+              view={view}
+              prop={activeKind}
+              threshold={activeThresholdNum(prop, threshold)}
+              source={source}
+              onOpenPlayer={handleOpenPlayer}
+            />
+          )}
+          {section === "hub" && (
+            <GameHub
+              games={data.games ?? []}
+              projections={data}
+              thresholds={threshold}
+              source={source}
+              onOpenPlayer={handleOpenPlayer}
+            />
+          )}
+          {section === "top" && (
+            <TopPlays
+              projections={data}
+              source={source}
+              threshold={threshold}
+              onThreshold={onThreshold}
+              onOpenPlayer={handleOpenPlayer}
+            />
+          )}
+          {section === "parks" && <Parks games={data.games ?? []} />}
+      </main>
       </LiveProvider>
 
-      <footer className="mt-12" style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
-        Projections are model estimates, not guarantees · Built on Historical and Current Data
-      </footer>
-    </main>
+      {/* Modal lives outside <main> so its fixed overlay covers the viewport. */}
+      <PlayerModal
+        open={selection != null}
+        playerId={selection?.playerId ?? null}
+        prop={selection?.prop ?? "hr"}
+        threshold={selection?.threshold}
+        date={selectedDate}
+        source={source}
+        onClose={closePlayer}
+        onOpenPlayer={(id, p) => openPlayer(id, p)}
+        projections={data}
+      />
+    </div>
   );
 }
