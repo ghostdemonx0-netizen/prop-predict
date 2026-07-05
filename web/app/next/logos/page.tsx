@@ -19,9 +19,11 @@ import { LOGOS_ART1 } from "../../../components/spatial/logos/LogosArt1";
 import { LOGOS_ART2 } from "../../../components/spatial/logos/LogosArt2";
 import { LOGOS_ART3 } from "../../../components/spatial/logos/LogosArt3";
 import { LOGOS_ART4 } from "../../../components/spatial/logos/LogosArt4";
+import { LOGOS_APERTURE } from "../../../components/spatial/logos/LogosAperture";
 
 const SECTIONS = [
-  { title: "★★★ ARTISTIC · negative-space / clever dual-read", logos: LOGOS_ART1 },
+  { title: "★★★★ APERTURE — bigger + variations", logos: LOGOS_APERTURE },
+  { title: "ARTISTIC · negative-space / clever dual-read", logos: LOGOS_ART1 },
   { title: "★★★ ARTISTIC · dynamic motion / energy", logos: LOGOS_ART2 },
   { title: "★★★ ARTISTIC · geometric modernist", logos: LOGOS_ART3 },
   { title: "★★★ ARTISTIC · luminous glass emblem", logos: LOGOS_ART4 },
