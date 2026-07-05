@@ -89,15 +89,16 @@ function nameMatchup(r: SpatialRow): string {
  * numeric threshold is encoded in it), never hardcoded.
  *
  * Strikeouts have no single threshold, so we name the pitcher's book line
- * instead — "O 2.5" (over the model book line, from the row's `line` field),
+ * instead — "O 4.5K" (over the model book line, from the row's `line` field),
  * consistent with the Game Hub / table Model Book Line. A real space separates
- * the "O" from the number; the K suffix is dropped so the number stays tight
- * (the render site tags this label so its letter-spacing is zeroed). Needs the
- * row for the per-pitcher line, so callers pass it for the K prop.
+ * the "O" from the number, then the "K" suffix sits tight against the number
+ * (no space before K) — the render site tags this label so its letter-spacing
+ * is zeroed, keeping the decimal + K tight. Needs the row for the per-pitcher
+ * line, so callers pass it for the K prop.
  * Returns null for Home Runs (HR stays unlabeled).
  */
 function propTrackLabel(prop: PropKind, r?: SpatialRow): string | null {
-  if (prop === "k") return r?.line ? `O ${r.line}` : null;
+  if (prop === "k") return r?.line ? `O ${r.line}K` : null;
   if (prop.startsWith("hits")) return `${prop.slice(4)}+ H`;
   if (prop.startsWith("tb")) return `${prop.slice(2)}+ TB`;
   if (prop.startsWith("runs")) return `${prop.slice(4)}+ R`;

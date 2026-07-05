@@ -4,11 +4,16 @@
  * Replaces the old 4 KPI tiles (Slate / Plays / Lineups / Top Edge) with a
  * 4-box header dashboard:
  *
- *   Box 1  — combined stats: Slate · Lineups · Plays scored
- *            (three stacked sections split by two faint --line dividers).
+ *   Box 1  — combined stats: Slate | Lineups | Plays scored
+ *            (three SIDE-BY-SIDE sections split by two faint VERTICAL --line
+ *            dividers, centred → a short/wide box that balances the grid).
  *   Box 2  — Top games (ranked by combined park+weather env boost).
- *   Box 3  — Top batters (best composite across all batter props).
- *   Box 4  — Top pitchers (highest strikeout over-line probability).
+ *   Box 3  — Top batters (ranked by best composite across all batter props;
+ *            shows a hand chip after each name, no % — the composite isn't a
+ *            meaningful displayable number).
+ *   Box 4  — Top pitchers (highest strikeout over-line probability); shows a
+ *            hand chip after the name + the K % + the model book K-line
+ *            ("O X.XK") to the right of the %.
  *
  * This component is PURELY presentational: every leaderboard + the stat values
  * are computed in app/next/page.tsx (a display aggregation of already-loaded
@@ -21,6 +26,7 @@
 
 import "./spatial.css";
 import { GlassCard } from "./GlassCard";
+import { HandChip } from "./chips";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,12 +44,15 @@ export interface DashStats {
 export interface DashRow {
   /** Matchup ("PIT @ WSH") or player name. */
   name: string;
-  /** Primary value shown at the right ("+22%", "63%"). */
-  value: string;
-  /** Optional secondary value under/next to the primary ("6.5 K"). */
+  /** Primary value shown at the right ("+22%", "63%"). Omitted for batters,
+   *  who show a hand chip instead of a (not-meaningful) composite %. */
+  value?: string;
+  /** Optional secondary value shown to the RIGHT of the primary ("O 4.5K"). */
   sub?: string;
   /** Optional CSS colour for the primary value (env green/amber/red scale). */
   color?: string;
+  /** Optional L / R / SW hand chip shown right after the name (batters/pitchers). */
+  hand?: "R" | "L" | "SW";
 }
 
 export interface HeaderDashProps {
@@ -58,16 +67,23 @@ export interface HeaderDashProps {
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
-/** One numbered leaderboard row (rank + name + value). */
+/** One numbered leaderboard row (rank + name + optional hand chip + value).
+ *  Batters carry a hand chip and no value; pitchers carry a hand chip, a K %
+ *  value, and a `sub` ("O X.XK") shown to the right of the %. */
 function LeaderRow({ rank, r }: { rank: number; r: DashRow }) {
   return (
     <li className="sp-drow">
       <span className="sp-drank">{rank}</span>
-      <span className="sp-dname">{r.name}</span>
-      <span className="sp-dval" style={r.color ? { color: r.color } : undefined}>
-        {r.value}
-        {r.sub && <small>{r.sub}</small>}
+      <span className="sp-dnamewrap">
+        <span className="sp-dname">{r.name}</span>
+        {r.hand && <HandChip hand={r.hand} />}
       </span>
+      {r.value && (
+        <span className="sp-dval" style={r.color ? { color: r.color } : undefined}>
+          {r.value}
+          {r.sub && <small>{r.sub}</small>}
+        </span>
+      )}
     </li>
   );
 }
@@ -111,7 +127,8 @@ export function HeaderDash({ stats, games, batters, pitchers }: HeaderDashProps)
   return (
     <section className="sp-hero">
       <div className="sp-dash">
-        {/* Box 1 — combined stats (three sections split by two faint dividers) */}
+        {/* Box 1 — combined stats: three SIDE-BY-SIDE sections split by two
+            VERTICAL dividers (short/wide box), centred in its cell. */}
         <GlassCard className="sp-dbox sp-dbox--stats">
           <div className="sp-dstat">
             <div className="sp-dlabel">Slate</div>

@@ -164,6 +164,17 @@ function urlThreshold(prop: BoardProp, t: Thresholds): number | null {
   }
 }
 
+/** Batter/pitcher hand string ("RHB"/"LHB"/"SW"/"RHP"/"LHP") → HandChip glyph.
+ *  Mirrors BoardView's handGlyph so the header leaderboards render the same
+ *  L / R / SW chip as the board. */
+function handGlyph(h?: string): "R" | "L" | "SW" | undefined {
+  if (!h) return undefined;
+  if (h === "SW" || h[0] === "S") return "SW";
+  if (h[0] === "L") return "L";
+  if (h[0] === "R") return "R";
+  return undefined;
+}
+
 /** Board onOpenPlayer PropKind → the modal's (ModalProp, threshold?). */
 function toModalTarget(kind: PropKind): { prop: ModalProp; threshold?: number } {
   if (kind === "hr") return { prop: "hr" };
@@ -374,31 +385,41 @@ export default function NextPage() {
     ["rbi1", 1],
     ["hrr2", 2],
   ];
-  const batterAcc = new Map<number, { name: string; sum: number; n: number }>();
+  // Rank internally by the avg-across-props metric, but DON'T display it — an
+  // average across mixed props isn't a meaningful %. Show the batter's hand
+  // chip instead (carried from the first row seen for that batter).
+  const batterAcc = new Map<
+    number,
+    { name: string; hand?: "R" | "L" | "SW"; sum: number; n: number }
+  >();
   for (const [kind, thr] of BATTER_BASES) {
     for (const r of toBoardRows(data, kind, thr, source)) {
       if (r.player_id == null) continue;
-      const e = batterAcc.get(r.player_id) ?? { name: r.player, sum: 0, n: 0 };
+      const e =
+        batterAcc.get(r.player_id) ??
+        { name: r.player, hand: handGlyph(r.playerHand), sum: 0, n: 0 };
       e.sum += r.prob;
       e.n += 1;
       batterAcc.set(r.player_id, e);
     }
   }
   const topBatters: DashRow[] = [...batterAcc.values()]
-    .map((e) => ({ name: e.name, avg: e.sum / e.n }))
+    .map((e) => ({ name: e.name, hand: e.hand, avg: e.sum / e.n }))
     .sort((a, b) => b.avg - a.avg)
     .slice(0, 6)
-    .map((e) => ({ name: e.name, value: pct(e.avg) }));
+    .map((e) => ({ name: e.name, hand: e.hand }));
 
   // ── Box 4 — Top 6 pitchers by strikeout over-line probability ──
-  // toBoardRows("k") is already sorted by over_prob desc; carry the projected
-  // K count (BoardRow.projection = expected_ks) as the compact sub-value.
+  // toBoardRows("k") is already sorted by over_prob desc; show the K % plus the
+  // hand chip after the name and the model book K-line ("O X.XK", from the
+  // row's `line` field — same format as the board K label) to the right of it.
   const topPitchers: DashRow[] = toBoardRows(data, "k", 0, source)
     .slice(0, 6)
     .map((r) => ({
       name: r.player,
       value: pct(r.prob),
-      sub: r.projection ? `${r.projection} K` : undefined,
+      sub: r.line ? `O ${r.line}K` : undefined,
+      hand: handGlyph(r.playerHand),
     }));
 
   return (

@@ -1173,16 +1173,29 @@
   color:          var(--ink-faint);
 }
 
-/* ---- Box 1: combined stats (three sections split by two faint dividers) ---- */
-.sp-root .sp-dbox--stats { justify-content: space-between; }
+/* ---- Box 1: combined stats — three SIDE-BY-SIDE sections split by two
+   VERTICAL divider lines (Slate | Lineups | Plays), centred in the cell so the
+   short/wide box balances against the leaderboards in the 2×2 grid. ---- */
+.sp-root .sp-dbox--stats {
+  flex-direction: row;
+  align-items:    stretch;
+  justify-content: center;
+}
 
 .sp-root .sp-dstat {
-  padding: 10px 0;
+  flex:           1 1 0;
+  min-width:      0;
+  padding:        4px 14px;
+  display:        flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items:    center;
+  text-align:     center;
 }
-.sp-root .sp-dstat:first-child { padding-top: 2px; }
-.sp-root .sp-dstat:last-child  { padding-bottom: 2px; }
-/* the two faint divider lines */
-.sp-root .sp-dstat + .sp-dstat { border-top: 1px solid var(--line); }
+.sp-root .sp-dstat:first-child { padding-left: 4px; }
+.sp-root .sp-dstat:last-child  { padding-right: 4px; }
+/* the two faint VERTICAL divider lines between the three sections */
+.sp-root .sp-dstat + .sp-dstat { border-left: 1px solid var(--line); }
 
 .sp-root .sp-dstat-v {
   font-family:    var(--f-disp);
@@ -1242,14 +1255,32 @@
   text-align:  right;
 }
 
+/* Name + optional hand chip group — grows to fill so the value sits at the
+   right, while the hand chip stays tight against the (ellipsised) name. */
+.sp-root .sp-dnamewrap {
+  flex:        1 1 auto;
+  min-width:   0;
+  display:     inline-flex;
+  align-items: baseline;
+  gap:         5px;
+  overflow:    hidden;
+}
+
 .sp-root .sp-dname {
-  flex:          1 1 auto;
+  flex:          0 1 auto;
   min-width:     0;
   font-size:     .8rem;
   color:         var(--ink);
   white-space:   nowrap;
   overflow:      hidden;
   text-overflow: ellipsis;
+}
+
+/* Keep the leaderboard hand chip from shrinking / wrapping. */
+.sp-root .sp-dnamewrap .sp-hand {
+  flex:          0 0 auto;
+  font-size:     .52rem;
+  padding:       .08rem .26rem;
 }
 
 .sp-root .sp-dval {
