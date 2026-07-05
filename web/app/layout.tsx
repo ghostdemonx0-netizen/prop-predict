@@ -23,7 +23,13 @@ const ORIENT_VIEWPORT = `(function(){
      auto-snaps to the fitted view both portrait<->landscape. */
   function snap(){try{if(!phone())return;set(landscape()?'width=812':'width=590');setTimeout(function(){set(target());},50);}catch(e){}}
   apply();
-  window.addEventListener('orientationchange',function(){setTimeout(snap,60);setTimeout(snap,350);});
+  var lastLand=landscape();
+  function onRotate(){setTimeout(snap,60);setTimeout(snap,350);}
+  window.addEventListener('orientationchange',onRotate);
+  /* orientationchange is unreliable on modern iOS — also snap on resize, but
+     ONLY when the orientation actually flipped (so address-bar/keyboard resizes
+     don't trigger a needless re-snap). */
+  window.addEventListener('resize',function(){var l=landscape();if(l!==lastLand){lastLand=l;onRotate();}});
   window.addEventListener('pageshow',apply);
 })();`;
 
