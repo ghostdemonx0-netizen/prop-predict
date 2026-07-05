@@ -12,9 +12,11 @@ import { LOGOS_NEW2 } from "../../../components/spatial/logos/LogosNew2";
 import { LOGOS_BOLTLOCK_A } from "../../../components/spatial/logos/LogosBoltLockA";
 import { LOGOS_BOLTLOCK_B } from "../../../components/spatial/logos/LogosBoltLockB";
 import { LOGOS_BOLTLOCK_MIX } from "../../../components/spatial/logos/LogosBoltLockMix";
+import { LOGOS_BOLTLOCK_GLASS } from "../../../components/spatial/logos/LogosBoltLockGlass";
 
 const SECTIONS = [
-  { title: "★★ Bolt Lock — Iris × Glass mix", logos: LOGOS_BOLTLOCK_MIX },
+  { title: "★★★ Bolt Lock Glass — upgraded (deep-glass)", logos: LOGOS_BOLTLOCK_GLASS },
+  { title: "Bolt Lock — Iris × Glass mix", logos: LOGOS_BOLTLOCK_MIX },
   {
     title: "Bolt Lock — improved versions",
     logos: [...LOGOS_BOLTLOCK_A, ...LOGOS_BOLTLOCK_B],
