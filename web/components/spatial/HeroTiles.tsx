@@ -45,9 +45,11 @@ import { useLiveFor } from "../LiveProvider";
 
 /** The three numbers shown in Box 1. */
 export interface DashStats {
-  /** Today's game count (the old "Slate" value); also the Lineups denominator. */
+  /** Today's game count (the "Slate" value). The Lineups denominator is 2× this
+   *  (one per team side), so the Lineups stat is distinct from the Slate. */
   games: number;
-  /** Number of GAMES whose lineups are confirmed (shown as "confirmed/games"). */
+  /** Number of TEAM lineups confirmed (home + away counted independently), shown
+   *  as "confirmed / 2×games" — full slate reads e.g. "30/30". */
   confirmed: number;
   /** Total props scored across every board (the old "Plays scored" value). */
   plays: number;
@@ -78,8 +80,10 @@ export interface DashRow {
   playerId?: number;
   /** Unique game key for the live status lookup (Top Pitchers rows). */
   gameId?: string;
-  /** The pitcher's model book K line (e.g. "4.5") — feeds the live tracker's
-   *  need (Top Pitchers rows). Its presence marks a row as live-K-trackable. */
+  /** Target line for this row's header live K tracker — the PROJECTED strikeouts
+   *  shown in the box (e.g. "5.7"), so `need` = floor(proj)+1 stays consistent
+   *  with the headline. NOT the book line (the board keeps tracking that). Its
+   *  presence marks a Top Pitchers row as live-K-trackable. */
   line?: string;
 }
 
@@ -256,7 +260,7 @@ export function HeaderDash({ stats, games, batters, pitchers }: HeaderDashProps)
           <div className="sp-dstat">
             <div className="sp-dlabel">Lineups</div>
             <div className="sp-dstat-v">
-              {stats.confirmed}/{stats.games}
+              {stats.confirmed}/{stats.games * 2}
               <small>confirmed</small>
             </div>
           </div>

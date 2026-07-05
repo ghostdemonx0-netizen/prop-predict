@@ -1330,9 +1330,12 @@
   grid-auto-flow:     column;
   grid-template-rows: repeat(3, auto);
   grid-auto-columns:  1fr;
-  gap:                6px 12px;
+  gap:                12px 12px;
   align-content:      start;
 }
+/* Roomier gap between the rank number and the name so the ranked list breathes
+   (Top Batters only — games/pitchers keep the tighter base .sp-drow gap). */
+.sp-root .sp-dbox--stackteam .sp-drow { gap: 12px; }
 /* Desktop/landscape shows the top 9; the 10th batter is portrait-only. */
 .sp-root .sp-dbox--stackteam .sp-dgrid > .sp-drow:nth-child(10) { display: none; }
 
@@ -1459,9 +1462,9 @@
      the top 10 (ranks 1–5 | 6–10), and un-hide the 10th batter that desktop
      drops. Tighten gaps + fonts so two narrow stacked cells fit with NO
      horizontal overflow (names ellipsise). */
-  .sp-root .sp-dbox--stackteam .sp-dgrid { grid-template-rows: repeat(5, auto); gap: 4px 5px; }
+  .sp-root .sp-dbox--stackteam .sp-dgrid { grid-template-rows: repeat(5, auto); gap: 9px 5px; }
   .sp-root .sp-dbox--stackteam .sp-dgrid > .sp-drow:nth-child(10) { display: flex; }
-  .sp-root .sp-dbox--stackteam .sp-drow  { gap: 3px; }
+  .sp-root .sp-dbox--stackteam .sp-drow  { gap: 7px; }
   .sp-root .sp-dbox--stackteam .sp-drank { font-size: .5rem; width: .9em; }
   .sp-root .sp-dbox--stackteam .sp-dname { font-size: .6rem; }
   .sp-root .sp-dbox--stackteam .sp-dnamewrap .sp-hand {

@@ -348,13 +348,16 @@ export default function NextPage() {
     (data.runs?.length ?? 0) +
     (data.rbi?.length ?? 0) +
     (data.hrr?.length ?? 0);
-  // Lineups stat = COUNT OF GAMES whose lineups are confirmed, out of the slate.
-  // A game counts once when BOTH sides' lineups are set (home + away lineup_status
-  // === "confirmed" on the Game object), so a 15-game slate reads e.g. "12/15".
-  const confirmedGames = (data.games ?? []).filter(
-    (g) =>
-      g.home_lineup_status === "confirmed" && g.away_lineup_status === "confirmed",
-  ).length;
+  // Lineups stat = COUNT OF TEAMS whose lineup is confirmed, out of every team on
+  // the slate. Each game has TWO sides (home + away), counted independently, so
+  // the denominator is 2 × game count and a 15-game slate reads e.g. "18/30".
+  const confirmedTeams = (data.games ?? []).reduce(
+    (acc, g) =>
+      acc +
+      (g.home_lineup_status === "confirmed" ? 1 : 0) +
+      (g.away_lineup_status === "confirmed" ? 1 : 0),
+    0,
+  );
 
   // ── Box 2 — Top 6 games by combined park+weather env boost ──
   // Reuses the same `env` multiplier Parks ranks by (park_mult × weather_mult,
@@ -435,6 +438,11 @@ export default function NextPage() {
   // playerId/gameId/line are threaded through so each row can render the SAME
   // live K tracker the board uses (LiveChip fed by useLiveFor(row, "k")), shown
   // to the LEFT of the proj-K value.
+  // TRACKER TARGET: the header box HEADLINES the PROJECTED strikeouts ("X.X K"),
+  // so the tracker's `need` must derive from that PROJ — not the book line. We
+  // feed `r.projection` (the same value shown) into the `line` slot useLiveFor
+  // reads; propNeed("k", …) → floor(proj)+1 (e.g. 5.7 → 6). Only the HEADER
+  // tracker changes; the board / Top Plays / Game Hub still track the book line.
   const topPitchers: DashRow[] = toBoardRows(data, "k", 0, source)
     .sort((a, b) => Number(b.projection ?? 0) - Number(a.projection ?? 0)) // step 1
     .slice(0, 6)
@@ -447,7 +455,7 @@ export default function NextPage() {
       team: r.team,
       playerId: r.player_id,
       gameId: r.gameId,
-      line: r.line,
+      line: r.projection ?? r.line,
     }));
 
   return (
@@ -462,7 +470,7 @@ export default function NextPage() {
       <main className="sp-wrap" style={{ paddingBottom: 80 }}>
         {/* ── Header dashboard (stats box + game/batter/pitcher leaderboards) ── */}
         <HeaderDash
-          stats={{ games: gameCount, confirmed: confirmedGames, plays: totalPlays }}
+          stats={{ games: gameCount, confirmed: confirmedTeams, plays: totalPlays }}
           games={topGames}
           batters={topBatters}
           pitchers={topPitchers}
