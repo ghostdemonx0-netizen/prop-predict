@@ -174,9 +174,9 @@ const Frosted: React.FC<{ size?: number }> = ({ size = 34 }) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
     <defs>
       <radialGradient id="blg3-body" cx="50%" cy="38%" r="80%">
-        <stop offset="0" stopColor="hsl(210 40% 30% / .5)" />
-        <stop offset="60%" stopColor="hsl(232 40% 16% / .62)" />
-        <stop offset="100%" stopColor="hsl(244 44% 10% / .74)" />
+        <stop offset="0" stopColor="hsl(210 42% 34% / .74)" />
+        <stop offset="60%" stopColor="hsl(232 42% 18% / .86)" />
+        <stop offset="100%" stopColor="hsl(244 46% 11% / .95)" />
       </radialGradient>
       <linearGradient id="blg3-rim" x1="6" y1="26" x2="26" y2="6" gradientUnits="userSpaceOnUse">
         <stop offset="0" stopColor="hsl(150 70% 70%)" />
@@ -208,17 +208,18 @@ const Frosted: React.FC<{ size?: number }> = ({ size = 34 }) => (
     </defs>
     <path d="M16 2.6 L29.4 16 L16 29.4 L2.6 16 Z" fill="url(#blg3-rim)" opacity="0.1" />
     {/* softly glowing lock frame */}
+    {/* inverted lock brackets — the corner elbows point INWARD toward the mark */}
     <g stroke="url(#blg3-frame)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.92" filter="url(#blg3-soft)">
-      <path d="M3.8 8.2 L3.8 3.8 L8.2 3.8" />
-      <path d="M23.8 3.8 L28.2 3.8 L28.2 8.2" />
-      <path d="M28.2 23.8 L28.2 28.2 L23.8 28.2" />
-      <path d="M8.2 28.2 L3.8 28.2 L3.8 23.8" />
+      <path d="M8.2 3.8 L8.2 8.2 L3.8 8.2" />
+      <path d="M23.8 3.8 L23.8 8.2 L28.2 8.2" />
+      <path d="M23.8 28.2 L23.8 23.8 L28.2 23.8" />
+      <path d="M8.2 28.2 L8.2 23.8 L3.8 23.8" />
     </g>
     <g fill="hsl(160 82% 84%)" opacity="0.85" filter="url(#blg3-soft)">
-      <circle cx="3.8" cy="3.8" r="0.9" />
-      <circle cx="28.2" cy="3.8" r="0.9" />
-      <circle cx="28.2" cy="28.2" r="0.9" />
-      <circle cx="3.8" cy="28.2" r="0.9" />
+      <circle cx="8.2" cy="8.2" r="0.9" />
+      <circle cx="23.8" cy="8.2" r="0.9" />
+      <circle cx="23.8" cy="23.8" r="0.9" />
+      <circle cx="8.2" cy="23.8" r="0.9" />
     </g>
     {/* frosted body */}
     <path d="M16 5 L27 16 L16 27 L5 16 Z" fill="url(#blg3-body)" />
@@ -226,8 +227,8 @@ const Frosted: React.FC<{ size?: number }> = ({ size = 34 }) => (
     <path d="M16 5 L27 16 L16 27 L5 16 Z" fill="url(#blg3-frost)" />
     {/* soft rim (no glow — diffuse) */}
     <path d="M16 5 L27 16 L16 27 L5 16 Z" fill="none" stroke="url(#blg3-rim)" strokeWidth="1.4" strokeLinejoin="round" opacity="0.85" />
-    {/* black bolt — crisp dark knockout on the frosted glass */}
-    <path d="M18 9.6 L11.4 16.4 L14.8 16.4 L13.7 22.8 L20.6 15.6 L17 15.6 Z" fill="hsl(232 32% 6%)" opacity="1" />
+    {/* black bolt — slightly smaller so more frosted fill surrounds it */}
+    <path d="M18 9.6 L11.4 16.4 L14.8 16.4 L13.7 22.8 L20.6 15.6 L17 15.6 Z" fill="hsl(232 32% 6%)" opacity="1" transform="translate(16 16) scale(0.84) translate(-16 -16)" />
   </svg>
 );
 
