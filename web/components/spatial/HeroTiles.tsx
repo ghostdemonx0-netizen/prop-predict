@@ -9,16 +9,19 @@
  *            dividers, centred → a short/wide box that balances the grid).
  *   Box 2  — Top games (ranked by combined park+weather env boost).
  *   Box 3  — Top batters (ranked by best composite across all batter props;
- *            shows the top 9 in THREE balanced columns — ranks 1–3 | 4–6 | 7–9 —
- *            each cell being rank + name + hand chip on line 1 and the small team
- *            chip STACKED underneath, no % — the composite isn't a meaningful
- *            displayable number).
+ *            one flat ranked list that CSS grid reflows column-major: 3 columns
+ *            × 3 (top 9 — ranks 1–3 | 4–6 | 7–9) on desktop/landscape, 2 columns
+ *            × 5 (top 10 — ranks 1–5 | 6–10) on phone portrait, the 10th row
+ *            hidden above 640px. Each cell is rank + name + hand chip on line 1
+ *            and the small team chip STACKED underneath, no % — the composite
+ *            isn't a meaningful displayable number).
  *   Box 4  — Top pitchers (two-step rank: top 6 by PROJECTED strikeouts, then
- *            those 6 ORDERED by over-line probability %); shows a hand chip +
- *            team chip after the name + the proj K as the headline value
- *            ("X.X K") + the over-line probability as a smaller secondary %. On
- *            mobile (≤640px) this box collapses to ONE tight column showing all
- *            5–6 rows; on desktop it shows the full 6 in two columns.
+ *            those 6 ORDERED by over-line probability %); each row is TWO lines
+ *            on every viewport — line 1: rank + name + hand chip + team chip;
+ *            line 2 (indented under the name): the live K tracker + the proj K
+ *            headline ("X.X K") + the over-line probability as a smaller % — so
+ *            the stats never run off the half-width box. Phone portrait (≤640px)
+ *            stacks all 6 in ONE column; desktop/landscape shows 2 columns of 3.
  *
  * Player names render in FULL on every viewport (mobile + desktop) — long names
  * ellipsise inside the row rather than being abbreviated.
@@ -141,18 +144,22 @@ function LeaderRow({
 }
 
 /**
- * A numbered leaderboard box (Boxes 2–4): header label + ranked rows split into
- * `cols` balanced, column-major columns (each `ceil(rows/cols)` tall):
- *   • 2 columns (default, Top games / Top pitchers) — ranks 1–3 | 4–6.
- *   • 3 columns (Top batters, `cols={3}` + 9 rows) — ranks 1–3 | 4–6 | 7–9.
+ * A numbered leaderboard box (Boxes 2–4): header label + ranked rows.
  *
- * `stackTeam` (Top batters) drops each row's team chip onto its own line UNDER
- * the name (line 1 = rank + name + hand chip; line 2 = team chip).
+ * Two rendering paths:
+ *   • Games / pitchers — rows are pre-split in JS into `cols` balanced,
+ *     column-major <ol>s (each `ceil(rows/cols)` tall) — ranks 1–3 | 4–6.
+ *   • Top batters (`stackTeam`) — a SINGLE flat ranked <ol.sp-dgrid>; CSS grid
+ *     lays it out column-major and reflows by breakpoint (3×3 = top 9 on
+ *     desktop/landscape, 2×5 = top 10 on portrait; the 10th is CSS-hidden >640).
  *
- * When `mobileStack` is set (Top Pitchers), mobile (≤640px) collapses the two
- * columns into a SINGLE tight column via CSS — both <ol>s stack (ranks 1–3 then
- * 4–6), so all 5–6 pitchers show as one clean full-name column, while desktop
- * still shows all 6 in two columns.
+ * `stackTeam` (Top batters) also drops each row's team chip onto its own line
+ * UNDER the name (line 1 = rank + name + hand chip; line 2 = team chip).
+ *
+ * When `mobileStack` is set (Top Pitchers), phone portrait (≤640px) collapses
+ * the two columns into a SINGLE tight column via CSS — both <ol>s stack (ranks
+ * 1–3 then 4–6), so all 5–6 pitchers show as one clean full-name column, while
+ * desktop/landscape shows all 6 in two columns.
  */
 function LeaderBox({
   label,
@@ -166,11 +173,32 @@ function LeaderBox({
   /** Collapse to a single tight column on mobile (all 5–6 rows visible); keeps
    *  two columns on desktop. Used for Top Pitchers. */
   mobileStack?: boolean;
-  /** Number of balanced columns (2 = games/pitchers, 3 = batters). */
+  /** Number of balanced columns for the multi-<ol> games/pitchers path (2). */
   cols?: 2 | 3;
   /** Drop each row's team chip onto its own line UNDER the name (Top Batters). */
   stackTeam?: boolean;
 }) {
+  // Top Batters (stackTeam): render ONE flat, ranked list and let CSS grid lay
+  // it out column-major — 3 cols × 3 (top 9) on desktop/landscape, 2 cols × 5
+  // (top 10) on phone portrait, with the 10th row hidden above 640px via CSS.
+  // Ranks are 1..N in order; column-major grid flow makes them read down each
+  // column, so no per-column JS offset is needed.
+  if (stackTeam) {
+    return (
+      <GlassCard className="sp-dbox sp-dbox--lead sp-dbox--stackteam">
+        <div className="sp-dlabel">{label}</div>
+        {rows.length === 0 ? (
+          <div className="sp-drow-empty">—</div>
+        ) : (
+          <ol className="sp-dlist sp-dgrid">
+            {rows.map((r, i) => (
+              <LeaderRow key={i} rank={i + 1} r={r} stackTeam />
+            ))}
+          </ol>
+        )}
+      </GlassCard>
+    );
+  }
   // Column-major split: fill column 1 top-to-bottom, then column 2, … so ranks
   // read down each column (1–3 | 4–6 | 7–9). Each column is ceil(rows/cols) tall.
   const perCol = Math.ceil(rows.length / cols) || 1;
@@ -178,17 +206,16 @@ function LeaderBox({
   for (let c = 0; c < cols; c++) {
     columns.push(rows.slice(c * perCol, (c + 1) * perCol));
   }
+  // Games / pitchers path: pre-split multi-<ol> columns (always 2 columns).
   return (
     <GlassCard
-      className={`sp-dbox sp-dbox--lead${mobileStack ? " sp-dbox--mstack" : ""}${
-        stackTeam ? " sp-dbox--stackteam" : ""
-      }`}
+      className={`sp-dbox sp-dbox--lead${mobileStack ? " sp-dbox--mstack" : ""}`}
     >
       <div className="sp-dlabel">{label}</div>
       {rows.length === 0 ? (
         <div className="sp-drow-empty">—</div>
       ) : (
-        <div className={`sp-dcols${cols === 3 ? " sp-dcols--3" : ""}`}>
+        <div className="sp-dcols">
           {columns.map(
             (col, c) =>
               col.length > 0 && (
@@ -245,9 +272,10 @@ export function HeaderDash({ stats, games, batters, pitchers }: HeaderDashProps)
         {/* Box 2 — top games by park+weather boost */}
         <LeaderBox label="Top games" rows={games} />
 
-        {/* Box 3 — top 9 batters across all batter props, THREE balanced
-            columns (1–3 | 4–6 | 7–9) with the team chip stacked UNDER each name */}
-        <LeaderBox label="Top batters" rows={batters} cols={3} stackTeam />
+        {/* Box 3 — top batters across all batter props, team chip stacked UNDER
+            each name. CSS grid reflows the single ranked list column-major:
+            3 cols × 3 (top 9) on desktop/landscape, 2 cols × 5 (top 10) portrait. */}
+        <LeaderBox label="Top batters" rows={batters} stackTeam />
 
         {/* Box 4 — top pitchers (top-6-proj pool, ordered by over %); single
             tight column on mobile (5–6 rows), two columns on desktop */}

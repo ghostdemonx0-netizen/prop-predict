@@ -1318,9 +1318,23 @@
   overflow:    hidden;
 }
 
-/* ---- Top Batters: 3 columns, team chip STACKED under the name ---- */
-/* 3 balanced columns (ranks 1–3 | 4–6 | 7–9). */
-.sp-root .sp-dcols--3 { grid-template-columns: 1fr 1fr 1fr; gap: 6px 12px; }
+/* ---- Top Batters: a SINGLE flat ranked list laid out column-major by CSS grid
+   so the SAME markup reflows between breakpoints (no JS viewport check):
+     • Desktop / landscape (>640px): 3 columns × 3 rows = top 9 (ranks 1–3 |
+       4–6 | 7–9); the 10th batter is hidden (nth-child(10) below).
+     • Portrait (≤640px): 2 columns × 5 rows = top 10 (ranks 1–5 | 6–10).
+   grid-auto-flow:column + a fixed row count fills each column top-to-bottom, so
+   the ranks (1..N in the JSX) read straight down each column. ---- */
+.sp-root .sp-dbox--stackteam .sp-dgrid {
+  display:            grid;
+  grid-auto-flow:     column;
+  grid-template-rows: repeat(3, auto);
+  grid-auto-columns:  1fr;
+  gap:                6px 12px;
+  align-content:      start;
+}
+/* Desktop/landscape shows the top 9; the 10th batter is portrait-only. */
+.sp-root .sp-dbox--stackteam .sp-dgrid > .sp-drow:nth-child(10) { display: none; }
 
 /* Stacked cell: name+hand on line 1, team chip on its own line below. Align the
    row to the top so the two-line cells line up cleanly with the rank. */
@@ -1357,47 +1371,32 @@
   margin-top:  6px;
 }
 
-/* ── Responsive ──────────────────────────────────────────── */
-
-/* ── Below desktop: ≤900px catches BOTH phone portrait (~600px) AND phone
-   landscape (~800px, where /next runs at device-width). The top row stays 2-up
-   (compact Box 1 + Top games), but the two leaderboards each STRETCH to the
-   full container width on their own row so the 3-col batters and the pitcher
-   rows get room to breathe. Desktop (>900px) keeps the current 2×2 grid. */
-@media (max-width: 900px) {
-  /* Grid: Box 1 + Top games share the top row; each leaderboard spans full. */
-  .sp-root .sp-dash            { grid-template-columns: repeat(2, 1fr); }
-  .sp-root .sp-dbox--stackteam { grid-column: 1 / -1; }  /* Top batters — full width */
-  .sp-root .sp-dbox--mstack    { grid-column: 1 / -1; }  /* Top pitchers — full width */
-
-  /* Top pitchers, now full width, keeps TWO balanced columns (ranks 1–3 | 4–6),
-     and every row becomes TWO lines so the stats never run off the box:
-       line 1: rank + name + hand chip + team chip
-       line 2: (indented under the name) live tracker + "X.X K" (proj) + "%".
-     Desktop (>900px) keeps the single-line row untouched. */
-  .sp-root .sp-dbox--mstack .sp-dcols {
-    grid-template-columns: 1fr 1fr;
-    gap:                   6px 22px;
-  }
-  .sp-root .sp-dbox--mstack .sp-drow {
-    display:               grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas:   "rank name"
-                           ".    val";
-    align-items:           baseline;
-    column-gap:            6px;
-    row-gap:               2px;
-  }
-  .sp-root .sp-dbox--mstack .sp-drank     { grid-area: rank; }
-  .sp-root .sp-dbox--mstack .sp-dnamewrap { grid-area: name; }
-  .sp-root .sp-dbox--mstack .sp-dval      { grid-area: val; justify-self: start; }
+/* ── Top Pitchers: two-line rows on ALL viewports ──────────
+   Each pitcher row is TWO lines so the stats never run off the half-width box:
+     line 1: rank + name + hand chip + team chip
+     line 2: (indented under the name) live tracker + "X.X K" (proj) + over "%".
+   The box keeps TWO balanced columns (ranks 1–3 | 4–6) on desktop + landscape
+   (base .sp-dcols); phone portrait (≤640) collapses to ONE column of 6. */
+.sp-root .sp-dbox--mstack .sp-drow {
+  display:               grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:   "rank name"
+                         ".    val";
+  align-items:           baseline;
+  column-gap:            6px;
+  row-gap:               2px;
 }
+.sp-root .sp-dbox--mstack .sp-drank     { grid-area: rank; }
+.sp-root .sp-dbox--mstack .sp-dnamewrap { grid-area: name; }
+.sp-root .sp-dbox--mstack .sp-dval      { grid-area: val; justify-self: start; }
+
+/* ── Responsive ──────────────────────────────────────────── */
 
 @media (max-width: 600px) {
   .sp-root .sp-cmd    { gap: 10px; padding: 0 10px; }
   .sp-root .sp-lt     { display: none; }
   .sp-root .sp-htitle { font-size: clamp(1.6rem, 7vw, 2.4rem); }
-  /* Top row stays 2-up (Box1 + Top games); leaderboards span full width (≤900). */
+  /* Keep the tidy 2×2 grid on phones (Box1 + 3 leaderboards) — no overflow. */
   .sp-root .sp-dash   { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .sp-root .sp-dbox   { padding: 12px 12px; }
   .sp-root .sp-dcols  { gap: 5px 8px; }
@@ -1440,20 +1439,19 @@
   .sp-root .sp-dval               { font-size: .62rem; gap: 3px; }
   .sp-root .sp-dval small         { font-size: .5rem; }
 
-  /* Top Pitchers is now FULL WIDTH on mobile/landscape (≤900px rule above), so
-     it keeps TWO balanced columns (ranks 1–3 | 4–6) with the two-line rows
-     defined in the ≤900 block. Just tighten the column gaps for the ~600px
-     portrait width. */
-  .sp-root .sp-dbox--mstack .sp-dcols  { grid-template-columns: 1fr 1fr; gap: 5px 16px; }
-  .sp-root .sp-dbox--mstack .sp-dlist  { gap: 5px; }
+  /* Top Pitchers (half-width cell on portrait): collapse the two columns into
+     ONE tight column so all 6 pitchers stack (ranks 1–3 then 4–6). The two-line
+     rows come from the base .sp-dbox--mstack rule, so they apply here too. */
+  .sp-root .sp-dbox--mstack .sp-dcols  { grid-template-columns: 1fr; gap: 3px; }
+  .sp-root .sp-dbox--mstack .sp-dlist  { gap: 4px; }
   .sp-root .sp-dbox--mstack .sp-drow   { line-height: 1.15; }
 
-  /* Top Batters keeps its THREE columns on mobile (team stacked under each
-     name). Placed AFTER the generic 2-col .sp-dcols rule above so it wins for
-     the 3-col box. Tighten gaps + fonts so three narrow stacked cells fit a
-     half-width dashboard cell with NO horizontal overflow (names ellipsise);
-     height ≈ 3 rows, roughly matching the single-column pitcher box beside it. */
-  .sp-root .sp-dcols--3 { grid-template-columns: 1fr 1fr 1fr; gap: 4px 5px; }
+  /* Top Batters (half-width cell on portrait): switch to TWO columns × 5 rows =
+     the top 10 (ranks 1–5 | 6–10), and un-hide the 10th batter that desktop
+     drops. Tighten gaps + fonts so two narrow stacked cells fit with NO
+     horizontal overflow (names ellipsise). */
+  .sp-root .sp-dbox--stackteam .sp-dgrid { grid-template-rows: repeat(5, auto); gap: 4px 5px; }
+  .sp-root .sp-dbox--stackteam .sp-dgrid > .sp-drow:nth-child(10) { display: flex; }
   .sp-root .sp-dbox--stackteam .sp-drow  { gap: 3px; }
   .sp-root .sp-dbox--stackteam .sp-drank { font-size: .5rem; width: .9em; }
   .sp-root .sp-dbox--stackteam .sp-dname { font-size: .6rem; }

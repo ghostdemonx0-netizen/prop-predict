@@ -372,11 +372,12 @@ export default function NextPage() {
       color: envImpactColor(g.env),
     }));
 
-  // ── Box 3 — Top 9 batters across ALL batter props ──
+  // ── Box 3 — Top 10 batters across ALL batter props ──
   // METRIC: for each unique batter (keyed by player_id), average their
   // source-weighted probability across every batter prop they appear in, taken
-  // at that prop's base/lowest threshold, then rank descending and take 9
-  // (shown as THREE columns of 3: ranks 1–3 | 4–6 | 7–9).
+  // at that prop's base/lowest threshold, then rank descending and take 10.
+  // The header shows 3 columns of 3 (top 9) on desktop/landscape and 2 columns
+  // of 5 (top 10) on phone portrait — the 10th is portrait-only (CSS-hidden >640).
   // Base thresholds per prop — edit this list to re-tune the composite metric:
   const BATTER_BASES: [PropKind, number][] = [
     ["hr", 1],
@@ -419,7 +420,7 @@ export default function NextPage() {
   const topBatters: DashRow[] = [...batterAcc.values()]
     .map((e) => ({ name: e.name, hand: e.hand, team: e.team, adv: e.adv, avg: e.sum / e.n }))
     .sort((a, b) => b.avg - a.avg)
-    .slice(0, 9)
+    .slice(0, 10)
     .map((e) => ({ name: e.name, hand: e.hand, team: e.team, adv: e.adv }));
 
   // ── Box 4 — Top pitchers: TWO-STEP rank (top-6-proj pool, ordered by over %) ──
