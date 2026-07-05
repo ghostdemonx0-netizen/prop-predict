@@ -226,8 +226,8 @@ const Frosted: React.FC<{ size?: number }> = ({ size = 34 }) => (
     <path d="M16 5 L27 16 L16 27 L5 16 Z" fill="url(#blg3-frost)" />
     {/* soft rim (no glow — diffuse) */}
     <path d="M16 5 L27 16 L16 27 L5 16 Z" fill="none" stroke="url(#blg3-rim)" strokeWidth="1.4" strokeLinejoin="round" opacity="0.85" />
-    {/* softly glowing bolt */}
-    <path d="M18 9.6 L11.4 16.4 L14.8 16.4 L13.7 22.8 L20.6 15.6 L17 15.6 Z" fill="url(#blg3-bolt)" opacity="0.96" filter="url(#blg3-soft)" />
+    {/* black bolt — crisp dark knockout on the frosted glass */}
+    <path d="M18 9.6 L11.4 16.4 L14.8 16.4 L13.7 22.8 L20.6 15.6 L17 15.6 Z" fill="hsl(232 32% 6%)" opacity="1" />
   </svg>
 );
 
