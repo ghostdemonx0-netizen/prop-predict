@@ -15,9 +15,17 @@ import { LOGOS_BOLTLOCK_MIX } from "../../../components/spatial/logos/LogosBoltL
 import { LOGOS_BOLTLOCK_GLASS } from "../../../components/spatial/logos/LogosBoltLockGlass";
 import { LOGOS_FROST_A } from "../../../components/spatial/logos/LogosFrostA";
 import { LOGOS_FROST_B } from "../../../components/spatial/logos/LogosFrostB";
+import { LOGOS_ART1 } from "../../../components/spatial/logos/LogosArt1";
+import { LOGOS_ART2 } from "../../../components/spatial/logos/LogosArt2";
+import { LOGOS_ART3 } from "../../../components/spatial/logos/LogosArt3";
+import { LOGOS_ART4 } from "../../../components/spatial/logos/LogosArt4";
 
 const SECTIONS = [
-  { title: "★ Frosted — something around it (enclosures)", logos: LOGOS_FROST_A },
+  { title: "★★★ ARTISTIC · negative-space / clever dual-read", logos: LOGOS_ART1 },
+  { title: "★★★ ARTISTIC · dynamic motion / energy", logos: LOGOS_ART2 },
+  { title: "★★★ ARTISTIC · geometric modernist", logos: LOGOS_ART3 },
+  { title: "★★★ ARTISTIC · luminous glass emblem", logos: LOGOS_ART4 },
+  { title: "Frosted — something around it (enclosures)", logos: LOGOS_FROST_A },
   { title: "★ Frosted — inverted-L bracket evolutions", logos: LOGOS_FROST_B },
   { title: "Bolt Lock Glass — upgraded (Frosted is #3 here)", logos: LOGOS_BOLTLOCK_GLASS },
   { title: "Bolt Lock — Iris × Glass mix", logos: LOGOS_BOLTLOCK_MIX },
