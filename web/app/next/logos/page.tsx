@@ -13,9 +13,13 @@ import { LOGOS_BOLTLOCK_A } from "../../../components/spatial/logos/LogosBoltLoc
 import { LOGOS_BOLTLOCK_B } from "../../../components/spatial/logos/LogosBoltLockB";
 import { LOGOS_BOLTLOCK_MIX } from "../../../components/spatial/logos/LogosBoltLockMix";
 import { LOGOS_BOLTLOCK_GLASS } from "../../../components/spatial/logos/LogosBoltLockGlass";
+import { LOGOS_FROST_A } from "../../../components/spatial/logos/LogosFrostA";
+import { LOGOS_FROST_B } from "../../../components/spatial/logos/LogosFrostB";
 
 const SECTIONS = [
-  { title: "★★★ Bolt Lock Glass — upgraded (deep-glass)", logos: LOGOS_BOLTLOCK_GLASS },
+  { title: "★ Frosted — something around it (enclosures)", logos: LOGOS_FROST_A },
+  { title: "★ Frosted — inverted-L bracket evolutions", logos: LOGOS_FROST_B },
+  { title: "Bolt Lock Glass — upgraded (Frosted is #3 here)", logos: LOGOS_BOLTLOCK_GLASS },
   { title: "Bolt Lock — Iris × Glass mix", logos: LOGOS_BOLTLOCK_MIX },
   {
     title: "Bolt Lock — improved versions",
