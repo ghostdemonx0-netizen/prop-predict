@@ -2394,8 +2394,10 @@
 
 .sp-root .sp-overlay {
   position: fixed; inset: 0; z-index: 120;
-  background: hsl(245 50% 2% / .68);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  /* Dark dimming scrim — keep the board firmly behind the modal, not competing
+     with its text. */
+  background: hsl(245 55% 1.5% / .88);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 40px 16px; overflow: auto;
   animation: fade .3s ease;
@@ -2404,6 +2406,9 @@
   max-width: 680px; width: 100%; overflow: hidden;
   animation: popin .5s var(--spring);
   box-shadow: 0 50px 110px -30px hsl(245 80% 1% / .9), inset 0 1px 0 var(--hi);
+  /* Near-solid dark glass — overrides the see-through .sp-float fill so the
+     board text behind never reads through. Keeps a subtle glass tint. */
+  background: linear-gradient(168deg, hsl(238 40% 12% / .975), hsl(240 44% 8% / .985));
 }
 
 /* ---- header ---- */
@@ -2414,8 +2419,10 @@
 }
 .sp-root .sp-mback {
   font-family: var(--f-mono); font-size: .66rem; color: var(--ink-dim);
-  cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  cursor: pointer; display: flex; width: fit-content; align-items: center; gap: 5px;
   background: 0; border: 0; padding: 0;
+  /* Sit on its own line above the matchup breadcrumb so the two never merge. */
+  margin-bottom: 4px;
 }
 .sp-root .sp-mback:hover { color: var(--iris-mint); }
 .sp-root .sp-mclose {

@@ -54,6 +54,23 @@ import { FactorBar } from "./FactorBar";
 import { LeanPair } from "./GlassDot";
 import { FBox } from "./chips";
 import { ClockIcon, WindIcon, TempIcon, RainIcon } from "../Icons";
+import {
+  SprayIcon,
+  HardHitIcon,
+  ProductionIcon,
+  PlatoonIcon,
+  HistoryIcon,
+  LineupIcon,
+  BaselineIcon,
+  FlameIcon,
+  PitcherIcon,
+  ParkIcon,
+  ParkWeatherIcon,
+} from "./factorIcons";
+
+// Shared inline-icon sizing for factor rows + inline notes.
+const FI = 14;
+const noteIconStyle = { verticalAlign: "-2px", marginRight: 5 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Public types
@@ -208,12 +225,12 @@ function BaselineBlock({
       <div className="sp-bd-eye" style={{ marginTop: 0 }}>His base level</div>
       {typeof b === "number" && (
         <div className="sp-drv-top" style={{ fontSize: ".9rem" }}>
-          <span className="sp-drv-l">📊 Baseline chance</span>
+          <span className="sp-drv-l"><BaselineIcon size={FI} /><span>Baseline chance</span></span>
           <span className="sp-delta sp-delta--flat">{pct(b)}</span>
         </div>
       )}
       {typeof p === "number" && p > 0 && (
-        <div className="sp-drv-note" style={{ marginTop: 4 }}>📈 Season pace · {paceText(kind, p)}</div>
+        <div className="sp-drv-note" style={{ marginTop: 4 }}><ProductionIcon size={13} style={noteIconStyle} />Season pace · {paceText(kind, p)}</div>
       )}
     </div>
   );
@@ -342,20 +359,20 @@ function HrFactors({ r }: { r: HrRow; source: Source }) {
   return (
     <>
       <FactorBar
-        icon="🏟️"
+        icon={<ParkIcon size={FI} />}
         label={`Park · ${r.park}`}
         mult={r.park_mult}
         note={`${r.park} plays ${parkFriendly ? "hitter-friendly" : "pitcher-friendly"} for home runs.`}
       />
       <FactorBar
-        icon="🌬️"
+        icon={<WindIcon size={FI} />}
         label="Weather"
         mult={r.spray_mult ? r.weather_mult / r.spray_mult : r.weather_mult}
         note={`${typeof r.wind_mph === "number" ? Math.round(r.wind_mph) + "mph wind " : ""}${typeof r.wind_dir === "number" ? windText(r.wind_dir) : ""}${typeof r.temp_f === "number" ? `, ${Math.round(r.temp_f)}°` : ""}.`}
       />
       {typeof r.spray_mult === "number" && (
         <FactorBar
-          icon="🎯"
+          icon={<SprayIcon size={FI} />}
           label="Spray"
           mult={r.spray_mult}
           note={sprayNote(r.spray_pull, r.spray_mult, r.bats, r.wind_mph, r.wind_dir)}
@@ -363,7 +380,7 @@ function HrFactors({ r }: { r: HrRow; source: Source }) {
       )}
       {typeof r.hard_hit_form === "number" && (
         <FactorBar
-          icon="💥"
+          icon={<HardHitIcon size={FI} />}
           label="Hard-hit form"
           mult={r.hard_hit_form}
           note={r.hard_hit_form > 1 ? "Squaring the ball up harder than his season norm lately." : r.hard_hit_form < 1 ? "Softer contact than usual recently." : "Contact quality around his season norm."}
@@ -371,16 +388,16 @@ function HrFactors({ r }: { r: HrRow; source: Source }) {
       )}
       {typeof r.production_form === "number" && (
         <FactorBar
-          icon="📈"
+          icon={<ProductionIcon size={FI} />}
           label="Production form"
           mult={r.production_form}
           note={r.production_form > 1 ? "Homering at a higher rate than his season pace lately." : r.production_form < 1 ? "Below his HR pace recently." : "Around his season HR pace."}
         />
       )}
-      <FactorBar icon="🔥" label="Recent form" mult={r.recent_form_mult} note="The blended net of hard-hit + production form." />
+      <FactorBar icon={<FlameIcon size={FI} />} label="Recent form" mult={r.recent_form_mult} note="The blended net of hard-hit + production form." />
       {r.vs && r.pitcher_mult !== undefined && (
         <FactorBar
-          icon="⚾"
+          icon={<PitcherIcon size={FI} />}
           label={`Pitcher · ${r.vs.name}`}
           mult={r.pitcher_mult ?? 1}
           note={`${r.vs.name}'s home-run quality (how many he gives up).`}
@@ -388,7 +405,7 @@ function HrFactors({ r }: { r: HrRow; source: Source }) {
       )}
       {r.vs && r.matchup_mult !== undefined && (
         <FactorBar
-          icon="🔄"
+          icon={<PlatoonIcon size={FI} />}
           label={`Platoon · ${batLabel(r.bats)} vs ${pitLabel(r.vs.throws)}`}
           mult={r.matchup_mult}
           note={`${platoonEdge(r.bats, r.vs.throws) ? "Favorable" : "Tough"} handedness matchup for him.`}
@@ -396,7 +413,7 @@ function HrFactors({ r }: { r: HrRow; source: Source }) {
       )}
       {r.vs && r.vs.bvp && r.vs.bvp.pa > 0 && r.bvp_mult !== undefined && (
         <FactorBar
-          icon="📜"
+          icon={<HistoryIcon size={FI} />}
           label={`History · vs ${r.vs.name}`}
           mult={r.bvp_mult}
           note={`${r.vs.bvp.hits}-for-${r.vs.bvp.ab} career${r.vs.bvp.hr > 0 ? ` with ${r.vs.bvp.hr} HR` : ""}.`}
@@ -414,7 +431,7 @@ function HitsFactors({ r, source }: { r: HitsRow; source: Source }) {
     <>
       {typeof (r.hard_hit_form ?? r.hard_hit_form_hist) === "number" && (
         <FactorBar
-          icon="💥"
+          icon={<HardHitIcon size={FI} />}
           label="Hard-hit form"
           mult={hh}
           note={hh > 1 ? "Squaring the ball up harder than his season norm lately." : hh < 1 ? "Softer contact than usual recently." : "Contact quality around his season norm."}
@@ -422,16 +439,16 @@ function HitsFactors({ r, source }: { r: HitsRow; source: Source }) {
       )}
       {typeof (r.production_form ?? r.production_form_hist) === "number" && (
         <FactorBar
-          icon="📈"
+          icon={<ProductionIcon size={FI} />}
           label="Production form"
           mult={prod}
           note={prod > 1 ? "Getting hits at a higher rate than his season pace lately." : prod < 1 ? "Below his hit pace recently." : "Around his season hit pace."}
         />
       )}
-      <FactorBar icon="🔥" label="Recent form" mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)} note="The blended net of hard-hit + production form." />
+      <FactorBar icon={<FlameIcon size={FI} />} label="Recent form" mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)} note="The blended net of hard-hit + production form." />
       {r.vs && (
         <FactorBar
-          icon="⚾"
+          icon={<PitcherIcon size={FI} />}
           label={`Pitcher · hit quality · ${r.vs.name}`}
           mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
           note="How hittable this pitcher is, plus the L/R platoon."
@@ -439,12 +456,12 @@ function HitsFactors({ r, source }: { r: HitsRow; source: Source }) {
       )}
       {r.vs && (
         <div className="sp-drv-note" style={{ marginTop: "0.35rem" }}>
-          🔄 <b>Platoon</b> · {batLabel(r.bats)} vs {pitLabel(r.vs.throws)} · {platoonEdge(r.bats, r.vs.throws) ? "favorable" : "tough"} — already reflected in the Pitcher factor above.
+          <PlatoonIcon size={13} style={noteIconStyle} /><b>Platoon</b> · {batLabel(r.bats)} vs {pitLabel(r.vs.throws)} · {platoonEdge(r.bats, r.vs.throws) ? "favorable" : "tough"} — already reflected in the Pitcher factor above.
         </div>
       )}
       {r.vs && r.vs.bvp && r.vs.bvp.pa > 0 && typeof r.bvp_hit_mult === "number" && (
         <FactorBar
-          icon="📜"
+          icon={<HistoryIcon size={FI} />}
           label={`History · vs ${r.vs.name}`}
           mult={r.bvp_hit_mult}
           note={`${r.vs.bvp.hits}-for-${r.vs.bvp.ab} career — his contact history vs this pitcher.`}
@@ -462,7 +479,7 @@ function TbFactors({ r, source }: { r: TbRow; source: Source }) {
     <>
       {typeof (r.hard_hit_form ?? r.hard_hit_form_hist) === "number" && (
         <FactorBar
-          icon="💥"
+          icon={<HardHitIcon size={FI} />}
           label="Hard-hit form"
           mult={hh}
           note={hh > 1 ? "Squaring the ball up harder than his season norm lately." : hh < 1 ? "Softer contact than usual recently." : "Contact quality around his season norm."}
@@ -470,16 +487,16 @@ function TbFactors({ r, source }: { r: TbRow; source: Source }) {
       )}
       {typeof (r.production_form ?? r.production_form_hist) === "number" && (
         <FactorBar
-          icon="📈"
+          icon={<ProductionIcon size={FI} />}
           label="Production form"
           mult={prod}
           note={prod > 1 ? "Racking up bases at a higher rate than his season pace lately." : prod < 1 ? "Below his bases pace recently." : "Around his season bases pace."}
         />
       )}
-      <FactorBar icon="🔥" label="Recent form" mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)} note="The blended net of hard-hit + production form." />
+      <FactorBar icon={<FlameIcon size={FI} />} label="Recent form" mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)} note="The blended net of hard-hit + production form." />
       {r.vs && (
         <FactorBar
-          icon="⚾"
+          icon={<PitcherIcon size={FI} />}
           label={`Pitcher · contact + power · ${r.vs.name}`}
           mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
           note="Combines how hittable he is with his power (extra-base/HR) suppression, plus platoon."
@@ -487,12 +504,12 @@ function TbFactors({ r, source }: { r: TbRow; source: Source }) {
       )}
       {r.vs && (
         <div className="sp-drv-note" style={{ marginTop: "0.35rem" }}>
-          🔄 <b>Platoon</b> · {batLabel(r.bats)} vs {pitLabel(r.vs.throws)} · {platoonEdge(r.bats, r.vs.throws) ? "favorable" : "tough"} — already reflected in the Pitcher factor above.
+          <PlatoonIcon size={13} style={noteIconStyle} /><b>Platoon</b> · {batLabel(r.bats)} vs {pitLabel(r.vs.throws)} · {platoonEdge(r.bats, r.vs.throws) ? "favorable" : "tough"} — already reflected in the Pitcher factor above.
         </div>
       )}
       {r.vs && r.vs.bvp && r.vs.bvp.pa > 0 && typeof r.bvp_hit_mult === "number" && (
         <FactorBar
-          icon="📜"
+          icon={<HistoryIcon size={FI} />}
           label={`History · vs ${r.vs.name}`}
           mult={r.bvp_hit_mult}
           note={`${r.vs.bvp.hits}-for-${r.vs.bvp.ab} career — his contact history vs this pitcher.`}
@@ -500,14 +517,14 @@ function TbFactors({ r, source }: { r: TbRow; source: Source }) {
       )}
       {typeof r.spray_mult === "number" && (
         <FactorBar
-          icon="🎯"
+          icon={<SprayIcon size={FI} />}
           label="Spray"
           mult={r.spray_mult}
           note={sprayNote(r.spray_pull, r.spray_mult, r.bats, r.wind_mph, r.wind_dir)}
         />
       )}
       <FactorBar
-        icon="🌦️"
+        icon={<ParkWeatherIcon size={FI} />}
         label="Park & weather"
         mult={r.spray_mult ? pick(r.park_weather_factor ?? 1, r.park_weather_factor_hist) / r.spray_mult : pick(r.park_weather_factor ?? 1, r.park_weather_factor_hist)}
         note="The ballpark and conditions' net effect on his extra-base power (doubles, triples, homers). Singles barely move with the park, so the nudge stays modest."
@@ -542,24 +559,24 @@ function LineupFactors({
   return (
     <>
       {typeof (r.lineup_mult ?? r.lineup_mult_hist) === "number" && (
-        <FactorBar icon="📋" label="Lineup" mult={pick(r.lineup_mult ?? 1, r.lineup_mult_hist)} note={lineupNote} />
+        <FactorBar icon={<LineupIcon size={FI} />} label="Lineup" mult={pick(r.lineup_mult ?? 1, r.lineup_mult_hist)} note={lineupNote} />
       )}
       <FactorBar
-        icon="💥"
+        icon={<HardHitIcon size={FI} />}
         label="Hard-hit form"
         mult={hh}
         note={hh > 1 ? "Squaring the ball up harder than his season norm lately." : hh < 1 ? "Softer contact than usual recently." : "Contact quality around his season norm."}
       />
       <FactorBar
-        icon="📈"
+        icon={<ProductionIcon size={FI} />}
         label="Production form"
         mult={prod}
         note={prod > 1 ? "Producing at a higher rate than his season pace lately." : prod < 1 ? "Producing below his season pace recently." : "Producing around his season pace."}
       />
-      <FactorBar icon="🔥" label="Recent form" mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)} note="The blended net of hard-hit + production form." />
+      <FactorBar icon={<FlameIcon size={FI} />} label="Recent form" mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)} note="The blended net of hard-hit + production form." />
       {r.vs && (
         <FactorBar
-          icon="⚾"
+          icon={<PitcherIcon size={FI} />}
           label={`Pitcher · ${r.vs.name}`}
           mult={pick(r.pitcher_factor ?? 1, r.pitcher_factor_hist)}
           note={prop === "hrr" ? "How hittable this pitcher is — affects both contact and scoring opportunity." : "How hittable this pitcher is, factoring in on-base opportunity."}
@@ -567,13 +584,13 @@ function LineupFactors({
       )}
       {r.vs && r.platoon_mult !== undefined && (
         <FactorBar
-          icon="🔄"
+          icon={<PlatoonIcon size={FI} />}
           label={`Platoon · ${batLabel(r.bats)} vs ${pitLabel(r.vs.throws)}`}
           mult={r.platoon_mult}
           note={`${platoonEdge(r.bats, r.vs.throws) ? "Favorable" : "Tough"} handedness matchup for him.`}
         />
       )}
-      <FactorBar icon="🏟️" label={`Park · ${r.team}`} mult={pick(r.park_weather_factor ?? 1, r.park_weather_factor_hist)} note={parkNote} />
+      <FactorBar icon={<ParkIcon size={FI} />} label={`Park · ${r.team}`} mult={pick(r.park_weather_factor ?? 1, r.park_weather_factor_hist)} note={parkNote} />
     </>
   );
 }
