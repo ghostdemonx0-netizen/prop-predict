@@ -420,16 +420,21 @@ export default function NextPage() {
     .slice(0, 6)
     .map((e) => ({ name: e.name, hand: e.hand, adv: e.adv }));
 
-  // ── Box 4 — Top 6 pitchers by strikeout over-line probability ──
-  // toBoardRows("k") is already sorted by over_prob desc; show the K % plus the
-  // hand chip after the name and the model book K-line ("O X.XK", from the
-  // row's `line` field — same format as the board K label) to the right of it.
+  // ── Box 4 — Top 6 pitchers by PROJECTED strikeouts (most Ks) ──
+  // RANKING METRIC: projected strikeouts — KRow.expected_ks, source-weighted
+  // (surfaced on the board row as `projection`, the same "proj X.X K" the Game
+  // Hub shows), sorted DESCENDING (most Ks first). To re-rank, change the sort
+  // key below (e.g. back to over-prob: `Number(b.prob) - Number(a.prob)`).
+  // Display: proj K is the HEADLINE value ("X.X K"); the K over-line probability
+  // rides along as a smaller secondary %. (The book K-line "O X.XK" was removed —
+  // it cluttered + overflowed these tight header rows.)
   const topPitchers: DashRow[] = toBoardRows(data, "k", 0, source)
+    .sort((a, b) => Number(b.projection ?? 0) - Number(a.projection ?? 0))
     .slice(0, 6)
     .map((r) => ({
       name: r.player,
-      value: pct(r.prob),
-      sub: r.line ? `O ${r.line}K` : undefined,
+      value: r.projection ? `${r.projection} K` : pct(r.prob),
+      sub: pct(r.prob),
       hand: handGlyph(r.playerHand),
     }));
 

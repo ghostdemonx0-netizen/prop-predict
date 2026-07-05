@@ -11,9 +11,14 @@
  *   Box 3  — Top batters (ranked by best composite across all batter props;
  *            shows a hand chip after each name, no % — the composite isn't a
  *            meaningful displayable number).
- *   Box 4  — Top pitchers (highest strikeout over-line probability); shows a
- *            hand chip after the name + the K % + the model book K-line
- *            ("O X.XK") to the right of the %.
+ *   Box 4  — Top pitchers (ranked by PROJECTED strikeouts — most Ks first);
+ *            shows a hand chip after the name + the proj K as the headline
+ *            value ("X.X K") + the over-line probability as a smaller secondary
+ *            %. On mobile (≤640px) this box shows only the TOP 3 (single column,
+ *            full names); on desktop it shows the full 6 in two columns.
+ *
+ * Player names render in FULL on every viewport (mobile + desktop) — long names
+ * ellipsise inside the row rather than being abbreviated.
  *
  * This component is PURELY presentational: every leaderboard + the stat values
  * are computed in app/next/page.tsx (a display aggregation of already-loaded
@@ -44,10 +49,11 @@ export interface DashStats {
 export interface DashRow {
   /** Matchup ("PIT @ WSH") or player name. */
   name: string;
-  /** Primary value shown at the right ("+22%", "63%"). Omitted for batters,
-   *  who show a hand chip instead of a (not-meaningful) composite %. */
+  /** Primary/headline value shown at the right ("+22%", "6.3 K"). Omitted for
+   *  batters, who show a hand chip instead of a (not-meaningful) composite %. */
   value?: string;
-  /** Optional secondary value shown to the RIGHT of the primary ("O 4.5K"). */
+  /** Optional smaller secondary value shown to the RIGHT of the primary — e.g.
+   *  a pitcher's over-line probability "%" next to the headline proj-K value. */
   sub?: string;
   /** Optional CSS colour for the primary value (env green/amber/red scale). */
   color?: string;
@@ -58,57 +64,28 @@ export interface DashRow {
   adv?: boolean;
 }
 
-/** Abbreviate a full player name to first-initial + last name for the tight
- *  mobile leaderboards: "Sonny Gray" → "S. Gray", "Christian Yelich" →
- *  "C. Yelich". Single-token names (or matchups) are returned unchanged; the
- *  abbreviated form is only ever SHOWN on mobile (CSS toggles it in). */
-export function abbrevName(full: string): string {
-  const parts = full.trim().split(/\s+/);
-  if (parts.length < 2) return full;
-  const first = parts[0];
-  const last = parts[parts.length - 1];
-  if (!first) return full;
-  return `${first[0]}. ${last}`;
-}
-
 export interface HeaderDashProps {
   stats: DashStats;
   /** Top games by park+weather env boost. */
   games: DashRow[];
   /** Top batters by composite probability across all batter props. */
   batters: DashRow[];
-  /** Top pitchers by strikeout over-line probability. */
+  /** Top pitchers by projected strikeouts (most Ks first). */
   pitchers: DashRow[];
 }
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
-/** One numbered leaderboard row (rank + name + optional hand chip + value).
- *  Batters carry a hand chip and no value; pitchers carry a hand chip, a K %
- *  value, and a `sub` ("O X.XK") shown to the right of the %. */
-function LeaderRow({
-  rank,
-  r,
-  abbrev,
-}: {
-  rank: number;
-  r: DashRow;
-  /** When true, render an extra mobile-only abbreviated name (CSS toggles which
-   *  one shows). Used for player leaderboards; NOT for matchup rows. */
-  abbrev?: boolean;
-}) {
+/** One numbered leaderboard row (rank + full name + optional hand chip + value).
+ *  Batters carry a hand chip and no value; pitchers carry a hand chip, a proj-K
+ *  headline value, and a `sub` (over-line "%") shown to the right of it. Names
+ *  always render in FULL (they ellipsise if too long — never abbreviated). */
+function LeaderRow({ rank, r }: { rank: number; r: DashRow }) {
   return (
     <li className="sp-drow">
       <span className="sp-drank">{rank}</span>
       <span className="sp-dnamewrap">
-        {abbrev ? (
-          <span className="sp-dname">
-            <span className="sp-dname-full">{r.name}</span>
-            <span className="sp-dname-abbr">{abbrevName(r.name)}</span>
-          </span>
-        ) : (
-          <span className="sp-dname">{r.name}</span>
-        )}
+        <span className="sp-dname">{r.name}</span>
         {r.hand && <HandChip hand={r.hand} adv={r.adv} />}
       </span>
       {r.value && (
@@ -125,21 +102,27 @@ function LeaderRow({
  * A numbered leaderboard box (Boxes 2–4): header label + up to 6 ranked rows,
  * laid out in TWO columns — ranks 1–3 on the left, ranks 4–6 on the right — so
  * each box is 3 rows tall and 2 wide (balanced).
+ *
+ * When `mobileTop3` is set (Top Pitchers), mobile (≤640px) hides the right
+ * column and collapses to a single column via CSS — so only the top 3 show, as
+ * one clean full-name column, while desktop still shows all 6 in two columns.
  */
 function LeaderBox({
   label,
   rows,
-  abbrev,
+  mobileTop3,
 }: {
   label: string;
   rows: DashRow[];
-  /** Abbreviate names on mobile (player leaderboards only, not matchups). */
-  abbrev?: boolean;
+  /** Show only the top 3 (single column) on mobile; full 6 on desktop. */
+  mobileTop3?: boolean;
 }) {
   const left = rows.slice(0, 3);
   const right = rows.slice(3, 6);
   return (
-    <GlassCard className="sp-dbox sp-dbox--lead">
+    <GlassCard
+      className={`sp-dbox sp-dbox--lead${mobileTop3 ? " sp-dbox--mtop3" : ""}`}
+    >
       <div className="sp-dlabel">{label}</div>
       {rows.length === 0 ? (
         <div className="sp-drow-empty">—</div>
@@ -147,13 +130,13 @@ function LeaderBox({
         <div className="sp-dcols">
           <ol className="sp-dlist">
             {left.map((r, i) => (
-              <LeaderRow key={i} rank={i + 1} r={r} abbrev={abbrev} />
+              <LeaderRow key={i} rank={i + 1} r={r} />
             ))}
           </ol>
           {right.length > 0 && (
             <ol className="sp-dlist">
               {right.map((r, i) => (
-                <LeaderRow key={i} rank={i + 4} r={r} abbrev={abbrev} />
+                <LeaderRow key={i} rank={i + 4} r={r} />
               ))}
             </ol>
           )}
@@ -195,14 +178,14 @@ export function HeaderDash({ stats, games, batters, pitchers }: HeaderDashProps)
           </div>
         </GlassCard>
 
-        {/* Box 2 — top games by park+weather boost (matchups: no name abbrev) */}
+        {/* Box 2 — top games by park+weather boost */}
         <LeaderBox label="Top games" rows={games} />
 
-        {/* Box 3 — top batters across all batter props (abbrev names on mobile) */}
-        <LeaderBox label="Top batters" rows={batters} abbrev />
+        {/* Box 3 — top batters across all batter props (full 6 on both) */}
+        <LeaderBox label="Top batters" rows={batters} />
 
-        {/* Box 4 — top pitchers by strikeout chance (abbrev names on mobile) */}
-        <LeaderBox label="Top pitchers" rows={pitchers} abbrev />
+        {/* Box 4 — top pitchers by projected Ks (top 3 on mobile, 6 on desktop) */}
+        <LeaderBox label="Top pitchers" rows={pitchers} mobileTop3 />
       </div>
     </section>
   );

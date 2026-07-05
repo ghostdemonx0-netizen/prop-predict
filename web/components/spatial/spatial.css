@@ -1276,12 +1276,6 @@
   text-overflow: ellipsis;
 }
 
-/* Mobile-only abbreviated player name ("S. Gray"); full name shows on desktop.
-   The 640px block below flips these — abbreviated names keep the tight mobile
-   leaderboard rows from running off the box. */
-.sp-root .sp-dname-full { display: inline; }
-.sp-root .sp-dname-abbr { display: none; }
-
 /* Keep the leaderboard hand chip from shrinking / wrapping. */
 .sp-root .sp-dnamewrap .sp-hand {
   flex:          0 0 auto;
@@ -1354,7 +1348,7 @@
   .sp-root .sp-dstat-v small      { font-size: .5rem; }
 
   /* Leaderboard boxes — tighten rows + share the two columns evenly so nothing
-     runs off the box; abbreviated names + ellipsis fallback keep them in-bounds. */
+     runs off the box; full names ellipsise to stay in-bounds. */
   .sp-root .sp-dcols              { grid-template-columns: 1fr 1fr; gap: 5px 7px; }
   .sp-root .sp-drow               { gap: 5px; }
   .sp-root .sp-drank              { font-size: .55rem; width: 1em; }
@@ -1364,9 +1358,12 @@
   .sp-root .sp-dval               { font-size: .62rem; gap: 3px; }
   .sp-root .sp-dval small         { font-size: .5rem; }
 
-  /* Show the abbreviated player name ("S. Gray"), hide the full one. */
-  .sp-root .sp-dname-full         { display: none; }
-  .sp-root .sp-dname-abbr         { display: inline; }
+  /* Top Pitchers on mobile: show only the TOP 3 as a single clean full-name
+     column. The right <ol> holds ranks 4–6 — hide it and collapse the grid to
+     one column, so the box is ~3 rows tall and balances the batters box
+     (3 rows × 2 cols). Batters keep all 6; desktop (>640px) shows all 6 here. */
+  .sp-root .sp-dbox--mtop3 .sp-dcols               { grid-template-columns: 1fr; }
+  .sp-root .sp-dbox--mtop3 .sp-dcols > ol:nth-child(2) { display: none; }
 }
 
 /* ── Reduced-motion ──────────────────────────────────────── */
