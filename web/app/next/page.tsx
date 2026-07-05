@@ -27,10 +27,12 @@ import { LiveProvider } from "../../components/LiveProvider";
 import type { LiveGame } from "../../lib/live";
 import type { Projections } from "../../lib/types";
 import type { PropKind } from "../../lib/format";
+import { pct } from "../../lib/format";
 import { toBoardRows, type Source } from "../../lib/weighting";
+import { envImpactColor } from "../../components/spatial/chips";
 
 import { CommandBar } from "../../components/spatial/CommandBar";
-import { HeroTiles, type KpiTile } from "../../components/spatial/HeroTiles";
+import { HeaderDash, type DashRow } from "../../components/spatial/HeroTiles";
 import { NavDock, type NavSection } from "../../components/spatial/NavDock";
 import { SegmentedControl } from "../../components/spatial/SegmentedControl";
 import { BoardView, type BoardViewMode } from "../../components/spatial/board/BoardView";
@@ -325,7 +327,7 @@ export default function NextPage() {
     ).values(),
   );
 
-  // ── KPI tiles ──
+  // ── Header dashboard: Box 1 stats (unchanged values from the old KPI tiles) ──
   const gameCount = data.games?.length ?? 0;
   const totalPlays =
     data.hr.length +
@@ -339,15 +341,61 @@ export default function NextPage() {
     data.hr.filter((r) => r.lineup_status === "confirmed").length +
     data.strikeouts.filter((r) => r.pitcher_status === "confirmed").length;
 
-  // Highest displayed probability on the current board (rows are sorted desc).
-  const topEdge = boardRows.length ? Math.round(boardRows[0].prob * 100) : 0;
+  // ── Box 2 — Top 6 games by combined park+weather env boost ──
+  // Reuses the same `env` multiplier Parks ranks by (park_mult × weather_mult,
+  // 1.0 = neutral), sorted best-first, and the shared envImpactColor scale.
+  const signedPct = (mult: number): string => {
+    const v = Math.round((mult - 1) * 100);
+    return (v >= 0 ? "+" : "") + v + "%";
+  };
+  const topGames: DashRow[] = [...(data.games ?? [])]
+    .sort((a, b) => b.env - a.env)
+    .slice(0, 6)
+    .map((g) => ({
+      name: g.matchup,
+      value: signedPct(g.env),
+      color: envImpactColor(g.env),
+    }));
 
-  const tiles: KpiTile[] = [
-    { label: "Slate", value: String(gameCount), sub: "games" },
-    { label: "Plays scored", value: String(totalPlays), sub: "props" },
-    { label: "Lineups", value: String(confirmedLineups), sub: "confirmed" },
-    { label: "Top edge", value: `${topEdge}%`, sub: "best play" },
+  // ── Box 3 — Top 6 batters across ALL batter props ──
+  // METRIC: for each unique batter (keyed by player_id), average their
+  // source-weighted probability across every batter prop they appear in, taken
+  // at that prop's base/lowest threshold, then rank descending and take 6.
+  // Base thresholds per prop — edit this list to re-tune the composite metric:
+  const BATTER_BASES: [PropKind, number][] = [
+    ["hr", 1],
+    ["hits1", 1],
+    ["tb2", 2],
+    ["runs1", 1],
+    ["rbi1", 1],
+    ["hrr2", 2],
   ];
+  const batterAcc = new Map<number, { name: string; sum: number; n: number }>();
+  for (const [kind, thr] of BATTER_BASES) {
+    for (const r of toBoardRows(data, kind, thr, source)) {
+      if (r.player_id == null) continue;
+      const e = batterAcc.get(r.player_id) ?? { name: r.player, sum: 0, n: 0 };
+      e.sum += r.prob;
+      e.n += 1;
+      batterAcc.set(r.player_id, e);
+    }
+  }
+  const topBatters: DashRow[] = [...batterAcc.values()]
+    .map((e) => ({ name: e.name, avg: e.sum / e.n }))
+    .sort((a, b) => b.avg - a.avg)
+    .slice(0, 6)
+    .map((e) => ({ name: e.name, value: pct(e.avg) }));
+
+  // ── Box 4 — Top 6 pitchers by strikeout over-line probability ──
+  // toBoardRows("k") is already sorted by over_prob desc; carry the projected
+  // K count (BoardRow.projection = expected_ks) as the compact sub-value.
+  const topPitchers: DashRow[] = toBoardRows(data, "k", 0, source)
+    .slice(0, 6)
+    .map((r) => ({
+      name: r.player,
+      value: pct(r.prob),
+      sub: r.projection ? `${r.projection} K` : undefined,
+    }));
 
   return (
     <>
@@ -355,8 +403,13 @@ export default function NextPage() {
       <CommandBar dates={dates} selectedDate={selectedDate} onDate={setSelectedDate} />
 
       <main className="sp-wrap" style={{ paddingBottom: 80 }}>
-        {/* ── KPI tiles ── */}
-        <HeroTiles tiles={tiles} />
+        {/* ── Header dashboard (stats box + game/batter/pitcher leaderboards) ── */}
+        <HeaderDash
+          stats={{ games: gameCount, confirmed: confirmedLineups, plays: totalPlays }}
+          games={topGames}
+          batters={topBatters}
+          pitchers={topPitchers}
+        />
 
         {/* ── Weighting row — centered between KPI tiles and NavDock ── */}
         <div className="sp-weighting-row">

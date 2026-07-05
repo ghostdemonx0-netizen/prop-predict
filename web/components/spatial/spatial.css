@@ -1146,19 +1146,26 @@
   margin:         16px 0 2px;
 }
 
-/* ── KPI tiles grid ──────────────────────────────────────── */
+/* ── Header dashboard grid (HeroTiles.tsx → HeaderDash) ───── */
 
-.sp-root .sp-tiles {
+.sp-root .sp-dash {
   display:               grid;
   grid-template-columns: repeat(4, 1fr);
   gap:                   14px;
+  align-items:           stretch;
 }
 
-.sp-root .sp-tile {
-  padding: 16px 18px;
+/* One glass box in the dashboard row. Flex column so the stats box's dividers
+   stretch full width and the leaderboard list fills the box height. */
+.sp-root .sp-dbox {
+  padding:        14px 16px;
+  display:        flex;
+  flex-direction: column;
+  min-width:      0;
 }
 
-.sp-root .sp-tile-k {
+/* Shared small uppercase mono label (matches the old .sp-tile-k). */
+.sp-root .sp-dlabel {
   font-family:    var(--f-mono);
   font-size:      .58rem;
   letter-spacing: .2em;
@@ -1166,35 +1173,113 @@
   color:          var(--ink-faint);
 }
 
-.sp-root .sp-tile-v {
+/* ---- Box 1: combined stats (three sections split by two faint dividers) ---- */
+.sp-root .sp-dbox--stats { justify-content: space-between; }
+
+.sp-root .sp-dstat {
+  padding: 10px 0;
+}
+.sp-root .sp-dstat:first-child { padding-top: 2px; }
+.sp-root .sp-dstat:last-child  { padding-bottom: 2px; }
+/* the two faint divider lines */
+.sp-root .sp-dstat + .sp-dstat { border-top: 1px solid var(--line); }
+
+.sp-root .sp-dstat-v {
   font-family:    var(--f-disp);
   font-weight:    700;
-  font-size:      1.7rem;
+  font-size:      1.5rem;
   letter-spacing: -.02em;
-  margin-top:     7px;
+  margin-top:     5px;
   display:        flex;
   align-items:    baseline;
   gap:            7px;
   line-height:    1;
 }
+.sp-root .sp-dstat-v small {
+  font-family: var(--f-mono);
+  font-size:   .64rem;
+  color:       var(--ink-dim);
+  font-weight: 400;
+}
 
-.sp-root .sp-tile-v small {
-  font-family:    var(--f-mono);
-  font-size:      .66rem;
-  color:          var(--ink-dim);
-  font-weight:    400;
+/* ---- Boxes 2–4: numbered leaderboards ---- */
+.sp-root .sp-dbox--lead { gap: 8px; }
+
+.sp-root .sp-dlist {
+  list-style:     none;
+  margin:         0;
+  padding:        0;
+  display:        flex;
+  flex-direction: column;
+  gap:            5px;
+  flex:           1 1 auto;
+  justify-content: space-between;
+}
+
+.sp-root .sp-drow {
+  display:     flex;
+  align-items: baseline;
+  gap:         8px;
+  min-width:   0;
+  line-height: 1.15;
+}
+
+.sp-root .sp-drank {
+  font-family: var(--f-mono);
+  font-size:   .64rem;
+  color:       var(--ink-faint);
+  width:       1.1em;
+  flex:        0 0 auto;
+  text-align:  right;
+}
+
+.sp-root .sp-dname {
+  flex:          1 1 auto;
+  min-width:     0;
+  font-size:     .8rem;
+  color:         var(--ink);
+  white-space:   nowrap;
+  overflow:      hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-root .sp-dval {
+  flex:        0 0 auto;
+  font-family: var(--f-mono);
+  font-size:   .78rem;
+  font-weight: 700;
+  color:       var(--ink);
+  display:     inline-flex;
+  align-items: baseline;
+  gap:         5px;
+}
+.sp-root .sp-dval small {
+  font-size:   .62rem;
+  font-weight: 400;
+  color:       var(--ink-faint);
+}
+
+.sp-root .sp-drow-empty {
+  font-family: var(--f-mono);
+  font-size:   .72rem;
+  color:       var(--ink-faint);
+  margin-top:  6px;
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
 
 @media (max-width: 880px) {
-  .sp-root .sp-tiles { grid-template-columns: repeat(2, 1fr); }
+  .sp-root .sp-dash { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 600px) {
   .sp-root .sp-cmd    { gap: 10px; padding: 0 10px; }
   .sp-root .sp-lt     { display: none; }
   .sp-root .sp-htitle { font-size: clamp(1.6rem, 7vw, 2.4rem); }
+  /* keep a tidy 2×2 (Box1 + 3 leaderboards) on phones — no overflow */
+  .sp-root .sp-dash   { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .sp-root .sp-dname  { font-size: .74rem; }
+  .sp-root .sp-dval   { font-size: .72rem; }
 }
 
 /* ── Reduced-motion ──────────────────────────────────────── */
