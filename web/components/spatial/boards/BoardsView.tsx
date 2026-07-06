@@ -132,7 +132,7 @@ function PitcherStatRow({ name }: { name: string }) {
       <table className="sp-boardstable" style={{ borderCollapse: "collapse", width: "100%", fontSize: 12 }}>
         <thead>
           <tr>
-            <th style={{ textAlign: "left", padding: "6px 10px", position: "sticky", left: 0 }}>Pitcher</th>
+            <th style={{ textAlign: "left", padding: "6px 10px", position: "sticky", left: 0, color: "var(--iris-cyan)" }}>vs Pitcher</th>
             {PITCHER_COLUMNS.map((c) => (
               <th key={c.key} style={{ padding: "6px 8px", textAlign: "center", opacity: 0.85 }}>{c.label}</th>
             ))}
@@ -141,7 +141,7 @@ function PitcherStatRow({ name }: { name: string }) {
         <tbody>
           <tr>
             <td style={{ padding: "5px 10px", whiteSpace: "nowrap", position: "sticky", left: 0 }}>
-              {p.name} <span style={{ opacity: 0.5 }}>({p.throws})</span>
+              <span style={{ color: "var(--iris-cyan)", fontWeight: 700 }}>vs</span> {p.name} <span style={{ opacity: 0.5 }}>({p.throws})</span>
             </td>
             {PITCHER_COLUMNS.map((c) => {
               const v = p.stats[c.key] ?? 0;
