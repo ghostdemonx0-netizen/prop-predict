@@ -545,7 +545,7 @@ export default function Home() {
 
         {/* ── Barrel Weight's own timeframe sub-row (appears only when active) ── */}
         {philosophy === "barrel" && (
-          <div className="sp-weighting-row" style={{ justifyContent: "center", gap: 12, marginTop: -4 }}>
+          <div className="sp-weighting-row" style={{ justifyContent: "center", gap: 12, marginTop: 10 }}>
             <SegmentedControl
               options={SOURCE_OPTIONS}
               value={source}

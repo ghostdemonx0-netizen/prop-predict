@@ -36,11 +36,12 @@ const BARREL_HIGHLIGHTS: ColumnDef[] = [
   { key: "xwobacon", label: "xwOBAc",  min: 0.26, max: 0.46, highlight: true },
   { key: "fb",       label: "FB%",     min: 18, max: 45, highlight: true },
   { key: "la",       label: "LA",      min: 8, max: 24, highlight: true },
+  { key: "hrfb",     label: "HR/FB%",  min: 5, max: 35, highlight: true },
 ];
 
 /** The Kasper/Barrel-Lab replica column set (no park/weather). */
 const REPLICA_COLUMNS: ColumnDef[] = [
-  { key: "trueScore", label: "kHR",     min: 20, max: 90 },
+  { key: "trueScore", label: "Score",   min: 20, max: 90 },
   { key: "matchup",   label: "Matchup", min: 30, max: 90 },
   { key: "zonefit",   label: "ZoneFit", min: 0.02, max: 0.16 },
   { key: "hrform",    label: "HR Form", min: 20, max: 90 },
@@ -54,6 +55,7 @@ const REPLICA_COLUMNS: ColumnDef[] = [
   { key: "fb",        label: "FB%",     min: 18, max: 45 },
   { key: "hh",        label: "HH%",     min: 25, max: 55 },
   { key: "la",        label: "LA",      min: 8, max: 24 },
+  { key: "hrfb",      label: "HR/FB%",  min: 5, max: 35 },
 ];
 
 export function boardsColumnsFor(lens: BoardsLens): ColumnDef[] {

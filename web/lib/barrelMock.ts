@@ -35,7 +35,7 @@ const BASE: Record<string, number> = {
   trueScore: 50, matchup: 55, park: 0, weather: 0, platoon: 0, pitcher: 0,
   form: 0, hardhit: 38, brl: 9, pbrl: 5, sweet: 34, zonefit: 0.08,
   hrform: 55, iso: 0.17, xwoba: 0.33, xwobacon: 0.36, swstr: 10,
-  fb: 30, hh: 40, la: 15,
+  fb: 30, hh: 40, la: 15, hrfb: 16,
 };
 
 let _id = 100;

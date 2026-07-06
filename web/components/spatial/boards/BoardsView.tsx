@@ -140,7 +140,7 @@ function TopReads({ lens }: { lens: BoardsLens }) {
   const scoreOf = (h: MockHitter) => (lens === "normal" ? h.stats.matchup : h.stats.trueScore);
   const top = [...all].sort((a, b) => scoreOf(b.h) - scoreOf(a.h)).slice(0, 4);
   const cells = lens === "normal" ? DRIVER_CELLS : BARREL_CELLS;
-  const tag = lens === "barrel" ? "kHR" : lens === "effect" ? "score · +barrel" : "current score";
+  const tag = lens === "barrel" ? "barrel score" : lens === "effect" ? "score · +barrel" : "current score";
   const cell = (v: number) =>
     Math.abs(v) < 1 && v !== 0 ? v.toFixed(3).replace(/^0/, "") : String(Math.round(v * 10) / 10);
   return (
