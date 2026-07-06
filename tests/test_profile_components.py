@@ -1,6 +1,7 @@
 # tests/test_profile_components.py
 import math
 from model.profiles import batter_profile_from_events, blended_batter_profile
+from model.profiles import pitcher_profile_from_events
 from model.profiles import regress, LEAGUE_K, LEAGUE_HIT, _K_R, _HIT_R
 
 
@@ -69,3 +70,35 @@ def test_blended_batter_returns_1b_2b_3b():
     # Existing fields still intact
     assert math.isclose(p["season_hr"], 49.0)
     assert math.isclose(p["season_pa"], 1040.0)
+
+
+def _brow(d, e, ls=90.0, la=15.0, lsa=5, bb="line_drive", hx=None, hy=None, stand="R", xw=0.3, gp=1):
+    return {"game_date": d, "events": e, "launch_speed": ls, "launch_angle": la,
+            "launch_speed_angle": lsa, "bb_type": bb, "hc_x": hx, "hc_y": hy,
+            "stand": stand, "estimated_woba_using_speedangle": xw, "game_pk": gp}
+
+
+def test_batter_profile_has_barrel_fields():
+    evs = [
+        _brow("2026-04-01", "home_run", ls=105, la=27, lsa=6, bb="fly_ball", hx=80.0, hy=100.0),
+        _brow("2026-04-02", "single",   ls=88,  la=10, lsa=4, bb="line_drive"),
+    ]
+    p = batter_profile_from_events(evs, as_of="2026-06-01", player_id=1)
+    assert p["barrel_rate"] == 0.5
+    assert p["hrfb_rate"] == 1.0          # 1 HR / 1 fly ball
+    assert "pulled_barrel_rate" in p and "xwobacon" in p and "sweetspot_rate" in p
+    # existing fields untouched
+    assert p["season_hr"] == 1 and p["season_pa"] == 2
+
+
+def test_pitcher_profile_has_allowed_barrel_fields():
+    evs = [
+        _brow("2026-04-01", "home_run", ls=103, la=25, lsa=6, bb="fly_ball", hx=80.0, hy=100.0),
+        _brow("2026-04-01", "strikeout", ls=None),
+    ]
+    p = pitcher_profile_from_events(evs, as_of="2026-06-01", player_id=9)
+    assert p["barrel_rate_allowed"] == 1.0    # 1 barrel of 1 BIP allowed
+    assert "pulled_barrel_rate_allowed" in p and "hardhit_rate_allowed" in p
+    assert "barrel_rate" not in p             # pitcher uses the _allowed flavor
+    # existing fields untouched
+    assert p["k_per_bf"] >= 0.0 and p["bf"] == 2

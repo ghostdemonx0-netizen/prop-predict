@@ -10,6 +10,7 @@ from model.blend import marcel_blend, regress
 from model.projections import LEAGUE_HR_RATE
 from model.matchup import LEAGUE_K, LEAGUE_HIT
 from model.run_props import RECENT_GAMES_WINDOW
+from model.barrel import barrel_metrics
 
 _HR_R, _K_R, _HIT_R = 300.0, 200.0, 200.0
 
@@ -98,6 +99,7 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
         "production_form_tb": production_form_tb,
         "k_rate": regress(ks, pa, LEAGUE_K, _K_R),
         "hit_rate": regress(hits, pa, LEAGUE_HIT, _HIT_R),
+        **barrel_metrics(events, as_of=as_of),
     }
 
 
@@ -167,6 +169,7 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
         "hit_allowed_rate": regress(hits, pa, LEAGUE_HIT, _HIT_R),
         "hr_allowed_rate": (hr / pa) if pa else 0.0,
         "bf": pa,
+        **barrel_metrics(events, as_of=as_of, allowed=True),
     }
 
 
