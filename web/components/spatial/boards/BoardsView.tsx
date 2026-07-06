@@ -120,6 +120,44 @@ function PitcherBoard() {
   );
 }
 
+const pnum = (v: number) =>
+  v < 1 && v !== 0 ? v.toFixed(2).replace(/^0/, "") : String(Math.round(v * 10) / 10);
+
+/** The opposing pitcher's slate row, shown on top of the hitters who face them. */
+function PitcherStatRow({ name }: { name: string }) {
+  const p = MOCK_PITCHER_BOARD.find((x) => x.name === name);
+  if (!p) return null;
+  return (
+    <div style={{ overflowX: "auto", marginBottom: 6 }} className="sp-float">
+      <table className="sp-boardstable" style={{ borderCollapse: "collapse", width: "100%", fontSize: 12 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", padding: "6px 10px", position: "sticky", left: 0 }}>Pitcher</th>
+            {PITCHER_COLUMNS.map((c) => (
+              <th key={c.key} style={{ padding: "6px 8px", textAlign: "center", opacity: 0.85 }}>{c.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ padding: "5px 10px", whiteSpace: "nowrap", position: "sticky", left: 0 }}>
+              {p.name} <span style={{ opacity: 0.5 }}>({p.throws})</span>
+            </td>
+            {PITCHER_COLUMNS.map((c) => {
+              const v = p.stats[c.key] ?? 0;
+              return (
+                <td key={c.key} style={{ padding: "5px 8px", textAlign: "center", background: heatColor(v, c.min, c.max, c.higherBetter ?? true) }}>
+                  {pnum(v)}
+                </td>
+              );
+            })}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // Card factor-cells follow the lens: current drivers when barrel is OFF,
 // the barrel recipe when Effect is ON or in Barrel Weight.
 const DRIVER_CELLS: [string, string][] = [
@@ -198,7 +236,11 @@ export function BoardsView({ lens }: BoardsViewProps) {
             </span>
           </summary>
           <div style={{ marginTop: 12 }}>
+            {/* Opposing pitcher's slate row sits on top of the lineup facing them */}
+            <PitcherStatRow name={g.homePitcher} />
             <HeatTable title={`${g.away} hitters vs ${g.homePitcher}`} hitters={g.awayHitters} columns={columns} />
+            <div style={{ height: 16 }} />
+            <PitcherStatRow name={g.awayPitcher} />
             <HeatTable title={`${g.home} hitters vs ${g.awayPitcher}`} hitters={g.homeHitters} columns={columns} />
           </div>
         </details>
