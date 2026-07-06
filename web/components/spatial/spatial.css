@@ -2778,25 +2778,25 @@
   margin-top:  12px;
 }
 
-/* ── Barrel Phase 1: faint Aperture watermark behind each nav pill ── */
-.sp-root .sp-dock-btn {
-  position: relative;
+/* ── Barrel Phase 1: collapsible board sections (games + slate pitchers) ── */
+.sp-root .sp-boardsec-head {
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 700;
+  padding: 6px 2px;
+  list-style: none;
+  user-select: none;
 }
-.sp-root .sp-dock-btn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 50% 45%, transparent 30%, rgba(255,255,255,.05) 31%, transparent 33%),
-    conic-gradient(from 0deg,
-      rgba(255,255,255,.06) 0 60deg, transparent 60deg 120deg,
-      rgba(255,255,255,.06) 120deg 180deg, transparent 180deg 240deg,
-      rgba(255,255,255,.06) 240deg 300deg, transparent 300deg 360deg);
-  -webkit-mask: radial-gradient(circle at 50% 45%, #000 34%, transparent 60%);
-          mask: radial-gradient(circle at 50% 45%, #000 34%, transparent 60%);
-  opacity: .5;
-  pointer-events: none;
+.sp-root .sp-boardsec-head::-webkit-details-marker { display: none; }
+.sp-root .sp-boardsec-head::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 8px;
+  opacity: .6;
+  transition: transform .15s ease;
+}
+.sp-root .sp-boardsec[open] > .sp-boardsec-head::before {
+  transform: rotate(90deg);
 }
 
 /* ── Barrel Phase 1: heatmap table polish ── */

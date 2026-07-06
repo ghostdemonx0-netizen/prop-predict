@@ -85,9 +85,9 @@ function HeatTable({
 function PitcherBoard() {
   const rows = [...MOCK_PITCHER_BOARD].sort((a, b) => b.stats.pscore - a.stats.pscore);
   return (
-    <div style={{ marginTop: 10 }}>
-      <h3 style={{ fontSize: 17, margin: "0 0 10px" }}>Slate Pitchers</h3>
-      <div style={{ overflowX: "auto" }} className="sp-float">
+    <details open className="sp-boardsec" style={{ marginBottom: 24 }}>
+      <summary className="sp-boardsec-head">Slate Pitchers</summary>
+      <div style={{ overflowX: "auto", marginTop: 10 }} className="sp-float">
         <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 12 }}>
           <thead>
             <tr>
@@ -116,7 +116,7 @@ function PitcherBoard() {
           </tbody>
         </table>
       </div>
-    </div>
+    </details>
   );
 }
 
@@ -172,22 +172,25 @@ export function BoardsView({ lens }: BoardsViewProps) {
         <span className="sp-eyebrow">{lensLabel}</span>
       </div>
 
+      {/* Slate pitchers up top */}
+      <PitcherBoard />
+
       <TopReads />
 
       {MOCK_GAMES.map((g) => (
-        <section key={g.id} style={{ marginBottom: 28 }}>
-          <h3 style={{ fontSize: 17, margin: "0 0 4px" }}>
+        <details key={g.id} open className="sp-boardsec" style={{ marginBottom: 24 }}>
+          <summary className="sp-boardsec-head">
             {g.away} @ {g.home}
-          </h3>
-          <p style={{ opacity: 0.6, margin: "0 0 12px", fontSize: 13 }}>
-            {g.venue} · {g.note}
-          </p>
-          <HeatTable title={`${g.away} hitters vs ${g.homePitcher}`} hitters={g.awayHitters} columns={columns} />
-          <HeatTable title={`${g.home} hitters vs ${g.awayPitcher}`} hitters={g.homeHitters} columns={columns} />
-        </section>
+            <span style={{ opacity: 0.55, fontSize: 13, fontWeight: 400, marginLeft: 10 }}>
+              {g.venue} · {g.note}
+            </span>
+          </summary>
+          <div style={{ marginTop: 12 }}>
+            <HeatTable title={`${g.away} hitters vs ${g.homePitcher}`} hitters={g.awayHitters} columns={columns} />
+            <HeatTable title={`${g.home} hitters vs ${g.awayPitcher}`} hitters={g.homeHitters} columns={columns} />
+          </div>
+        </details>
       ))}
-
-      <PitcherBoard />
     </div>
   );
 }

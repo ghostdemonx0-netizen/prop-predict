@@ -540,6 +540,19 @@ export default function Home() {
           )}
         </div>
 
+        {/* ── Barrel Weight's own timeframe sub-row (appears only when active) ── */}
+        {philosophy === "barrel" && (
+          <div className="sp-weighting-row" style={{ gap: 12, marginTop: -4 }}>
+            <span className="sp-eyebrow">BARREL WEIGHT ·</span>
+            <SegmentedControl
+              options={SOURCE_OPTIONS}
+              value={source}
+              onChange={(v) => setSource(v as Source)}
+              variant="sm"
+            />
+          </div>
+        )}
+
         {/* ── Nav dock ── */}
         <NavDock section={section} onSection={setSection} />
 

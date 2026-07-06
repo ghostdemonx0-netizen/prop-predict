@@ -23,12 +23,19 @@ const DRIVER_COLUMNS: ColumnDef[] = [
   { key: "hardhit",   label: "HH%",     min: 25, max: 55 },
 ];
 
-/** Barrel columns that light up when Barrel Effect is ON. */
+/** Barrel-recipe columns that light up when Barrel Effect is ON.
+ *  (Matchup + HH already live in DRIVER_COLUMNS; these are the barrel adds.) */
 const BARREL_HIGHLIGHTS: ColumnDef[] = [
-  { key: "brl",     label: "Brl/BIP", min: 3, max: 20, highlight: true },
-  { key: "pbrl",    label: "PullBrl", min: 1, max: 12, highlight: true },
-  { key: "sweet",   label: "Sweet%",  min: 25, max: 45, highlight: true },
-  { key: "zonefit", label: "ZoneFit", min: 0.02, max: 0.16, highlight: true },
+  { key: "brl",      label: "Brl/BIP", min: 3, max: 20, highlight: true },
+  { key: "pbrl",     label: "PullBrl", min: 1, max: 12, highlight: true },
+  { key: "sweet",    label: "Sweet%",  min: 25, max: 45, highlight: true },
+  { key: "zonefit",  label: "ZoneFit", min: 0.02, max: 0.16, highlight: true },
+  { key: "iso",      label: "ISO",     min: 0.08, max: 0.30, highlight: true },
+  { key: "hrform",   label: "HR Form", min: 20, max: 90, highlight: true },
+  { key: "xwoba",    label: "xwOBA",   min: 0.26, max: 0.42, highlight: true },
+  { key: "xwobacon", label: "xwOBAc",  min: 0.26, max: 0.46, highlight: true },
+  { key: "fb",       label: "FB%",     min: 18, max: 45, highlight: true },
+  { key: "la",       label: "LA",      min: 8, max: 24, highlight: true },
 ];
 
 /** The Kasper/Barrel-Lab replica column set (no park/weather). */
