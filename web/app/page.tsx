@@ -505,23 +505,23 @@ export default function Home() {
           pitchers={topPitchers}
         />
 
-        {/* ── Weighting + Barrel controls row ── */}
+        {/* ── Weighting + Barrel controls row ──
+            Barrel Weight is the 4th weighting option, sibling to Current/Blend/
+            History (selecting it sets philosophy="barrel"). Barrel Effect is a
+            toggle on the normal three, hidden while Barrel Weight is active. */}
         <div className="sp-weighting-row" style={{ flexWrap: "wrap", gap: 14 }}>
           <span className="sp-eyebrow">WEIGHTING</span>
           <SegmentedControl
-            options={SOURCE_OPTIONS}
-            value={source}
-            onChange={(v) => setSource(v as Source)}
-            variant="ghost"
-          />
-          <span className="sp-eyebrow">PHILOSOPHY</span>
-          <SegmentedControl
-            options={[
-              { value: "normal", label: "Normal" },
-              { value: "barrel", label: "Barrel Weight" },
-            ]}
-            value={philosophy}
-            onChange={(v) => setPhilosophy(v as Philosophy)}
+            options={[...SOURCE_OPTIONS, { value: "barrel", label: "Barrel Weight" }]}
+            value={philosophy === "barrel" ? "barrel" : source}
+            onChange={(v) => {
+              if (v === "barrel") {
+                setPhilosophy("barrel");
+              } else {
+                setSource(v as Source);
+                setPhilosophy("normal");
+              }
+            }}
             variant="ghost"
           />
           {philosophy === "normal" && (
