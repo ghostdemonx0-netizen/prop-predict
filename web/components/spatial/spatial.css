@@ -2777,3 +2777,34 @@
   opacity:     .62;
   margin-top:  12px;
 }
+
+/* ── Barrel Phase 1: faint Aperture watermark behind each nav pill ── */
+.sp-root .sp-dock-btn {
+  position: relative;
+}
+.sp-root .sp-dock-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 50% 45%, transparent 30%, rgba(255,255,255,.05) 31%, transparent 33%),
+    conic-gradient(from 0deg,
+      rgba(255,255,255,.06) 0 60deg, transparent 60deg 120deg,
+      rgba(255,255,255,.06) 120deg 180deg, transparent 180deg 240deg,
+      rgba(255,255,255,.06) 240deg 300deg, transparent 300deg 360deg);
+  -webkit-mask: radial-gradient(circle at 50% 45%, #000 34%, transparent 60%);
+          mask: radial-gradient(circle at 50% 45%, #000 34%, transparent 60%);
+  opacity: .5;
+  pointer-events: none;
+}
+
+/* ── Barrel Phase 1: heatmap table polish ── */
+.sp-root .sp-boardstable { border-radius: 12px; overflow: hidden; }
+.sp-root .sp-boardstable th { font-weight: 600; letter-spacing: .02em; }
+.sp-root .sp-boardstable td,
+.sp-root .sp-boardstable th { border: 1px solid rgba(255,255,255,.04); }
+.sp-root .sp-boardstable thead th:first-child,
+.sp-root .sp-boardstable tbody td:first-child {
+  background: var(--bg);
+}
