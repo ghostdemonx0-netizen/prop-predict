@@ -178,8 +178,16 @@ def _date_window(season: int) -> tuple[str, str]:
     return f"{season}-03-01", f"{season}-11-01"
 
 
-_BATTER_EVENT_COLS = ["game_date", "events", "launch_speed"]
-_PITCHER_EVENT_COLS = ["game_date", "events", "game_pk"]
+_BATTER_EVENT_COLS = [
+    "game_date", "events", "launch_speed",
+    "launch_angle", "launch_speed_angle", "hc_x", "hc_y", "stand",
+    "bb_type", "estimated_woba_using_speedangle",
+]
+_PITCHER_EVENT_COLS = [
+    "game_date", "events", "game_pk", "launch_speed",
+    "launch_angle", "launch_speed_angle", "hc_x", "hc_y", "stand",
+    "bb_type", "estimated_woba_using_speedangle",
+]
 _DAY_EVENT_COLS = ["batter", "pitcher", "game_date", "events", "launch_speed", "game_pk"]
 
 
@@ -195,13 +203,15 @@ def _slim_records(df: pd.DataFrame, cols: list[str]) -> list[dict]:
 
 
 def batter_events(player_id: int, season: int) -> list[dict]:
-    """One batter-season of slim Statcast rows: game_date, events, launch_speed."""
+    """One batter-season of slim Statcast rows (incl. barrel inputs:
+    launch_angle, launch_speed_angle, hc_x/hc_y, stand, bb_type, xwOBAcon)."""
     start, end = _date_window(season)
     return _slim_records(_with_retries(lambda: statcast_batter(start, end, player_id)), _BATTER_EVENT_COLS)
 
 
 def pitcher_events(player_id: int, season: int) -> list[dict]:
-    """One pitcher-season of slim Statcast rows: game_date, events, game_pk."""
+    """One pitcher-season of slim Statcast rows (incl. barrel inputs:
+    launch_angle, launch_speed_angle, hc_x/hc_y, stand, bb_type, xwOBAcon)."""
     start, end = _date_window(season)
     return _slim_records(_with_retries(lambda: statcast_pitcher(start, end, player_id)), _PITCHER_EVENT_COLS)
 
