@@ -9,6 +9,7 @@
 
 import "./spatial.css";
 import { useRef, useLayoutEffect, useState, useCallback, type ReactElement } from "react";
+import { LogoMark } from "./LogoMark";
 
 export type NavSection = "board" | "hub" | "top" | "parks" | "boards";
 
@@ -19,11 +20,15 @@ export interface NavDockProps {
 
 // ── Inline SVG icons ────────────────────────────────────────────────────────
 
+/** Props pill = a grayed-out version of the Aperture brand mark. */
 function IconBoard() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 4h11a2 2 0 0 1 2 2v12M6 4a2 2 0 0 0-2 2v1h4M6 4a2 2 0 0 1 2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2" />
-    </svg>
+    <span
+      aria-hidden="true"
+      style={{ display: "inline-flex", filter: "grayscale(1)", opacity: 0.72 }}
+    >
+      <LogoMark size={20} />
+    </span>
   );
 }
 

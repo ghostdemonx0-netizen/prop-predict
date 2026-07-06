@@ -120,35 +120,47 @@ function PitcherBoard() {
   );
 }
 
-function TopReads() {
-  // Flatten all hitters, take the 4 highest trueScore across the slate.
+// Card factor-cells follow the lens: current drivers when barrel is OFF,
+// the barrel recipe when Effect is ON or in Barrel Weight.
+const DRIVER_CELLS: [string, string][] = [
+  ["Matchup", "matchup"], ["Park", "park"], ["Wx", "weather"],
+  ["Pitcher", "pitcher"], ["Form", "form"], ["HH%", "hardhit"],
+];
+const BARREL_CELLS: [string, string][] = [
+  ["Matchup", "matchup"], ["ZoneFit", "zonefit"], ["HR Form", "hrform"],
+  ["PullBrl", "pbrl"], ["Brl/BIP", "brl"], ["ISO", "iso"],
+];
+
+function TopReads({ lens }: { lens: BoardsLens }) {
   const all = MOCK_GAMES.flatMap((g) => [
-    ...g.awayHitters.map((h) => ({ h, opp: g.homePitcher, vs: `${g.away} vs ${g.home}` })),
-    ...g.homeHitters.map((h) => ({ h, opp: g.awayPitcher, vs: `${g.home} vs ${g.away}` })),
+    ...g.awayHitters.map((h) => ({ h, vs: `${g.away} vs ${g.home}` })),
+    ...g.homeHitters.map((h) => ({ h, vs: `${g.home} vs ${g.away}` })),
   ]);
-  const top = all.sort((a, b) => b.h.stats.trueScore - a.h.stats.trueScore).slice(0, 4);
-  const CELLS: [string, string][] = [
-    ["Matchup", "matchup"], ["ZoneFit", "zonefit"], ["HR Form", "hrform"],
-    ["PullBrl", "pbrl"], ["Brl/BIP", "brl"], ["ISO", "iso"],
-  ];
+  // OFF = rank by your current-model score (mock: matchup); ON/Barrel = barrel score.
+  const scoreOf = (h: MockHitter) => (lens === "normal" ? h.stats.matchup : h.stats.trueScore);
+  const top = [...all].sort((a, b) => scoreOf(b.h) - scoreOf(a.h)).slice(0, 4);
+  const cells = lens === "normal" ? DRIVER_CELLS : BARREL_CELLS;
+  const tag = lens === "barrel" ? "kHR" : lens === "effect" ? "score · +barrel" : "current score";
+  const cell = (v: number) =>
+    Math.abs(v) < 1 && v !== 0 ? v.toFixed(3).replace(/^0/, "") : String(Math.round(v * 10) / 10);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 22 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12, marginBottom: 22 }}>
       {top.map(({ h, vs }) => (
         <GlassCard key={h.id} style={{ padding: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <b style={{ fontSize: 14 }}>{h.name}</b>
             <span className="sp-iristext" style={{ fontSize: 22, fontWeight: 800 }}>
-              {Math.round(h.stats.trueScore)}
+              {Math.round(scoreOf(h))}
             </span>
           </div>
-          <div style={{ opacity: 0.55, fontSize: 11, marginBottom: 8 }}>{vs}</div>
+          <div style={{ opacity: 0.55, fontSize: 11, marginBottom: 8 }}>
+            {vs} · <span className="sp-eyebrow">{tag}</span>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
-            {CELLS.map(([label, key]) => (
+            {cells.map(([label, key]) => (
               <div key={key} style={{ textAlign: "center", background: "rgba(255,255,255,.05)", borderRadius: 6, padding: "4px 2px" }}>
                 <div style={{ fontSize: 9, opacity: 0.6 }}>{label}</div>
-                <b style={{ fontSize: 12 }}>
-                  {h.stats[key] < 1 && h.stats[key] !== 0 ? h.stats[key].toFixed(3).replace(/^0/, "") : Math.round(h.stats[key])}
-                </b>
+                <b style={{ fontSize: 12 }}>{cell(h.stats[key] ?? 0)}</b>
               </div>
             ))}
           </div>
@@ -175,7 +187,7 @@ export function BoardsView({ lens }: BoardsViewProps) {
       {/* Slate pitchers up top */}
       <PitcherBoard />
 
-      <TopReads />
+      <TopReads lens={lens} />
 
       {MOCK_GAMES.map((g) => (
         <details key={g.id} open className="sp-boardsec" style={{ marginBottom: 24 }}>
