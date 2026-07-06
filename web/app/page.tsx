@@ -505,11 +505,14 @@ export default function Home() {
           pitchers={topPitchers}
         />
 
-        {/* ── Weighting + Barrel controls row ──
-            Barrel Weight is the 4th weighting option, sibling to Current/Blend/
-            History (selecting it sets philosophy="barrel"). Barrel Effect is a
-            toggle on the normal three, hidden while Barrel Weight is active. */}
-        <div className="sp-weighting-row" style={{ flexWrap: "wrap", gap: 14 }}>
+        {/* ── Weighting controls row ──
+            The 4-option WEIGHTING selector (Barrel Weight is the 4th, sibling to
+            Current/Blend/History) stays CENTERED; the Barrel Effect toggle floats
+            isolated on the right, only in the normal three modes. */}
+        <div
+          className="sp-weighting-row"
+          style={{ position: "relative", justifyContent: "center", flexWrap: "wrap", gap: 14 }}
+        >
           <span className="sp-eyebrow">WEIGHTING</span>
           <SegmentedControl
             options={[...SOURCE_OPTIONS, { value: "barrel", label: "Barrel Weight" }]}
@@ -525,7 +528,7 @@ export default function Home() {
             variant="ghost"
           />
           {philosophy === "normal" && (
-            <>
+            <div className="sp-barrel-effect">
               <span className="sp-eyebrow">BARREL EFFECT</span>
               <SegmentedControl
                 options={[
@@ -534,16 +537,15 @@ export default function Home() {
                 ]}
                 value={barrelEffect ? "on" : "off"}
                 onChange={(v) => setBarrelEffect(v === "on")}
-                variant="ghost"
+                variant="sm"
               />
-            </>
+            </div>
           )}
         </div>
 
         {/* ── Barrel Weight's own timeframe sub-row (appears only when active) ── */}
         {philosophy === "barrel" && (
-          <div className="sp-weighting-row" style={{ gap: 12, marginTop: -4 }}>
-            <span className="sp-eyebrow">BARREL WEIGHT ·</span>
+          <div className="sp-weighting-row" style={{ justifyContent: "center", gap: 12, marginTop: -4 }}>
             <SegmentedControl
               options={SOURCE_OPTIONS}
               value={source}

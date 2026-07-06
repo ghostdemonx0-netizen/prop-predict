@@ -2778,6 +2778,25 @@
   margin-top:  12px;
 }
 
+/* ── Barrel Phase 1: Barrel Effect toggle — isolated on the right of the centered weighting row ── */
+.sp-root .sp-barrel-effect {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 760px) {
+  /* On narrow screens drop it below the centered selector so nothing overlaps. */
+  .sp-root .sp-barrel-effect {
+    position: static;
+    transform: none;
+    margin-top: 6px;
+  }
+}
+
 /* ── Barrel Phase 1: collapsible board sections (games + slate pitchers) ── */
 .sp-root .sp-boardsec-head {
   cursor: pointer;
