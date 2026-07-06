@@ -16,6 +16,8 @@ from model import fetch, profiles
 from model import spray as _spray
 from model.cache import get_or_compute
 from model.pipeline import build_hr_rows, build_strikeout_rows, build_games, build_hits_rows, build_total_bases_rows, build_runs_rows, build_rbi_rows, build_hrr_rows
+from model.prop_score import prop_score
+from model.matchup import hr_platoon_mult
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
 _DATE_FILE = re.compile(r"^\d{4}-\d{2}-\d{2}\.json$")
@@ -325,6 +327,87 @@ def make_bvp_fn():
     return bvp_fn
 
 
+def _pct(x) -> float:
+    return round((x or 0.0) * 100.0, 1)
+
+
+def _hand(bats: str) -> str:
+    if bats == "S":
+        return "SW"
+    return bats if bats in ("R", "L") else "R"
+
+
+def _hitter_board(b: dict, opp: dict | None, order: int, team: str) -> dict:
+    pmult = hr_platoon_mult(b.get("bats", "R"), opp.get("throws", "R")) if opp else 1.0
+    score = prop_score(b, opp, platoon_mult=pmult) if opp else 0.0
+    return {
+        "id": b.get("player_id"),
+        "name": b.get("name", ""),
+        "hand": _hand(b.get("bats", "R")),
+        "team": team,
+        "order": order,
+        "stats": {
+            "trueScore": score,
+            "brl": _pct(b.get("barrel_rate")),
+            "pbrl": _pct(b.get("pulled_barrel_rate")),
+            "sweet": _pct(b.get("sweetspot_rate")),
+            "fb": _pct(b.get("fb_rate")),
+            "hh": _pct(b.get("hardhit_rate")),
+            "hardhit": _pct(b.get("hardhit_rate")),
+            "la": round(b.get("la_mean") or 0.0, 1),
+            "xwobacon": round(b.get("xwobacon") or 0.0, 3),
+            "hrfb": _pct(b.get("hrfb_rate")),
+        },
+    }
+
+
+def _pitcher_board(p: dict, opp_team: str) -> dict:
+    return {
+        "name": p.get("name", ""),
+        "team": "",
+        "throws": p.get("throws", "R"),
+        "opp": opp_team,
+        "stats": {
+            "pbrl": _pct(p.get("pulled_barrel_rate_allowed")),
+            "brlbip": _pct(p.get("barrel_rate_allowed")),
+            "fb": _pct(p.get("fb_rate_allowed")),
+            "hh": _pct(p.get("hardhit_rate_allowed")),
+        },
+    }
+
+
+def build_boards_payload(slate: list[dict], lineups_fn, pitcher_fn) -> dict:
+    """Per-game barrel boards (display only): each team's hitters (real barrel
+    stats + Prop Score) vs the pitcher they face, plus a slate-pitchers list of
+    barrel-allowed rows. Not-yet-real columns are omitted (frontend shows "—")."""
+    games, pitchers, seen_p = [], [], set()
+    for game in slate:
+        if game.get("started"):
+            continue
+        away, home = game.get("away", "?"), game.get("home", "?")
+        home_p = pitcher_fn(game["home_pitcher_id"]) if game.get("home_pitcher_id") else None
+        away_p = pitcher_fn(game["away_pitcher_id"]) if game.get("away_pitcher_id") else None
+        lns = lineups_fn(game)
+        # away batters face the HOME pitcher; home batters face the AWAY pitcher
+        away_hitters = [_hitter_board(b, home_p, i + 1, away) for i, b in enumerate(lns.get("away", []))]
+        home_hitters = [_hitter_board(b, away_p, i + 1, home) for i, b in enumerate(lns.get("home", []))]
+        games.append({
+            "id": f"{away}-{home}",
+            "away": away, "home": home,
+            "venue": game.get("park_name", ""),
+            "note": "",
+            "awayPitcher": home_p.get("name", "") if home_p else "",
+            "homePitcher": away_p.get("name", "") if away_p else "",
+            "awayHitters": away_hitters,
+            "homeHitters": home_hitters,
+        })
+        for p, opp in ((home_p, away), (away_p, home)):
+            if p and p.get("player_id") not in seen_p:
+                seen_p.add(p.get("player_id"))
+                pitchers.append(_pitcher_board(p, opp))
+    return {"games": games, "pitchers": pitchers}
+
+
 def main(date_str: str, max_games: int | None = None, include_started: bool = False) -> None:
     season = int(date_str[:4])
     slate = fetch.get_schedule(date_str)
@@ -354,6 +437,7 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
         "rbi": rbi_rows,
         "hrr": hrr_rows,
         "games": build_games(slate, weather_fn),
+        "boards": build_boards_payload(slate, lineups_fn, pitcher_fn),
     }
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     (DATA_DIR / f"{date_str}.json").write_text(json.dumps(payload, indent=2))
