@@ -7,8 +7,9 @@
 
 import "../spatial.css";
 import type { BoardsLens } from "../../../lib/barrelLens";
-import { boardsColumnsFor, heatColor, type ColumnDef } from "../../../lib/barrelColumns";
-import { MOCK_GAMES, type MockHitter } from "../../../lib/barrelMock";
+import { boardsColumnsFor, heatColor, PITCHER_COLUMNS, type ColumnDef } from "../../../lib/barrelColumns";
+import { MOCK_GAMES, MOCK_PITCHER_BOARD, type MockHitter } from "../../../lib/barrelMock";
+import { GlassCard } from "../GlassCard";
 import { HandChip } from "../chips";
 
 export interface BoardsViewProps {
@@ -81,6 +82,82 @@ function HeatTable({
   );
 }
 
+function PitcherBoard() {
+  const rows = [...MOCK_PITCHER_BOARD].sort((a, b) => b.stats.pscore - a.stats.pscore);
+  return (
+    <div style={{ marginTop: 10 }}>
+      <h3 style={{ fontSize: 17, margin: "0 0 10px" }}>Slate Pitchers</h3>
+      <div style={{ overflowX: "auto" }} className="sp-float">
+        <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 12 }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left", padding: "6px 10px" }}>Pitcher</th>
+              <th style={{ padding: "6px 8px" }}>Opp</th>
+              {PITCHER_COLUMNS.map((c) => (
+                <th key={c.key} style={{ padding: "6px 8px", textAlign: "center", opacity: 0.85 }}>{c.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((p) => (
+              <tr key={p.name}>
+                <td style={{ padding: "5px 10px", whiteSpace: "nowrap" }}>{p.name} <span style={{ opacity: 0.5 }}>({p.throws})</span></td>
+                <td style={{ padding: "5px 8px", textAlign: "center", opacity: 0.7 }}>{p.opp}</td>
+                {PITCHER_COLUMNS.map((c) => {
+                  const v = p.stats[c.key] ?? 0;
+                  return (
+                    <td key={c.key} style={{ padding: "5px 8px", textAlign: "center", background: heatColor(v, c.min, c.max, c.higherBetter ?? true) }}>
+                      {v < 1 && v !== 0 ? v.toFixed(2).replace(/^0/, "") : Math.round(v * 10) / 10}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TopReads() {
+  // Flatten all hitters, take the 4 highest trueScore across the slate.
+  const all = MOCK_GAMES.flatMap((g) => [
+    ...g.awayHitters.map((h) => ({ h, opp: g.homePitcher, vs: `${g.away} vs ${g.home}` })),
+    ...g.homeHitters.map((h) => ({ h, opp: g.awayPitcher, vs: `${g.home} vs ${g.away}` })),
+  ]);
+  const top = all.sort((a, b) => b.h.stats.trueScore - a.h.stats.trueScore).slice(0, 4);
+  const CELLS: [string, string][] = [
+    ["Matchup", "matchup"], ["ZoneFit", "zonefit"], ["HR Form", "hrform"],
+    ["PullBrl", "pbrl"], ["Brl/BIP", "brl"], ["ISO", "iso"],
+  ];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 22 }}>
+      {top.map(({ h, vs }) => (
+        <GlassCard key={h.id} style={{ padding: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <b style={{ fontSize: 14 }}>{h.name}</b>
+            <span className="sp-iristext" style={{ fontSize: 22, fontWeight: 800 }}>
+              {Math.round(h.stats.trueScore)}
+            </span>
+          </div>
+          <div style={{ opacity: 0.55, fontSize: 11, marginBottom: 8 }}>{vs}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+            {CELLS.map(([label, key]) => (
+              <div key={key} style={{ textAlign: "center", background: "rgba(255,255,255,.05)", borderRadius: 6, padding: "4px 2px" }}>
+                <div style={{ fontSize: 9, opacity: 0.6 }}>{label}</div>
+                <b style={{ fontSize: 12 }}>
+                  {h.stats[key] < 1 && h.stats[key] !== 0 ? h.stats[key].toFixed(3).replace(/^0/, "") : Math.round(h.stats[key])}
+                </b>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      ))}
+    </div>
+  );
+}
+
 export function BoardsView({ lens }: BoardsViewProps) {
   const columns = boardsColumnsFor(lens);
   const lensLabel =
@@ -95,6 +172,8 @@ export function BoardsView({ lens }: BoardsViewProps) {
         <span className="sp-eyebrow">{lensLabel}</span>
       </div>
 
+      <TopReads />
+
       {MOCK_GAMES.map((g) => (
         <section key={g.id} style={{ marginBottom: 28 }}>
           <h3 style={{ fontSize: 17, margin: "0 0 4px" }}>
@@ -107,6 +186,8 @@ export function BoardsView({ lens }: BoardsViewProps) {
           <HeatTable title={`${g.home} hitters vs ${g.awayPitcher}`} hitters={g.homeHitters} columns={columns} />
         </section>
       ))}
+
+      <PitcherBoard />
     </div>
   );
 }
