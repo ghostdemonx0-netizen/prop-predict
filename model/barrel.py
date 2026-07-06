@@ -1,0 +1,69 @@
+"""Pure barrel / batted-ball quality metrics from slim Statcast event rows.
+
+Statcast's own quality class lives in `launch_speed_angle` (1-6); value 6 = Barrel.
+Fly balls come from `bb_type`; xwOBAcon = mean `estimated_woba_using_speedangle`
+over batted balls. Pull side reuses model.spray. No I/O; no lookahead.
+"""
+from model.spray import spray_angle, field_of
+
+_BARREL_CODE = 6
+_SWEETSPOT_LO, _SWEETSPOT_HI = 8.0, 32.0
+_HARDHIT_MPH = 95.0
+
+_KEYS = ("barrel_rate", "pulled_barrel_rate", "sweetspot_rate", "fb_rate",
+         "hardhit_rate", "la_mean", "xwobacon", "hrfb_rate")
+
+
+def is_barrel(row: dict) -> bool:
+    """Statcast barrel = launch_speed_angle code 6."""
+    return row.get("launch_speed_angle") == _BARREL_CODE
+
+
+def is_pulled_barrel(row: dict) -> bool:
+    """A barrel hit to the batter's pull side (needs hit coords + handedness)."""
+    if not is_barrel(row):
+        return False
+    hx, hy, stand = row.get("hc_x"), row.get("hc_y"), row.get("stand")
+    if hx is None or hy is None or not stand:
+        return False
+    return field_of(spray_angle(hx, hy), stand) == "pull"
+
+
+def barrel_metrics(events: list[dict], *, as_of: str, allowed: bool = False) -> dict:
+    """Season barrel/batted-ball rates from events strictly before `as_of`.
+
+    BIP = batted balls (launch_speed present). Rates are count/len(BIP), 0.0 when
+    no BIP. `allowed=True` suffixes every key with `_allowed` (pitcher profiles).
+    """
+    past = [e for e in events if e["game_date"] < as_of]
+    bip = [e for e in past if e.get("launch_speed") is not None]
+    n = len(bip)
+
+    def rate(cnt: int) -> float:
+        return cnt / n if n else 0.0
+
+    barrels = sum(1 for e in bip if is_barrel(e))
+    pulled = sum(1 for e in bip if is_pulled_barrel(e))
+    sweet = sum(1 for e in bip
+                if e.get("launch_angle") is not None
+                and _SWEETSPOT_LO <= e["launch_angle"] <= _SWEETSPOT_HI)
+    hard = sum(1 for e in bip if e["launch_speed"] >= _HARDHIT_MPH)
+    fbs = [e for e in bip if e.get("bb_type") == "fly_ball"]
+    la_vals = [e["launch_angle"] for e in bip if e.get("launch_angle") is not None]
+    xw_vals = [e["estimated_woba_using_speedangle"] for e in bip
+               if e.get("estimated_woba_using_speedangle") is not None]
+    hr_fb = sum(1 for e in fbs if e["events"] == "home_run")
+
+    m = {
+        "barrel_rate": rate(barrels),
+        "pulled_barrel_rate": rate(pulled),
+        "sweetspot_rate": rate(sweet),
+        "fb_rate": rate(len(fbs)),
+        "hardhit_rate": rate(hard),
+        "la_mean": (sum(la_vals) / len(la_vals)) if la_vals else 0.0,
+        "xwobacon": (sum(xw_vals) / len(xw_vals)) if xw_vals else 0.0,
+        "hrfb_rate": (hr_fb / len(fbs)) if fbs else 0.0,
+    }
+    if allowed:
+        return {f"{k}_allowed": m[k] for k in _KEYS}
+    return m
