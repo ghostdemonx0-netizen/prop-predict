@@ -27,13 +27,13 @@ def test_barrel_metrics_basic_rates():
         _bb("2026-04-01", "home_run", ls=104, la=28, lsa=6, bb="fly_ball", hx=80.0, hy=100.0, stand="R", xw=1.8),
         _bb("2026-04-01", "single",   ls=96,  la=12, lsa=5, bb="line_drive", xw=0.5),
         _bb("2026-04-01", "field_out", ls=80, la=45, lsa=3, bb="fly_ball", xw=0.1),
-        _bb("2026-04-01", "strikeout", ls=None),  # not a BIP
+        _bb("2026-04-01", "strikeout", ls=None, bb=None),  # not a BBE (no bb_type)
     ]
     m = barrel_metrics(evs, as_of="2026-06-01")
-    assert m["barrel_rate"] == 1 / 3          # 1 barrel of 3 BIP
+    assert m["barrel_rate"] == 1 / 3          # 1 barrel of 3 BBE
     assert m["pulled_barrel_rate"] == 1 / 3   # the barrel was pulled
     assert m["hardhit_rate"] == 2 / 3         # 104 and 96 are >=95
-    assert m["fb_rate"] == 2 / 3              # two fly_ball of 3 BIP
+    assert m["fb_rate"] == 2 / 3              # two fly_ball of 3 BBE
     assert m["hrfb_rate"] == 1 / 2            # 1 HR of 2 fly balls
     assert round(m["la_mean"], 3) == round((28 + 12 + 45) / 3, 3)
     assert round(m["xwobacon"], 3) == round((1.8 + 0.5 + 0.1) / 3, 3)
@@ -41,7 +41,7 @@ def test_barrel_metrics_basic_rates():
 
 
 def test_no_bip_all_zeros():
-    m = barrel_metrics([_bb("2026-04-01", "strikeout", ls=None), _bb("2026-04-01", "walk", ls=None)], as_of="2026-06-01")
+    m = barrel_metrics([_bb("2026-04-01", "strikeout", ls=None, bb=None), _bb("2026-04-01", "walk", ls=None, bb=None)], as_of="2026-06-01")
     for k in ("barrel_rate", "pulled_barrel_rate", "sweetspot_rate", "fb_rate", "hardhit_rate", "la_mean", "xwobacon", "hrfb_rate"):
         assert m[k] == 0.0
 

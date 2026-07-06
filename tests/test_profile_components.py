@@ -94,10 +94,10 @@ def test_batter_profile_has_barrel_fields():
 def test_pitcher_profile_has_allowed_barrel_fields():
     evs = [
         _brow("2026-04-01", "home_run", ls=103, la=25, lsa=6, bb="fly_ball", hx=80.0, hy=100.0),
-        _brow("2026-04-01", "strikeout", ls=None),
+        _brow("2026-04-01", "strikeout", ls=None, bb=None),
     ]
     p = pitcher_profile_from_events(evs, as_of="2026-06-01", player_id=9)
-    assert p["barrel_rate_allowed"] == 1.0    # 1 barrel of 1 BIP allowed
+    assert p["barrel_rate_allowed"] == 1.0    # 1 barrel of 1 BBE allowed
     assert "pulled_barrel_rate_allowed" in p and "hardhit_rate_allowed" in p
     assert "barrel_rate" not in p             # pitcher uses the _allowed flavor
     # existing fields untouched
