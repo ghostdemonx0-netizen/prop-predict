@@ -10,7 +10,7 @@
 import "./spatial.css";
 import { useRef, useLayoutEffect, useState, useCallback, type ReactElement } from "react";
 
-export type NavSection = "board" | "hub" | "top" | "parks";
+export type NavSection = "board" | "hub" | "top" | "parks" | "boards";
 
 export interface NavDockProps {
   section: NavSection;
@@ -55,11 +55,21 @@ function IconParks() {
   );
 }
 
+function IconBoards() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 9h18M3 14h18M9 4v16M15 4v16" />
+    </svg>
+  );
+}
+
 const NAV_ITEMS: { id: NavSection; label: string; Icon: () => ReactElement }[] = [
-  { id: "board",  label: "Board",     Icon: IconBoard },
-  { id: "hub",    label: "Game Hub",  Icon: IconHub   },
-  { id: "top",    label: "Top Plays", Icon: IconTop   },
-  { id: "parks",  label: "Parks",     Icon: IconParks },
+  { id: "board",  label: "Props",     Icon: IconBoard  },
+  { id: "hub",    label: "Game Hub",  Icon: IconHub    },
+  { id: "top",    label: "Top Plays", Icon: IconTop    },
+  { id: "parks",  label: "Parks",     Icon: IconParks  },
+  { id: "boards", label: "Boards",    Icon: IconBoards },
 ];
 
 export function NavDock({ section, onSection }: NavDockProps) {
