@@ -35,6 +35,7 @@ import type { Projections } from "../lib/types";
 import type { PropKind } from "../lib/format";
 import { pct, platoonAdvantage } from "../lib/format";
 import { toBoardRows, type Source } from "../lib/weighting";
+import { boardsLens, type Philosophy } from "../lib/barrelLens";
 import { envImpactColor } from "../components/spatial/chips";
 
 import { DepthField } from "../components/spatial/DepthField";
@@ -203,6 +204,8 @@ export default function Home() {
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [source, setSource] = useState<Source>("current");
+  const [philosophy, setPhilosophy] = useState<Philosophy>("normal");
+  const [barrelEffect, setBarrelEffect] = useState<boolean>(false);
   const [section, setSection] = useState<NavSection>("board");
   const [prop, setProp] = useState<BoardProp>("hr");
   const [view, setView] = useState<BoardViewMode>("split");
@@ -249,6 +252,10 @@ export default function Home() {
     const src = params.get("source");
     if (src === "hist") setSource("hist");
     else if (src === "blend") setSource("blend");
+
+    const phil = params.get("phil");
+    if (phil === "barrel") setPhilosophy("barrel");
+    if (params.get("effect") === "on") setBarrelEffect(true);
 
     const sectionParam = params.get("section");
     if (
@@ -304,10 +311,14 @@ export default function Home() {
     else params.delete("threshold");
     if (source === "current") params.delete("source");
     else params.set("source", source);
+    if (philosophy === "barrel") params.set("phil", "barrel");
+    else params.delete("phil");
+    if (barrelEffect && philosophy === "normal") params.set("effect", "on");
+    else params.delete("effect");
     params.set("section", section);
     params.set("view", view);
     window.history.replaceState(null, "", `?${params.toString()}`);
-  }, [selectedDate, prop, threshold, source, section, view, selection]);
+  }, [selectedDate, prop, threshold, source, section, view, selection, philosophy, barrelEffect]);
 
   // ── Handlers ──
   const handleOpenPlayer = (playerId: number, kind: PropKind) => {
@@ -494,8 +505,8 @@ export default function Home() {
           pitchers={topPitchers}
         />
 
-        {/* ── Weighting row — centered between KPI tiles and NavDock ── */}
-        <div className="sp-weighting-row">
+        {/* ── Weighting + Barrel controls row ── */}
+        <div className="sp-weighting-row" style={{ flexWrap: "wrap", gap: 14 }}>
           <span className="sp-eyebrow">WEIGHTING</span>
           <SegmentedControl
             options={SOURCE_OPTIONS}
@@ -503,6 +514,30 @@ export default function Home() {
             onChange={(v) => setSource(v as Source)}
             variant="ghost"
           />
+          <span className="sp-eyebrow">PHILOSOPHY</span>
+          <SegmentedControl
+            options={[
+              { value: "normal", label: "Normal" },
+              { value: "barrel", label: "Barrel Weight" },
+            ]}
+            value={philosophy}
+            onChange={(v) => setPhilosophy(v as Philosophy)}
+            variant="ghost"
+          />
+          {philosophy === "normal" && (
+            <>
+              <span className="sp-eyebrow">BARREL EFFECT</span>
+              <SegmentedControl
+                options={[
+                  { value: "off", label: "Off" },
+                  { value: "on", label: "On" },
+                ]}
+                value={barrelEffect ? "on" : "off"}
+                onChange={(v) => setBarrelEffect(v === "on")}
+                variant="ghost"
+              />
+            </>
+          )}
         </div>
 
         {/* ── Nav dock ── */}
@@ -614,7 +649,9 @@ export default function Home() {
             />
           )}
           {section === "parks" && <Parks games={data.games ?? []} />}
-          {section === "boards" && <BoardsView />}
+          {section === "boards" && (
+            <BoardsView lens={boardsLens(philosophy, barrelEffect)} />
+          )}
       </main>
       </LiveProvider>
 
