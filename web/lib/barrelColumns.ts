@@ -13,7 +13,7 @@ export interface ColumnDef {
 
 /** Your current model's drivers (the "Normal" board). */
 const DRIVER_COLUMNS: ColumnDef[] = [
-  { key: "trueScore", label: "Score",   min: 20, max: 90 },
+  { key: "trueScore", label: "Prop Score", min: 20, max: 90 },
   { key: "matchup",   label: "Matchup", min: 30, max: 90 },
   { key: "park",      label: "Park",    min: -15, max: 15 },
   { key: "weather",   label: "Wx",      min: -15, max: 15 },
@@ -41,7 +41,7 @@ const BARREL_HIGHLIGHTS: ColumnDef[] = [
 
 /** The Kasper/Barrel-Lab replica column set (no park/weather). */
 const REPLICA_COLUMNS: ColumnDef[] = [
-  { key: "trueScore", label: "Score",   min: 20, max: 90 },
+  { key: "trueScore", label: "Prop Score", min: 20, max: 90 },
   { key: "matchup",   label: "Matchup", min: 30, max: 90 },
   { key: "zonefit",   label: "ZoneFit", min: 0.02, max: 0.16 },
   { key: "hrform",    label: "HR Form", min: 20, max: 90 },
