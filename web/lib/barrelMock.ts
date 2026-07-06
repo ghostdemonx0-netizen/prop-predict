@@ -69,7 +69,7 @@ export const MOCK_GAMES: MockGame[] = [
     id: "NYM-ATL",
     away: "NYM", home: "ATL", venue: "Truist Park",
     note: "Power Park",
-    awayPitcher: "Grant Holmes", homePitcher: "Christian Scott",
+    awayPitcher: "Christian Scott", homePitcher: "Grant Holmes",
     awayHitters: [
       h("Pete Alonso", "R", "NYM", 1, { trueScore: 77, matchup: 76, hrform: 62, pbrl: 6, brl: 15, iso: 0.22, hh: 46, la: 18, zonefit: 0.115 }),
       h("Francisco Lindor", "SW", "NYM", 2, { trueScore: 64, matchup: 60, hrform: 58, pbrl: 7, brl: 10, iso: 0.21, swstr: 8 }),
