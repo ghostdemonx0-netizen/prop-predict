@@ -1,6 +1,7 @@
 /**
  * BoardsView.tsx — the "Boards" section: competitor-style heatmap boards.
  * Phase 1 = MOCK DATA prototype (web/lib/barrelMock.ts).
+ * Phase 2 = REAL barrel data from the export (mock fallback when absent).
  * Columns follow the active lens (normal | effect | barrel).
  */
 "use client";
@@ -8,12 +9,14 @@
 import "../spatial.css";
 import type { BoardsLens } from "../../../lib/barrelLens";
 import { boardsColumnsFor, heatColor, PITCHER_COLUMNS, type ColumnDef } from "../../../lib/barrelColumns";
-import { MOCK_GAMES, MOCK_PITCHER_BOARD, type MockHitter } from "../../../lib/barrelMock";
+import { MOCK_GAMES, MOCK_PITCHER_BOARD } from "../../../lib/barrelMock";
+import type { BoardsData, BoardHitter, BoardPitcher, BoardsGame } from "../../../lib/types";
 import { GlassCard } from "../GlassCard";
 import { HandChip } from "../chips";
 
 export interface BoardsViewProps {
   lens: BoardsLens;
+  boards?: BoardsData;
 }
 
 /** Format a stat for display (small decimals stay decimal, else integer). */
@@ -26,7 +29,7 @@ function HeatTable({
   title, hitters, columns,
 }: {
   title: string;
-  hitters: MockHitter[];
+  hitters: BoardHitter[];
   columns: ColumnDef[];
 }) {
   const rows = [...hitters].sort(
@@ -58,18 +61,14 @@ function HeatTable({
                   {r.name} <HandChip hand={r.hand} />
                 </td>
                 {columns.map((c) => {
-                  const v = r.stats[c.key] ?? 0;
+                  const raw = r.stats[c.key];
+                  const has = raw !== undefined && raw !== null;
+                  const v = has ? raw : 0;
                   return (
-                    <td
-                      key={c.key}
-                      style={{
-                        padding: "5px 8px",
-                        textAlign: "center",
-                        background: heatColor(v, c.min, c.max, c.higherBetter ?? true),
-                        outline: c.highlight ? "1px solid var(--iris-cyan)" : undefined,
-                      }}
-                    >
-                      {fmt(v)}
+                    <td key={c.key} style={{ padding: "5px 8px", textAlign: "center",
+                        background: has ? heatColor(v, c.min, c.max, c.higherBetter ?? true) : "transparent",
+                        outline: c.highlight ? "1px solid var(--iris-cyan)" : undefined }}>
+                      {has ? fmt(v) : "—"}
                     </td>
                   );
                 })}
@@ -82,8 +81,8 @@ function HeatTable({
   );
 }
 
-function PitcherBoard() {
-  const rows = [...MOCK_PITCHER_BOARD].sort((a, b) => b.stats.pscore - a.stats.pscore);
+function PitcherBoard({ pitchers }: { pitchers: BoardPitcher[] }) {
+  const rows = [...pitchers].sort((a, b) => (b.stats.brlbip ?? 0) - (a.stats.brlbip ?? 0));
   return (
     <details open className="sp-boardsec" style={{ marginBottom: 24 }}>
       <summary className="sp-boardsec-head">Slate Pitchers</summary>
@@ -104,10 +103,12 @@ function PitcherBoard() {
                 <td style={{ padding: "5px 10px", whiteSpace: "nowrap" }}>{p.name} <span style={{ opacity: 0.5 }}>({p.throws})</span></td>
                 <td style={{ padding: "5px 8px", textAlign: "center", opacity: 0.7 }}>{p.opp}</td>
                 {PITCHER_COLUMNS.map((c) => {
-                  const v = p.stats[c.key] ?? 0;
+                  const raw = p.stats[c.key];
+                  const has = raw !== undefined && raw !== null;
+                  const v = has ? raw : 0;
                   return (
-                    <td key={c.key} style={{ padding: "5px 8px", textAlign: "center", background: heatColor(v, c.min, c.max, c.higherBetter ?? true) }}>
-                      {v < 1 && v !== 0 ? v.toFixed(2).replace(/^0/, "") : Math.round(v * 10) / 10}
+                    <td key={c.key} style={{ padding: "5px 8px", textAlign: "center", background: has ? heatColor(v, c.min, c.max, c.higherBetter ?? true) : "transparent" }}>
+                      {has ? (v < 1 && v !== 0 ? v.toFixed(2).replace(/^0/, "") : String(Math.round(v * 10) / 10)) : "—"}
                     </td>
                   );
                 })}
@@ -124,8 +125,8 @@ const pnum = (v: number) =>
   v < 1 && v !== 0 ? v.toFixed(2).replace(/^0/, "") : String(Math.round(v * 10) / 10);
 
 /** The opposing pitcher's slate row, shown on top of the hitters who face them. */
-function PitcherStatRow({ name }: { name: string }) {
-  const p = MOCK_PITCHER_BOARD.find((x) => x.name === name);
+function PitcherStatRow({ name, pitchers }: { name: string; pitchers: BoardPitcher[] }) {
+  const p = pitchers.find((x) => x.name === name);
   if (!p) return null;
   return (
     <div style={{ overflowX: "auto", marginBottom: 6 }} className="sp-float">
@@ -144,10 +145,12 @@ function PitcherStatRow({ name }: { name: string }) {
               <span style={{ color: "var(--iris-cyan)", fontWeight: 700 }}>vs</span> {p.name} <span style={{ opacity: 0.5 }}>({p.throws})</span>
             </td>
             {PITCHER_COLUMNS.map((c) => {
-              const v = p.stats[c.key] ?? 0;
+              const raw = p.stats[c.key];
+              const has = raw !== undefined && raw !== null;
+              const v = has ? raw : 0;
               return (
-                <td key={c.key} style={{ padding: "5px 8px", textAlign: "center", background: heatColor(v, c.min, c.max, c.higherBetter ?? true) }}>
-                  {pnum(v)}
+                <td key={c.key} style={{ padding: "5px 8px", textAlign: "center", background: has ? heatColor(v, c.min, c.max, c.higherBetter ?? true) : "transparent" }}>
+                  {has ? pnum(v) : "—"}
                 </td>
               );
             })}
@@ -169,13 +172,13 @@ const BARREL_CELLS: [string, string][] = [
   ["PullBrl", "pbrl"], ["Brl/BIP", "brl"], ["ISO", "iso"],
 ];
 
-function TopReads({ lens }: { lens: BoardsLens }) {
-  const all = MOCK_GAMES.flatMap((g) => [
+function TopReads({ games, lens }: { games: BoardsGame[]; lens: BoardsLens }) {
+  const all = games.flatMap((g) => [
     ...g.awayHitters.map((h) => ({ h, vs: `${g.away} vs ${g.home}` })),
     ...g.homeHitters.map((h) => ({ h, vs: `${g.home} vs ${g.away}` })),
   ]);
   // OFF = rank by your current-model score (mock: matchup); ON/Barrel = barrel score.
-  const scoreOf = (h: MockHitter) => (lens === "normal" ? h.stats.matchup : h.stats.trueScore);
+  const scoreOf = (h: BoardHitter) => (lens === "normal" ? (h.stats.matchup ?? 0) : (h.stats.trueScore ?? 0));
   const top = [...all].sort((a, b) => scoreOf(b.h) - scoreOf(a.h)).slice(0, 4);
   const cells = lens === "normal" ? DRIVER_CELLS : BARREL_CELLS;
   const tag = lens === "barrel" ? "prop score · barrel" : lens === "effect" ? "prop score · +barrel" : "prop score · current";
@@ -195,12 +198,16 @@ function TopReads({ lens }: { lens: BoardsLens }) {
             {vs} · <span className="sp-eyebrow">{tag}</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
-            {cells.map(([label, key]) => (
-              <div key={key} style={{ textAlign: "center", background: "rgba(255,255,255,.05)", borderRadius: 6, padding: "4px 2px" }}>
-                <div style={{ fontSize: 9, opacity: 0.6 }}>{label}</div>
-                <b style={{ fontSize: 12 }}>{cell(h.stats[key] ?? 0)}</b>
-              </div>
-            ))}
+            {cells.map(([label, key]) => {
+              const raw = h.stats[key];
+              const has = raw !== undefined && raw !== null;
+              return (
+                <div key={key} style={{ textAlign: "center", background: "rgba(255,255,255,.05)", borderRadius: 6, padding: "4px 2px" }}>
+                  <div style={{ fontSize: 9, opacity: 0.6 }}>{label}</div>
+                  <b style={{ fontSize: 12 }}>{has ? cell(raw) : "—"}</b>
+                </div>
+              );
+            })}
           </div>
         </GlassCard>
       ))}
@@ -208,8 +215,10 @@ function TopReads({ lens }: { lens: BoardsLens }) {
   );
 }
 
-export function BoardsView({ lens }: BoardsViewProps) {
+export function BoardsView({ lens, boards }: BoardsViewProps) {
   const columns = boardsColumnsFor(lens);
+  const games: BoardsGame[] = boards?.games ?? MOCK_GAMES;
+  const slatePitchers: BoardPitcher[] = boards?.pitchers ?? MOCK_PITCHER_BOARD;
   const lensLabel =
     lens === "barrel" ? "Barrel Weight — replica" :
     lens === "effect" ? "Barrel Effect ON — barrel columns lit" :
@@ -223,11 +232,11 @@ export function BoardsView({ lens }: BoardsViewProps) {
       </div>
 
       {/* Slate pitchers up top */}
-      <PitcherBoard />
+      <PitcherBoard pitchers={slatePitchers} />
 
-      <TopReads lens={lens} />
+      <TopReads games={games} lens={lens} />
 
-      {MOCK_GAMES.map((g) => (
+      {games.map((g) => (
         <details key={g.id} open className="sp-boardsec" style={{ marginBottom: 24 }}>
           <summary className="sp-boardsec-head">
             {g.away} @ {g.home}
@@ -237,10 +246,10 @@ export function BoardsView({ lens }: BoardsViewProps) {
           </summary>
           <div style={{ marginTop: 12 }}>
             {/* Opposing pitcher's slate row sits on top of the lineup facing them */}
-            <PitcherStatRow name={g.homePitcher} />
+            <PitcherStatRow name={g.homePitcher} pitchers={slatePitchers} />
             <HeatTable title={`${g.away} hitters vs ${g.homePitcher}`} hitters={g.awayHitters} columns={columns} />
             <div style={{ height: 16 }} />
-            <PitcherStatRow name={g.awayPitcher} />
+            <PitcherStatRow name={g.awayPitcher} pitchers={slatePitchers} />
             <HeatTable title={`${g.home} hitters vs ${g.awayPitcher}`} hitters={g.homeHitters} columns={columns} />
           </div>
         </details>

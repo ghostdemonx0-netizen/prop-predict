@@ -665,7 +665,7 @@ export default function Home() {
           )}
           {section === "parks" && <Parks games={data.games ?? []} />}
           {section === "boards" && (
-            <BoardsView lens={boardsLens(philosophy, barrelEffect)} />
+            <BoardsView lens={boardsLens(philosophy, barrelEffect)} boards={data.boards} />
           )}
       </main>
       </LiveProvider>
