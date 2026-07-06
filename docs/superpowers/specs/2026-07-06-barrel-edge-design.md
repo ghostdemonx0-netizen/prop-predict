@@ -59,18 +59,20 @@ Existing timeframe selection lives in `web/lib/weighting.ts` (`pickN`) + source 
 
 Factors are a **shared pantry**; each prop is a **recipe** that draws from it in different amounts. Recipes are **generous** (include any relevant factor); the **grader tunes the weights**. The **contact pair (ZoneFit + low SwStr%) is near-universal** — contact is the gate to all offense; only the *power* side re-weights per prop.
 
-| Prop | Recipe (contact side + power side) |
-|---|---|
-| **HR** | full pantry — PulledBrl, Brl/BIP, FB%, LA, HH%, SweetSpot%, xwOBAcon, ISO, **ZoneFit**, low SwStr + pitcher barrel/FB-allowed |
-| **Hits** | **ZoneFit + low SwStr** + xwOBA/xBA + some HH · pitcher CSW% + hit-allowed |
-| **Total Bases** | **ZoneFit + low SwStr** *(contact)* **＋** HH + xwOBAcon + ISO + SweetSpot/FB + PulledBrl *(power)* |
-| **Runs** | on-base contact (ZoneFit, low SwStr, xwOBA) + own power + lineup-behind (existing) |
-| **RBI** | drive-power (HH, ISO, Brl, xwOBAcon) + contact + lineup-ahead (existing) |
-| **HRR** | inherits HR power + Hits/Runs contact, dampened (as HRR already dampens park) |
-| **Ks** | pitcher CSW%/SwStr% + batter contact |
-| **KCN** | pitcher-K vs batter contact; pitcher hit-allowed vs batter contact |
+**Contact pair = ZoneFit + low SwStr%** is explicit on every batter prop below (it was buried in "contact"/"on-base" shorthand before — LOCKED explicit 2026-07-06). Only the power/whiff side and the pitcher side change per prop.
 
-Full weighted matrix (primary/secondary per factor) to be finalized in the Barrel Effect / Barrel Weight implementation plans and tuned via grader.
+| Prop | Hitter factors | Pitcher side |
+|---|---|---|
+| **HR** | full pantry: PulledBrl, Brl/BIP, HH%, SweetSpot%, FB%, LA, xwOBAcon, ISO **+ ZoneFit, low SwStr** | barrel-allowed, HH-allowed, FB-allowed |
+| **Hits** | **ZoneFit, low SwStr** + xwOBA + HH% + **SweetSpot%** (line-drive contact) | hit-allowed, CSW% |
+| **Total Bases** | **ZoneFit, low SwStr** + HH%, xwOBAcon, ISO, SweetSpot%, FB%, PulledBrl | hit-allowed, barrel-allowed |
+| **Runs** | **ZoneFit, low SwStr**, xwOBA (on-base) + own power + lineup-behind (existing) | hit-allowed (suppression) |
+| **RBI** | drive-power (HH%, ISO, Brl, xwOBAcon) + **ZoneFit, low SwStr** + lineup-ahead (existing) | hit-allowed, barrel-allowed |
+| **HRR** | inherits HR power + Hits/Runs contact (incl. ZoneFit), dampened (as HRR already dampens park) | combined |
+| **Ks** | batter K-rate, SwStr, chase — **NO ZoneFit** (whiff ≠ damage-zone) | **CSW%, SwStr%** (whiff) |
+| **KCN** | pitcher-K vs batter contact; pitcher hit-allowed vs batter contact | — |
+
+ZoneFit answer (LOCKED): **YES** on Runs/RBI/HRR (contact gates on-base + driving in), **NO** on Ks (Ks is whiff-driven). SweetSpot added to Hits. This is the "eligible factor" list (generous by design); the **exact weights are grader-tuned**. Finalized numeric weights land in the Barrel Effect / Barrel Weight per-prop implementation plans. NOTE: this recipe drives the per-prop **probabilities** (Barrel Effect + Barrel Weight builds) — it is NOT the b-weight **Prop Score** (the HR-focused board headline; see `2026-07-06-barrel-prop-score-design.md`).
 
 ### 4b. Barrel as WEIGHTING — Barrel Weight mode
 A distinct philosophy where barrel dominates Layer 2. **Pure replica first** (park/weather/BvP rest, by design) so we can validate it lines up with the proven boards; their **score** (kHR / TrueHRScore) becomes a **probability** poured into the normal card face. **HR is its home turf** (uses the full pantry); Hits/TB/Runs/RBI/HRR still stand on real base rates + machinery, tilted by the contact-side barrel factors. Hybrid "sauce" (a little weather/park) is deferred (§9).
