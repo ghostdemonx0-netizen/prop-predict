@@ -46,6 +46,7 @@ import { BoardView, type BoardViewMode } from "../components/spatial/board/Board
 import { GameHub } from "../components/spatial/GameHub";
 import { TopPlays, type TopPlaysThresholds } from "../components/spatial/TopPlays";
 import { Parks } from "../components/spatial/Parks";
+import { BoardsView } from "../components/spatial/boards/BoardsView";
 import {
   PlayerModal,
   usePlayerModalUrl,
@@ -254,7 +255,8 @@ export default function Home() {
       sectionParam === "board" ||
       sectionParam === "hub" ||
       sectionParam === "top" ||
-      sectionParam === "parks"
+      sectionParam === "parks" ||
+      sectionParam === "boards"
     ) {
       setSection(sectionParam);
     }
@@ -612,6 +614,7 @@ export default function Home() {
             />
           )}
           {section === "parks" && <Parks games={data.games ?? []} />}
+          {section === "boards" && <BoardsView />}
       </main>
       </LiveProvider>
 
