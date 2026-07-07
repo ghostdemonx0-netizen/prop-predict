@@ -221,6 +221,16 @@ def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:
                     "blend":   _blend(cur, hist),
                     "history": hist,
                 }
+        # Barreled triples — one per threshold field that carries a beff value
+        for field, label in THRESHOLDS.get(prop_lower, []):
+            cur_b = row.get(f"{field}_beff")
+            if cur_b is not None:
+                hist_b = row.get(f"{field}_beff_hist")
+                probs[f"{label} barreled"] = {
+                    "current": cur_b,
+                    "blend":   _blend(cur_b, hist_b),
+                    "history": hist_b,
+                }
 
     rec["probs"] = probs
 

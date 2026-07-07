@@ -1119,3 +1119,69 @@ def test_archive_captures_barreled_hr():
     assert rec["factors"].get("barrel_mult") == 1.20
     # a barreled prob triple is recorded
     assert any("barrel" in k.lower() for k in rec["probs"])
+
+
+# ===========================================================================
+# Task 4 — barreled archive triples for Hits/TB/Runs/RBI/HRR
+# ===========================================================================
+
+HITS_BEFF_ROW = {
+    "prop": "HITS",
+    "game_id": GAME_ID_SOON,
+    "game_time": GAME_TIME_SOON,
+    "player_id": 101,
+    "player": "Barrel Hitter",
+    "team": "AAA",
+    "matchup": "AAA @ BBB",
+    "bats": "R",
+    "lineup_status": "confirmed",
+    "p_ge1": 0.70, "p_ge1_hist": 0.65,
+    "p_ge2": 0.40, "p_ge2_hist": 0.38,
+    "p_ge3": 0.15, "p_ge3_hist": 0.14,
+    "p_ge1_beff": 0.72, "p_ge1_beff_hist": 0.68,
+    "p_ge2_beff": 0.42, "p_ge2_beff_hist": 0.39,
+    "vs": {"name": "Pitcher Pat", "player_id": 999, "throws": "R"},
+}
+
+
+def test_hits_barreled_triple_recorded():
+    """Hits row with p_ge1_beff records a '1+ barreled' triple in probs."""
+    rec = record_from_row(HITS_BEFF_ROW, "hits")
+    assert "1+ barreled" in rec["probs"]
+
+
+def test_hits_barreled_triple_current_value():
+    rec = record_from_row(HITS_BEFF_ROW, "hits")
+    assert math.isclose(rec["probs"]["1+ barreled"]["current"], 0.72)
+
+
+def test_hits_barreled_triple_history_value():
+    rec = record_from_row(HITS_BEFF_ROW, "hits")
+    assert math.isclose(rec["probs"]["1+ barreled"]["history"], 0.68)
+
+
+def test_hits_barreled_triple_blend_is_midpoint():
+    rec = record_from_row(HITS_BEFF_ROW, "hits")
+    # blend of 0.72 and 0.68 = 0.70
+    assert math.isclose(rec["probs"]["1+ barreled"]["blend"], 0.70)
+
+
+def test_hits_all_barreled_thresholds_recorded():
+    """All threshold levels that have beff data produce barreled triples."""
+    rec = record_from_row(HITS_BEFF_ROW, "hits")
+    assert "1+ barreled" in rec["probs"]
+    assert "2+ barreled" in rec["probs"]
+
+
+def test_hits_barreled_hist_none_when_absent():
+    """When beff_hist is absent the history in the triple is None."""
+    row = {k: v for k, v in HITS_BEFF_ROW.items() if k != "p_ge1_beff_hist"}
+    rec = record_from_row(row, "hits")
+    assert rec["probs"]["1+ barreled"]["history"] is None
+
+
+def test_threshold_without_beff_produces_no_barreled_triple():
+    """A hits row without any beff fields produces no barreled keys in probs."""
+    row = {k: v for k, v in HITS_BEFF_ROW.items() if "_beff" not in k}
+    rec = record_from_row(row, "hits")
+    assert not any("barreled" in k for k in rec["probs"])

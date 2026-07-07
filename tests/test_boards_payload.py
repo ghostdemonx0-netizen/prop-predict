@@ -1,3 +1,4 @@
+import math
 from model.export_web import build_boards_payload
 
 _H = {"barrel_rate": 0.15, "pulled_barrel_rate": 0.08, "sweetspot_rate": 0.40,
@@ -51,3 +52,106 @@ def test_boards_surfaces_pitch_level_fields():
     assert "xwoba" in h and "zonefit" in h                                 # zonefit computed from zone_dmg × zone_freq
     p = boards["pitchers"][0]["stats"]
     assert "swstr" in p and "csw" in p and "ball" in p and "xwoba" in p
+
+
+# ===========================================================================
+# Task 4 — history-beff twins propagated for threshold props
+# ===========================================================================
+
+def test_hits_barrel_mult_beff_surface_as_hist(monkeypatch):
+    """barrel_mult + p_ge*_beff on a hits history row must appear as *_hist twins on current row."""
+    import model.export_web as ew
+
+    _cur_lf  = object()   # sentinel for current-mode lineup fn
+    _hist_lf = object()   # sentinel for history-mode lineup fn
+
+    cur_row  = {"player_id": 1, "game_id": 101,
+                "p_ge1": 0.70, "p_ge2": 0.40, "p_ge3": 0.15,
+                "barrel_mult": 1.10}
+    hist_row = {"player_id": 1, "game_id": 101,
+                "p_ge1": 0.65, "p_ge2": 0.38, "p_ge3": 0.14,
+                "barrel_mult": 1.15,
+                "p_ge1_beff": 0.72, "p_ge2_beff": 0.42}
+
+    def fake_hits(slate, lf, pf, wf, bvp_fn=None):
+        return [dict(hist_row)] if lf is _hist_lf else [dict(cur_row)]
+
+    monkeypatch.setattr(ew, "build_hits_rows", fake_hits)
+    monkeypatch.setattr(ew, "build_hr_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_strikeout_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_total_bases_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_runs_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_rbi_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hrr_rows", lambda *a, **kw: [])
+
+    _, _, hits, _, _, _, _ = ew.build_board_with_history(
+        [], _cur_lf, None, _hist_lf, None, None, None)
+
+    assert hits[0].get("barrel_mult_hist") == 1.15, "barrel_mult_hist not attached for hits"
+    assert hits[0].get("p_ge1_beff_hist") == 0.72, "p_ge1_beff_hist not attached for hits"
+    assert hits[0].get("p_ge2_beff_hist") == 0.42, "p_ge2_beff_hist not attached for hits"
+
+
+def test_tb_barrel_mult_beff_surface_as_hist(monkeypatch):
+    """barrel_mult + p_ge*_beff on a TB history row must appear as *_hist twins on current row."""
+    import model.export_web as ew
+
+    _cur_lf  = object()
+    _hist_lf = object()
+
+    cur_row  = {"player_id": 2, "game_id": 102,
+                "p_ge2": 0.60, "p_ge3": 0.35, "p_ge4": 0.10}
+    hist_row = {"player_id": 2, "game_id": 102,
+                "p_ge2": 0.55, "p_ge3": 0.32, "p_ge4": 0.09,
+                "barrel_mult": 1.20,
+                "p_ge2_beff": 0.58, "p_ge3_beff": 0.34}
+
+    def fake_tb(slate, lf, pf, wf, bvp_fn=None):
+        return [dict(hist_row)] if lf is _hist_lf else [dict(cur_row)]
+
+    monkeypatch.setattr(ew, "build_total_bases_rows", fake_tb)
+    monkeypatch.setattr(ew, "build_hr_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_strikeout_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hits_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_runs_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_rbi_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hrr_rows", lambda *a, **kw: [])
+
+    _, _, _, tb, _, _, _ = ew.build_board_with_history(
+        [], _cur_lf, None, _hist_lf, None, None, None)
+
+    assert tb[0].get("barrel_mult_hist") == 1.20, "barrel_mult_hist not attached for tb"
+    assert tb[0].get("p_ge2_beff_hist") == 0.58, "p_ge2_beff_hist not attached for tb"
+    assert tb[0].get("p_ge3_beff_hist") == 0.34, "p_ge3_beff_hist not attached for tb"
+
+
+def test_runs_barrel_mult_beff_surface_as_hist(monkeypatch):
+    """barrel_mult + p_ge*_beff on a runs history row (_attach path) must appear as *_hist twins."""
+    import model.export_web as ew
+
+    _cur_lf  = object()
+    _hist_lf = object()
+
+    cur_row  = {"player_id": 3, "game_id": 103,
+                "p_ge1": 0.55, "p_ge2": 0.20}
+    hist_row = {"player_id": 3, "game_id": 103,
+                "p_ge1": 0.50, "p_ge2": 0.18,
+                "barrel_mult": 1.05,
+                "p_ge1_beff": 0.57}
+
+    def fake_runs(slate, lf, pf, wf, bvp_fn=None):
+        return [dict(hist_row)] if lf is _hist_lf else [dict(cur_row)]
+
+    monkeypatch.setattr(ew, "build_runs_rows", fake_runs)
+    monkeypatch.setattr(ew, "build_hr_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_strikeout_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hits_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_total_bases_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_rbi_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hrr_rows", lambda *a, **kw: [])
+
+    _, _, _, _, runs, _, _ = ew.build_board_with_history(
+        [], _cur_lf, None, _hist_lf, None, None, None)
+
+    assert runs[0].get("barrel_mult_hist") == 1.05, "barrel_mult_hist not attached for runs"
+    assert runs[0].get("p_ge1_beff_hist") == 0.57, "p_ge1_beff_hist not attached for runs"

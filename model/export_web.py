@@ -264,6 +264,11 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
         for field in _hits_factor_fields:
             if field in h:
                 r[f"{field}_hist"] = h[field]
+        if "barrel_mult" in h:
+            r["barrel_mult_hist"] = h["barrel_mult"]
+        for field in _hits_thresholds:
+            if f"{field}_beff" in h:
+                r[f"{field}_beff_hist"] = h[f"{field}_beff"]
         if r.get("vs") and h.get("vs"):
             _copy_vs(r["vs"], h["vs"])
     for r in tb:
@@ -276,6 +281,11 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
         for field in _tb_factor_fields:
             if field in h:
                 r[f"{field}_hist"] = h[field]
+        if "barrel_mult" in h:
+            r["barrel_mult_hist"] = h["barrel_mult"]
+        for field in _tb_thresholds:
+            if f"{field}_beff" in h:
+                r[f"{field}_beff_hist"] = h[f"{field}_beff"]
         if r.get("vs") and h.get("vs"):
             _copy_vs(r["vs"], h["vs"])
 
@@ -304,6 +314,11 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
             for field in _run_factor_fields:
                 if field in h:
                     r[f"{field}_hist"] = h[field]
+            if "barrel_mult" in h:
+                r["barrel_mult_hist"] = h["barrel_mult"]
+            for field in thresholds:
+                if f"{field}_beff" in h:
+                    r[f"{field}_beff_hist"] = h[f"{field}_beff"]
             if r.get("vs") and h.get("vs"):
                 _copy_vs(r["vs"], h["vs"])
 
