@@ -23,9 +23,9 @@ Make barrel actually move the props the user bets. When **b effect is ON**, each
 5. **Per-prop recipe** = the locked matrix (parent §4a): HR = full pantry; Hits = ZoneFit+contact; TB = contact+power; Runs/RBI/HRR contact+relevant power; Ks = pitcher CSW/SwStr + batter contact. Each prop's `barrel_mult` is built from ITS recipe factors only.
 6. **OFF = today's math**, untouched.
 
-### v1 SCOPE DECISION TO CONFIRM AT REVIEW
-- **Timeframe:** the end-state is timeframe-matched (Current→current barrel, History→3yr, Blend→blend). But **3-season *blended* barrel is not built yet** (Phase 0 computed barrel on current-season profiles only). So **v1 uses current-season barrel across all three timeframes** (documented simplification — barrel is most meaningful current-season anyway). The timeframe-matched version (blended barrel on History/Blend) is a flagged **fast-follow**. *Confirm this v1 simplification, or we add a "blended barrel" task first.*
-- **Props:** the machinery is prop-agnostic; the plan builds it once and applies each prop's recipe. If we want to ship incrementally, **HR first** (barrel's home turf, cleanest), then the others — but since the shared machinery is the bulk, the plan does all batter props + Ks together.
+### SCOPE DECISIONS (locked)
+- **Timeframe = FULLY MATCHED from day one (user chose "B", 2026-07-07).** Build the **3-season blended barrel FIRST** (extend `blended_batter_profile`/`blended_pitcher_profile` with `barrel_metrics` across the 3 seasons, Marcel-weighted), so Current→current barrel, History→3yr blended barrel, Blend→blend. This is the first task of the plan; b effect then applies timeframe-matched to both the current probs and the `_hist` twins.
+- **Props = HR first (implementation decomposition).** The machinery (blended barrel + `barrel_effect_mult` + the `_beff` twin pattern + recorder + frontend toggle + the 🛢️ Barrel display row) is proven end-to-end on **HR** (barrel's home turf), with real before/after HR numbers for sign-off. The other props (Hits/TB/Runs/RBI/HRR/Ks) are a **fast-follow plan** reusing the exact same machinery + their locked recipes. *(This keeps the first plan testable; flag at execution — if you'd rather do all props in one pass, say so.)*
 
 ---
 
