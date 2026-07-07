@@ -4,15 +4,21 @@ grader-tunable SEEDS. ZoneFit is a hitter-side matchup factor (hitter damage-by-
 × this pitcher's location); SwStr is inverted (low whiff = good)."""
 from model.pitch_metrics import zone_fit
 
-# league anchors reused across recipes: (lo, hi)
+# league anchors reused across recipes: (lo, hi) — midpoints = 2024 league averages
 _A = {
-    "pulled_barrel_rate": (0.01, 0.12), "barrel_rate": (0.03, 0.20),
-    "hardhit_rate": (0.25, 0.55), "sweetspot_rate": (0.25, 0.45),
-    "fb_rate": (0.18, 0.45), "xwobacon": (0.26, 0.46),
-    "zonefit": (0.28, 0.52), "swstr": (0.06, 0.16),
-    "pulled_barrel_rate_allowed": (0.03, 0.08), "barrel_rate_allowed": (0.04, 0.12),
-    "hardhit_rate_allowed": (0.35, 0.52), "fb_rate_allowed": (0.18, 0.45),
-    "hit_allowed_rate": (0.20, 0.28),
+    "pulled_barrel_rate": (0.01, 0.06),          # mid ~0.035
+    "barrel_rate": (0.02, 0.14),                 # mid ~0.08
+    "hardhit_rate": (0.28, 0.52),                # mid ~0.40
+    "sweetspot_rate": (0.26, 0.42),              # mid ~0.34
+    "fb_rate": (0.18, 0.45),                     # mid ~0.315 (unchanged; low weight)
+    "xwobacon": (0.28, 0.46),                    # mid ~0.37
+    "zonefit": (0.25, 0.49),                     # mid ~0.37
+    "swstr": (0.06, 0.16),                       # mid ~0.11 (unchanged; already centered)
+    "pulled_barrel_rate_allowed": (0.01, 0.05),  # mid ~0.03
+    "barrel_rate_allowed": (0.04, 0.12),         # mid ~0.08 (unchanged)
+    "hardhit_rate_allowed": (0.28, 0.52),        # mid ~0.40
+    "fb_rate_allowed": (0.18, 0.45),             # mid ~0.315 (unchanged)
+    "hit_allowed_rate": (0.20, 0.28),            # mid ~0.24 (unchanged)
 }
 _INVERT = {"swstr"}       # lower is better -> flip the deviation sign
 _MATCHUP = {"zonefit"}    # value computed from hitter x pitcher, not a plain field

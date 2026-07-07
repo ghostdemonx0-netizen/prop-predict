@@ -70,10 +70,11 @@ def test_hr_reaches_cap_when_all_factors_maxed():
 # ---- still-valid legacy tests (recipe now includes ZoneFit+SwStr; exact caps dropped) ----
 
 def test_neutral_matchup_near_one():
-    mid_h = {"pulled_barrel_rate": 0.065, "barrel_rate": 0.115, "hardhit_rate": 0.40,
-             "sweetspot_rate": 0.35, "fb_rate": 0.315, "xwobacon": 0.36, "bbe": 300}
-    mid_p = {"pulled_barrel_rate_allowed": 0.055, "barrel_rate_allowed": 0.08,
-             "hardhit_rate_allowed": 0.435, "fb_rate_allowed": 0.315}
+    # midpoints updated to match new league-centered anchors (2024 averages)
+    mid_h = {"pulled_barrel_rate": 0.035, "barrel_rate": 0.08, "hardhit_rate": 0.40,
+             "sweetspot_rate": 0.34, "fb_rate": 0.315, "xwobacon": 0.37, "bbe": 300}
+    mid_p = {"pulled_barrel_rate_allowed": 0.03, "barrel_rate_allowed": 0.08,
+             "hardhit_rate_allowed": 0.40, "fb_rate_allowed": 0.315}
     assert abs(barrel_effect_mult(mid_h, mid_p) - 1.0) < 0.02
 
 
@@ -96,9 +97,21 @@ def test_zonefit_missing_data_is_neutral_not_negative():
     # hitter with all barrel factors at their anchor MIDPOINTS (dev 0), no zone_dmg, no swstr;
     # pitcher-allowed factors also at midpoints, no zone_freq. Nudge must be ~1.0 (neutral),
     # NOT dragged below 1.0 by a spurious max-negative ZoneFit.
-    mid_h = {"bbe": 300, "pulled_barrel_rate": 0.065, "barrel_rate": 0.115,
-             "hardhit_rate": 0.40, "sweetspot_rate": 0.35, "fb_rate": 0.315, "xwobacon": 0.36}
-    mid_p = {"pulled_barrel_rate_allowed": 0.055, "barrel_rate_allowed": 0.08,
-             "hardhit_rate_allowed": 0.435, "fb_rate_allowed": 0.315, "hit_allowed_rate": 0.24}
+    # Midpoints updated to match new league-centered anchors (2024 averages).
+    mid_h = {"bbe": 300, "pulled_barrel_rate": 0.035, "barrel_rate": 0.08,
+             "hardhit_rate": 0.40, "sweetspot_rate": 0.34, "fb_rate": 0.315, "xwobacon": 0.37}
+    mid_p = {"pulled_barrel_rate_allowed": 0.03, "barrel_rate_allowed": 0.08,
+             "hardhit_rate_allowed": 0.40, "fb_rate_allowed": 0.315, "hit_allowed_rate": 0.24}
     m = barrel_effect_mult(mid_h, mid_p, prop="hr")
     assert abs(m - 1.0) < 0.03, m   # was ~0.98 before the fix (spurious ZoneFit drag); ~1.0 after
+
+
+def test_league_average_matchup_is_neutral_all_props():
+    avg_h = {"bbe": 300, "pulled_barrel_rate": 0.035, "barrel_rate": 0.08,
+             "hardhit_rate": 0.40, "sweetspot_rate": 0.34, "fb_rate": 0.315,
+             "xwobacon": 0.37, "swstr": 0.11}   # no zone data -> ZoneFit neutral
+    avg_p = {"pulled_barrel_rate_allowed": 0.03, "barrel_rate_allowed": 0.08,
+             "hardhit_rate_allowed": 0.40, "fb_rate_allowed": 0.315, "hit_allowed_rate": 0.24}
+    for prop in ("hr","tb","hits","runs","rbi","hrr"):
+        m = barrel_effect_mult(avg_h, avg_p, prop=prop)
+        assert abs(m - 1.0) < 0.01, (prop, m)
