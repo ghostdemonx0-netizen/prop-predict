@@ -1,4 +1,5 @@
 import math
+import pytest
 from model.barrel_effect import barrel_effect_mult, _RECIPES
 
 _STRONG = {"pulled_barrel_rate": 0.12, "barrel_rate": 0.20, "hardhit_rate": 0.55,
@@ -14,7 +15,7 @@ _STINGY_P = {"pulled_barrel_rate_allowed": 0.03, "barrel_rate_allowed": 0.04,
 # ---- new prop-aware tests ----
 
 def _hw(spec):
-    # normalize entries to (key, ((lo,hi), w)) ignoring the optional invert marker
+    # normalize entries to (key, ((lo,hi), weight)) format; invert status tracked separately in _INVERT
     return [(k, (v[0], v[1])) for k, v in spec.items()]
 
 
@@ -29,6 +30,7 @@ def test_every_recipe_side_sums_to_one():
 def test_caps_are_graduated():
     assert _RECIPES["hr"]["cap"] == 0.20 and _RECIPES["rbi"]["cap"] == 0.20
     assert _RECIPES["hits"]["cap"] == 0.15 and _RECIPES["runs"]["cap"] == 0.15
+    assert _RECIPES["tb"]["cap"] == 0.20 and _RECIPES["hrr"]["cap"] == 0.15
 
 
 def test_swstr_inverted_low_whiff_helps_hits():
@@ -52,6 +54,17 @@ def test_clamps_to_prop_cap_and_neutral_no_data():
              "fb_rate": 0.45, "xwobacon": 0.46}
     assert barrel_effect_mult(maxed, None, prop="hr") <= 1.20 + 1e-9
     assert abs(barrel_effect_mult({}, None, prop="hr") - 1.0) < 1e-9
+
+
+def test_hr_reaches_cap_when_all_factors_maxed():
+    full_h = {"bbe": 400, "pulled_barrel_rate": 0.12, "barrel_rate": 0.20,
+              "hardhit_rate": 0.55, "sweetspot_rate": 0.45, "fb_rate": 0.45,
+              "xwobacon": 0.46, "swstr": 0.06,          # low swstr = good
+              "zone_dmg": {5: 1.0}}                      # all damage in zone 5
+    full_p = {"pulled_barrel_rate_allowed": 0.08, "barrel_rate_allowed": 0.12,
+              "hardhit_rate_allowed": 0.52, "fb_rate_allowed": 0.45,
+              "zone_freq": {5: 1.0}}                     # pitcher lives in zone 5
+    assert barrel_effect_mult(full_h, full_p, prop="hr") == pytest.approx(1.20)
 
 
 # ---- still-valid legacy tests (recipe now includes ZoneFit+SwStr; exact caps dropped) ----
