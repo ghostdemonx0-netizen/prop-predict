@@ -49,6 +49,10 @@ export type HrRow = {
   pace_hist?: number;
   lineup_status?: string;
   probability_hist?: number;
+  probability_beff?: number;
+  probability_hist_beff?: number;
+  barrel_mult?: number;
+  barrel_mult_hist?: number;
 };
 
 export type KRow = {

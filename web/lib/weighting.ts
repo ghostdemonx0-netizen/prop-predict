@@ -123,6 +123,7 @@ export function toBoardRows(
   prop: PropKind,
   threshold: number,
   source: Source,
+  barrelEffect: boolean = false,
 ): SpatialRow[] {
   // Convenience wrappers bound to the requested source.
   const pN = (cur?: number, hist?: number): number =>
@@ -132,11 +133,13 @@ export function toBoardRows(
   let rows: SpatialRow[];
 
   if (prop === "hr") {
+    const curField  = barrelEffect ? "probability_beff" : "probability";
+    const histField = barrelEffect ? "probability_hist_beff" : "probability_hist";
     rows = data.hr.map((r) => ({
       id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
       player: r.player,
       team: r.team,
-      prob: pN(r.probability, r.probability_hist),
+      prob: pickN(r[curField] as number | undefined, r[histField] as number | undefined, source) ?? 0,
       detail: gameLabel(r.matchup, r.team) ?? `@ ${r.park}`,
       href: `/player/hr/${r.player_id ?? encodeURIComponent(r.player)}`,
       player_id: r.player_id,
