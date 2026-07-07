@@ -127,3 +127,12 @@ def test_blended_pitcher_profile_has_allowed_barrel_fields():
     p = blended_pitcher_profile(by_season, as_of="2026-06-01", current_season=2026, player_id=9)
     # pooled 3 BBE, 2 barrels allowed -> barrel_rate_allowed = 2/3 (current-only would be 1.0)
     assert math.isclose(p["barrel_rate_allowed"], 2 / 3, rel_tol=1e-6)
+
+
+def test_batter_profile_has_pitch_rates():
+    evs = [_brow("2026-04-01", "single", ls=90, bb="line_drive")]
+    evs[0]["description"] = "hit_into_play"
+    evs.append({"game_date": "2026-04-01", "events": None, "launch_speed": None,
+                "description": "swinging_strike", "zone": 5})
+    p = batter_profile_from_events(evs, as_of="2026-06-01", player_id=1)
+    assert "swstr" in p and "csw" in p and "ball" in p and "pitches" in p
