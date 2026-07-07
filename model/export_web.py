@@ -223,6 +223,8 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
         if not h:
             continue
         r["probability_hist"] = h["probability"]
+        r["probability_hist_beff"] = h.get("probability_beff")
+        r["barrel_mult_hist"] = h.get("barrel_mult")
         r["baseline_prob_hist"] = h.get("baseline_prob")
         r["pace_hist"] = h.get("pace")
         if r.get("vs") and h.get("vs"):

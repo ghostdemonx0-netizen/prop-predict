@@ -1102,3 +1102,20 @@ def test_spray_mult_absent_when_not_on_row():
     # rows without the field (e.g. hits) simply omit it — tolerant .get
     f = record_from_row(HR_ROW_SOON, "hr")["factors"]
     assert "spray_mult" not in f
+
+
+# ===========================================================================
+# Task 4 — HR history-beff twin + recorder archives barreled HR + barrel_mult
+# ===========================================================================
+
+def test_archive_captures_barreled_hr():
+    row = {  # minimal HR row with beff twins (reuse the file's existing HR row helper if present)
+        "prop": "HR", "game_id": 1, "player_id": 5, "player": "X", "team": "BOS",
+        "probability": 0.15, "probability_hist": 0.18,
+        "probability_beff": 0.18, "probability_hist_beff": 0.216,
+        "barrel_mult": 1.20, "barrel_mult_hist": 1.20,
+    }
+    rec = record_from_row(row, "hr")
+    assert rec["factors"].get("barrel_mult") == 1.20
+    # a barreled prob triple is recorded
+    assert any("barrel" in k.lower() for k in rec["probs"])

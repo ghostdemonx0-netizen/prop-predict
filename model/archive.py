@@ -84,6 +84,9 @@ _FACTOR_KEYS: tuple[str, ...] = (
     # BvP hit dial (Hits/TB contact components)
     "bvp_hit_mult",
     "bvp_hit_mult_hist",
+    # Barrel-adjusted HR probability multiplier
+    "barrel_mult",
+    "barrel_mult_hist",
 )
 
 
@@ -203,6 +206,9 @@ def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:
         cur  = row.get("probability")
         hist = row.get("probability_hist")
         probs["1+"] = {"current": cur, "blend": _blend(cur, hist), "history": hist}
+        cur_b, hist_b = row.get("probability_beff"), row.get("probability_hist_beff")
+        if cur_b is not None or hist_b is not None:
+            probs["1+ barreled"] = {"current": cur_b, "blend": _blend(cur_b, hist_b), "history": hist_b}
 
     else:
         # p_geN threshold family
