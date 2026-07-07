@@ -47,7 +47,7 @@ def test_boards_surfaces_pitch_level_fields():
         lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
         pitcher_fn=lambda pid: dict(_P))
     h = boards["games"][0]["awayHitters"][0]["stats"]
-    assert h["swstr"] == 10.0 and h["csw"] == 30.0 and h["iso"] == 25.0   # rates *100 for display
+    assert h["swstr"] == 10.0 and h["csw"] == 30.0 and h["iso"] == 0.25   # swstr/csw/ball *100 for display; iso decimal passthrough
     assert "xwoba" in h and "zonefit" in h                                 # zonefit computed from zone_dmg × zone_freq
     p = boards["pitchers"][0]["stats"]
     assert "swstr" in p and "csw" in p and "ball" in p and "xwoba" in p

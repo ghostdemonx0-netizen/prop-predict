@@ -363,7 +363,7 @@ def _hitter_board(b: dict, opp: dict | None, order: int, team: str) -> dict:
             "swstr": _pct(b.get("swstr")),
             "csw": _pct(b.get("csw")),
             "ball": _pct(b.get("ball")),
-            "iso": _pct(b.get("iso")),
+            "iso": round((b.get("iso") or 0.0), 3),
             "xwoba": round((b.get("xwoba") or 0.0), 3),
             "zonefit": zone_fit(b.get("zone_dmg") or {}, opp.get("zone_freq") or {}) if opp else 0.0,
         },
