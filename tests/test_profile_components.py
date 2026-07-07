@@ -1,7 +1,7 @@
 # tests/test_profile_components.py
 import math
 from model.profiles import batter_profile_from_events, blended_batter_profile
-from model.profiles import pitcher_profile_from_events
+from model.profiles import pitcher_profile_from_events, blended_pitcher_profile
 from model.profiles import regress, LEAGUE_K, LEAGUE_HIT, _K_R, _HIT_R
 
 
@@ -102,3 +102,27 @@ def test_pitcher_profile_has_allowed_barrel_fields():
     assert "barrel_rate" not in p             # pitcher uses the _allowed flavor
     # existing fields untouched
     assert p["k_per_bf"] >= 0.0 and p["bf"] == 2
+
+
+def test_blended_batter_profile_has_barrel_fields():
+    ev = lambda d, e, **k: {"game_date": d, "events": e, "launch_speed": k.get("ls", 100.0),
+                            "launch_angle": 20.0, "launch_speed_angle": k.get("lsa", 6),
+                            "bb_type": "fly_ball", "hc_x": 80.0, "hc_y": 100.0, "stand": "R",
+                            "estimated_woba_using_speedangle": 0.6, "game_pk": 1}
+    by_season = {2026: [ev("2026-04-01", "home_run")],
+                 2025: [ev("2025-04-01", "single", lsa=5)],
+                 2024: [ev("2024-04-01", "home_run")]}
+    p = blended_batter_profile(by_season, as_of="2026-06-01", current_season=2026, player_id=1)
+    # pooled 3 BBE, 2 barrels -> blended barrel_rate present and > 0
+    assert "barrel_rate" in p and p["barrel_rate"] > 0
+    assert "pulled_barrel_rate" in p and "xwobacon" in p
+
+
+def test_blended_pitcher_profile_has_allowed_barrel_fields():
+    ev = lambda d, e: {"game_date": d, "events": e, "launch_speed": 103.0, "launch_angle": 22.0,
+                       "launch_speed_angle": 6, "bb_type": "fly_ball", "hc_x": 80.0, "hc_y": 100.0,
+                       "stand": "R", "estimated_woba_using_speedangle": 0.6, "game_pk": 1}
+    by_season = {2026: [ev("2026-04-01", "home_run")], 2025: [ev("2025-04-01", "home_run")],
+                 2024: [ev("2024-04-01", "home_run")]}
+    p = blended_pitcher_profile(by_season, as_of="2026-06-01", current_season=2026, player_id=9)
+    assert "barrel_rate_allowed" in p and p["barrel_rate_allowed"] > 0

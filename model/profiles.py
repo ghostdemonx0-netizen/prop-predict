@@ -217,6 +217,9 @@ def blended_batter_profile(events_by_season: dict, *, as_of: str, current_season
     prof["season_3b"] = s3_made
     prof["k_rate"] = regress(ks_made, eff_pa, LEAGUE_K, _K_R)
     prof["hit_rate"] = regress(hits_made, eff_pa, LEAGUE_HIT, _HIT_R)
+    # Pooled 3-season barrel metrics (equal weight — Marcel weighting is a later refinement)
+    pooled = [e for evs in seasons for e in evs]
+    prof.update(barrel_metrics(pooled, as_of=as_of))
     return prof
 
 
@@ -247,6 +250,9 @@ def blended_pitcher_profile(events_by_season: dict, *, as_of: str, current_seaso
     prof["k_per_bf"] = regress(ks_made, eff_pa, LEAGUE_K, _K_R)
     prof["hit_allowed_rate"] = regress(hits_made, eff_pa, LEAGUE_HIT, _HIT_R)
     prof["hr_allowed_rate"] = regress(hr_made, eff_pa, LEAGUE_HR_RATE, _HR_R)
+    # Pooled 3-season barrel metrics allowed (equal weight — Marcel weighting is a later refinement)
+    pooled = [e for evs in seasons for e in evs]
+    prof.update(barrel_metrics(pooled, as_of=as_of, allowed=True))
     return prof
 
 
