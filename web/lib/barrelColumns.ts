@@ -29,7 +29,7 @@ const BARREL_HIGHLIGHTS: ColumnDef[] = [
   { key: "brl",      label: "Brl/BIP", min: 3, max: 20, highlight: true },
   { key: "pbrl",     label: "PullBrl", min: 1, max: 12, highlight: true },
   { key: "sweet",    label: "Sweet%",  min: 25, max: 45, highlight: true },
-  { key: "zonefit",  label: "ZoneFit", min: 0.02, max: 0.16, highlight: true },
+  { key: "zonefit",  label: "ZoneFit", min: 0.28, max: 0.52, highlight: true },
   { key: "iso",      label: "ISO",     min: 0.08, max: 0.30, highlight: true },
   { key: "hrform",   label: "HR Form", min: 20, max: 90, highlight: true },
   { key: "xwoba",    label: "xwOBA",   min: 0.26, max: 0.42, highlight: true },
@@ -43,7 +43,7 @@ const BARREL_HIGHLIGHTS: ColumnDef[] = [
 const REPLICA_COLUMNS: ColumnDef[] = [
   { key: "trueScore", label: "Prop Score", min: 20, max: 90 },
   { key: "matchup",   label: "Matchup", min: 30, max: 90 },
-  { key: "zonefit",   label: "ZoneFit", min: 0.02, max: 0.16 },
+  { key: "zonefit",   label: "ZoneFit", min: 0.28, max: 0.52 },
   { key: "hrform",    label: "HR Form", min: 20, max: 90 },
   { key: "iso",       label: "ISO",     min: 0.08, max: 0.30 },
   { key: "xwoba",     label: "xwOBA",   min: 0.26, max: 0.42 },
