@@ -330,6 +330,8 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                 hard = b.get("recent_form_mult", 1.0)
                 prod = b.get("production_form_tb" if units == "bases" else "production_form_hit", 1.0)
                 form = _run_props.blend_forms(hard, prod, w_hard=0.60)
+                bprop = "hits" if units == "hits" else "tb"
+                barrel_mult = barrel_effect_mult(b, opp, prop=bprop)
                 actual_vec, neutral_vec = _batter_outcome_vector(
                     b, opp, eff_park, weather_mult, slot, bvp,
                     apply_xbh_park=(units == "bases"),
@@ -423,6 +425,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     "park_weather_factor": park_weather_factor,
                     "park_factor": park_factor,
                     "weather_factor": weather_factor,
+                    "barrel_mult": barrel_mult,
                     "vs": vs,
                     "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"], "wind_dir": w["wind_dir"],
                     "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],
@@ -430,6 +433,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                 for label, nthresh in thresholds:
                     row[label] = count_ge_prob(outcomes, epa, nthresh)
                     row[f"baseline_{label}"] = count_ge_prob(boutcomes, epa, nthresh)
+                    row[f"{label}_beff"] = min(1.0, max(0.0, row[label] * barrel_mult))
                 rows.append(row)
     rows.sort(key=lambda r: r[thresholds[0][0]], reverse=True)
     return rows

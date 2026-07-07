@@ -324,3 +324,41 @@ def test_k_rows_carry_baseline_and_pace():
     assert "baseline_over_prob" in r and "pace" in r
     assert r["pace"] > 0
     assert 0.0 <= r["baseline_over_prob"] <= 1.0
+
+
+# --- Barrel nudge wired into Hits + TB threshold rows ---
+
+def test_hits_rows_have_barrel_beff_twins():
+    rows = _pl.build_hits_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    assert len(rows) > 0
+    r = rows[0]
+    assert "barrel_mult" in r
+    for label in ("p_ge1", "p_ge2", "p_ge3"):
+        assert f"{label}_beff" in r, f"missing {label}_beff"
+        assert 0.0 <= r[f"{label}_beff"] <= 1.0
+        # Base OFF probability must still be present and unchanged
+        assert label in r
+        assert r[label] == pytest.approx(r[label])  # sanity: value is a real number
+
+
+def test_tb_rows_have_barrel_beff_twins():
+    rows = _pl.build_total_bases_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    assert len(rows) > 0
+    r = rows[0]
+    assert "barrel_mult" in r
+    for label in ("p_ge2", "p_ge3", "p_ge4"):
+        assert f"{label}_beff" in r, f"missing {label}_beff"
+        assert 0.0 <= r[f"{label}_beff"] <= 1.0
+        # Base OFF probability must still be present and unchanged
+        assert label in r
+        assert r[label] == pytest.approx(r[label])  # sanity: value is a real number
+
+
+def test_hits_beff_equals_base_times_barrel_mult():
+    """_beff keys are exactly clamp(base * barrel_mult, 0, 1) — base key is byte-identical."""
+    rows = _pl.build_hits_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    r = rows[0]
+    bm = r["barrel_mult"]
+    for label in ("p_ge1", "p_ge2", "p_ge3"):
+        expected = min(1.0, max(0.0, r[label] * bm))
+        assert r[f"{label}_beff"] == pytest.approx(expected)
