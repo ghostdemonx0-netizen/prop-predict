@@ -111,7 +111,7 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
 
     def batter_fn(pid: int, status: str) -> dict:
         m = meta.get(pid, {})
-        events = get_or_compute(f"bat-events-v2-{pid}-{season}", lambda: fetch.batter_events(pid, season))
+        events = get_or_compute(f"bat-events-v3-{pid}-{season}", lambda: fetch.batter_events(pid, season))
         prof = profiles.batter_profile_from_events(
             events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)), bats=m.get("bats", "R"))
         prof = profiles.with_gamelog(prof, _gamelog_fetch(pid), current_season=season)
@@ -131,7 +131,7 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
 
     def pitcher_fn(pid: int) -> dict:
         m = meta.get(pid, {})
-        events = get_or_compute(f"pit-events-v2-{pid}-{season}", lambda: fetch.pitcher_events(pid, season))
+        events = get_or_compute(f"pit-events-v3-{pid}-{season}", lambda: fetch.pitcher_events(pid, season))
         prof = profiles.pitcher_profile_from_events(
             events, as_of=as_of, player_id=pid, name=m.get("name", str(pid)),
             throws=m.get("throws", "R"), started_game_pks=_started_set(pid))
@@ -147,7 +147,7 @@ def make_profile_fns(slate: list[dict], season: int, as_of: str) -> tuple:
 
     def _events_by_season(pid: int, kind: str) -> dict:
         fetcher = fetch.batter_events if kind == "bat" else fetch.pitcher_events
-        prefix = "bat-events-v2" if kind == "bat" else "pit-events-v2"
+        prefix = "bat-events-v3" if kind == "bat" else "pit-events-v3"
         return {yr: get_or_compute(f"{prefix}-{pid}-{yr}", lambda yr=yr: fetcher(pid, yr))
                 for yr in (season, season - 1, season - 2)}
 

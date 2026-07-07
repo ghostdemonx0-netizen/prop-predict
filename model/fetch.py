@@ -182,11 +182,13 @@ _BATTER_EVENT_COLS = [
     "game_date", "events", "launch_speed",
     "launch_angle", "launch_speed_angle", "hc_x", "hc_y", "stand",
     "bb_type", "estimated_woba_using_speedangle",
+    "description", "zone", "type", "plate_x", "plate_z", "woba_value", "woba_denom",
 ]
 _PITCHER_EVENT_COLS = [
     "game_date", "events", "game_pk", "launch_speed",
     "launch_angle", "launch_speed_angle", "hc_x", "hc_y", "stand",
     "bb_type", "estimated_woba_using_speedangle",
+    "description", "zone", "type", "plate_x", "plate_z", "woba_value", "woba_denom",
 ]
 _DAY_EVENT_COLS = ["batter", "pitcher", "game_date", "events", "launch_speed", "game_pk"]
 
