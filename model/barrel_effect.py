@@ -1,25 +1,63 @@
-"""Pure "b effect": one combined, capped, sample-shrunk barrel multiplier for HR,
-from the HR recipe's barrel factors (barrels lead). Multiplies onto the normal HR
-prob in the existing factor chain. All constants are grader-tunable SEEDS. Other
-props reuse this machinery with their recipes later."""
+"""Pure "b effect": one combined, capped, sample-shrunk barrel multiplier per prop.
+Multiplies onto the normal prob in the existing factor chain. All constants are
+grader-tunable SEEDS. ZoneFit is a hitter-side matchup factor (hitter damage-by-zone
+× this pitcher's location); SwStr is inverted (low whiff = good)."""
+from model.pitch_metrics import zone_fit
 
-# each stat: ((lo, hi) league anchors, weight). weights per side sum to 1.0.
-_HR_HITTER = {
-    "pulled_barrel_rate": ((0.01, 0.12), 0.30),
-    "barrel_rate":        ((0.03, 0.20), 0.30),
-    "hardhit_rate":       ((0.25, 0.55), 0.15),
-    "sweetspot_rate":     ((0.25, 0.45), 0.10),
-    "fb_rate":            ((0.18, 0.45), 0.05),
-    "xwobacon":           ((0.26, 0.46), 0.10),
+# league anchors reused across recipes: (lo, hi)
+_A = {
+    "pulled_barrel_rate": (0.01, 0.12), "barrel_rate": (0.03, 0.20),
+    "hardhit_rate": (0.25, 0.55), "sweetspot_rate": (0.25, 0.45),
+    "fb_rate": (0.18, 0.45), "xwobacon": (0.26, 0.46),
+    "zonefit": (0.28, 0.52), "swstr": (0.06, 0.16),
+    "pulled_barrel_rate_allowed": (0.03, 0.08), "barrel_rate_allowed": (0.04, 0.12),
+    "hardhit_rate_allowed": (0.35, 0.52), "fb_rate_allowed": (0.18, 0.45),
+    "hit_allowed_rate": (0.20, 0.28),
 }
-_HR_PITCHER = {
-    "pulled_barrel_rate_allowed": ((0.03, 0.08), 0.35),
-    "barrel_rate_allowed":        ((0.04, 0.12), 0.35),
-    "hardhit_rate_allowed":       ((0.35, 0.52), 0.20),
-    "fb_rate_allowed":            ((0.18, 0.45), 0.10),
+_INVERT = {"swstr"}       # lower is better -> flip the deviation sign
+_MATCHUP = {"zonefit"}    # value computed from hitter x pitcher, not a plain field
+
+def _h(pairs):  # build a hitter/pitcher spec dict: {key: ((lo,hi), weight)}
+    return {k: (_A[k], w) for k, w in pairs}
+
+# ---- per-prop recipes (hitter side sums 1.0, pitcher side sums 1.0) ----
+_RECIPES = {
+    "hr": {"cap": 0.20,
+        "hitter": _h([("pulled_barrel_rate",0.25),("barrel_rate",0.25),("hardhit_rate",0.12),
+                      ("sweetspot_rate",0.08),("fb_rate",0.05),("xwobacon",0.10),
+                      ("zonefit",0.10),("swstr",0.05)]),
+        "pitcher": _h([("pulled_barrel_rate_allowed",0.35),("barrel_rate_allowed",0.35),
+                       ("hardhit_rate_allowed",0.20),("fb_rate_allowed",0.10)])},
+    "tb": {"cap": 0.20,
+        "hitter": _h([("barrel_rate",0.20),("pulled_barrel_rate",0.15),("hardhit_rate",0.15),
+                      ("xwobacon",0.12),("sweetspot_rate",0.10),("fb_rate",0.08),
+                      ("zonefit",0.12),("swstr",0.08)]),
+        "pitcher": _h([("barrel_rate_allowed",0.40),("hardhit_rate_allowed",0.30),
+                       ("hit_allowed_rate",0.30)])},
+    "hits": {"cap": 0.15,
+        "hitter": _h([("zonefit",0.22),("swstr",0.20),("hardhit_rate",0.18),
+                      ("sweetspot_rate",0.15),("xwobacon",0.15),("barrel_rate",0.10)]),
+        "pitcher": _h([("hit_allowed_rate",0.50),("hardhit_rate_allowed",0.30),
+                       ("barrel_rate_allowed",0.20)])},
+    "runs": {"cap": 0.15,
+        "hitter": _h([("zonefit",0.20),("swstr",0.18),("xwobacon",0.15),("hardhit_rate",0.15),
+                      ("barrel_rate",0.12),("sweetspot_rate",0.10),("fb_rate",0.10)]),
+        "pitcher": _h([("hit_allowed_rate",0.50),("hardhit_rate_allowed",0.30),
+                       ("barrel_rate_allowed",0.20)])},
+    "rbi": {"cap": 0.20,
+        "hitter": _h([("hardhit_rate",0.20),("barrel_rate",0.18),("xwobacon",0.15),
+                      ("pulled_barrel_rate",0.10),("zonefit",0.15),("swstr",0.12),
+                      ("sweetspot_rate",0.10)]),
+        "pitcher": _h([("barrel_rate_allowed",0.40),("hardhit_rate_allowed",0.30),
+                       ("hit_allowed_rate",0.30)])},
+    "hrr": {"cap": 0.15,
+        "hitter": _h([("barrel_rate",0.18),("hardhit_rate",0.15),("xwobacon",0.12),
+                      ("pulled_barrel_rate",0.10),("zonefit",0.15),("swstr",0.12),
+                      ("sweetspot_rate",0.08),("fb_rate",0.10)]),
+        "pitcher": _h([("barrel_rate_allowed",0.35),("hardhit_rate_allowed",0.30),
+                       ("hit_allowed_rate",0.35)])},
 }
 _W_HITTER, _W_PITCHER = 0.60, 0.40
-_CAP = 0.20
 _N_STABLE = 40.0
 
 
@@ -32,20 +70,34 @@ def _dev(value, lo, hi) -> float:
     return 2.0 * t - 1.0
 
 
-def _index(profile: dict, spec: dict) -> float:
-    return sum(w * _dev(profile.get(k), lo, hi) for k, ((lo, hi), w) in spec.items())
+def _hitter_index(hitter: dict, pitcher: dict | None, spec: dict) -> float:
+    total = 0.0
+    for key, ((lo, hi), w) in spec.items():
+        if key in _MATCHUP:
+            val = zone_fit(hitter.get("zone_dmg") or {}, pitcher.get("zone_freq") or {}) if pitcher else None
+        else:
+            val = hitter.get(key)
+        dev = _dev(val, lo, hi)
+        if key in _INVERT:
+            dev = -dev
+        total += w * dev
+    return total
 
 
-def barrel_effect_mult(hitter: dict, pitcher: dict | None, *, cap: float = _CAP,
+def _pitcher_index(pitcher: dict, spec: dict) -> float:
+    return sum(w * _dev(pitcher.get(k), lo, hi) for k, ((lo, hi), w) in spec.items())
+
+
+def barrel_effect_mult(hitter: dict, pitcher: dict | None, *, prop: str = "hr",
                        n_stable: float = _N_STABLE) -> float:
-    """Combined HR barrel nudge in [1-cap, 1+cap]. Hitter barrels vs pitcher
-    barrels-allowed, shrunk by the hitter's batted-ball sample (`bbe`). Neutral
-    (1.0) with no data."""
-    d_h = _index(hitter, _HR_HITTER)                       # [-1, 1]
-    d_p = _index(pitcher, _HR_PITCHER) if pitcher else 0.0  # [-1, 1]
-    d = _W_HITTER * d_h + _W_PITCHER * d_p                 # [-1, 1]
+    """Combined barrel nudge in [1-cap, 1+cap] for `prop`. Hitter recipe vs pitcher
+    recipe, shrunk by the hitter's batted-ball sample (`bbe`). Neutral (1.0) with no data."""
+    recipe = _RECIPES[prop]
+    d_h = _hitter_index(hitter, pitcher, recipe["hitter"])
+    d_p = _pitcher_index(pitcher, recipe["pitcher"]) if pitcher else 0.0
+    d = _W_HITTER * d_h + _W_PITCHER * d_p
     bbe = hitter.get("bbe") or 0
     trust = min(bbe / n_stable, 1.0) if n_stable else 1.0
     d *= trust
     d = -1.0 if d < -1.0 else 1.0 if d > 1.0 else d
-    return 1.0 + d * cap
+    return 1.0 + d * recipe["cap"]

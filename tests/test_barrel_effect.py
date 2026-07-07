@@ -1,4 +1,5 @@
-from model.barrel_effect import barrel_effect_mult
+import math
+from model.barrel_effect import barrel_effect_mult, _RECIPES
 
 _STRONG = {"pulled_barrel_rate": 0.12, "barrel_rate": 0.20, "hardhit_rate": 0.55,
            "sweetspot_rate": 0.45, "fb_rate": 0.45, "xwobacon": 0.46, "bbe": 300}
@@ -10,13 +11,50 @@ _STINGY_P = {"pulled_barrel_rate_allowed": 0.03, "barrel_rate_allowed": 0.04,
              "hardhit_rate_allowed": 0.35, "fb_rate_allowed": 0.18}
 
 
-def test_strong_vs_vulnerable_pushes_up_to_cap():
-    assert barrel_effect_mult(_STRONG, _VULN_P) == 1.20   # both maxed -> full +cap
+# ---- new prop-aware tests ----
+
+def _hw(spec):
+    # normalize entries to (key, ((lo,hi), w)) ignoring the optional invert marker
+    return [(k, (v[0], v[1])) for k, v in spec.items()]
 
 
-def test_weak_vs_stingy_pushes_down_to_cap():
-    assert barrel_effect_mult(_WEAK, _STINGY_P) == 0.80    # both min -> full -cap
+def test_every_recipe_side_sums_to_one():
+    for prop, r in _RECIPES.items():
+        hs = sum(w for _, (_, w) in _hw(r["hitter"]))
+        ps = sum(w for _, (_, w) in r["pitcher"].items())
+        assert math.isclose(hs, 1.0, abs_tol=1e-9), f"{prop} hitter {hs}"
+        assert math.isclose(ps, 1.0, abs_tol=1e-9), f"{prop} pitcher {ps}"
 
+
+def test_caps_are_graduated():
+    assert _RECIPES["hr"]["cap"] == 0.20 and _RECIPES["rbi"]["cap"] == 0.20
+    assert _RECIPES["hits"]["cap"] == 0.15 and _RECIPES["runs"]["cap"] == 0.15
+
+
+def test_swstr_inverted_low_whiff_helps_hits():
+    strong = {"bbe": 300, "zone_dmg": {}, "swstr": 0.06,  # low whiff (good)
+              "hardhit_rate": 0.55, "sweetspot_rate": 0.45, "xwobacon": 0.46, "barrel_rate": 0.20}
+    whiffy = dict(strong); whiffy["swstr"] = 0.16          # high whiff (bad)
+    assert barrel_effect_mult(strong, None, prop="hits") > barrel_effect_mult(whiffy, None, prop="hits")
+
+
+def test_zonefit_matchup_moves_nudge():
+    hitter = {"bbe": 300, "zone_dmg": {5: 0.9}, "swstr": 0.10, "hardhit_rate": 0.40,
+              "sweetspot_rate": 0.35, "xwobacon": 0.36, "barrel_rate": 0.10}
+    into_hot = {"zone_freq": {5: 1.0}}      # pitcher lives in the hitter's hot zone
+    into_cold = {"zone_freq": {1: 1.0}}
+    assert barrel_effect_mult(hitter, into_hot, prop="hits") > barrel_effect_mult(hitter, into_cold, prop="hits")
+
+
+def test_clamps_to_prop_cap_and_neutral_no_data():
+    maxed = {"bbe": 300, "zone_dmg": {}, "swstr": 0.06, "pulled_barrel_rate": 0.12,
+             "barrel_rate": 0.20, "hardhit_rate": 0.55, "sweetspot_rate": 0.45,
+             "fb_rate": 0.45, "xwobacon": 0.46}
+    assert barrel_effect_mult(maxed, None, prop="hr") <= 1.20 + 1e-9
+    assert abs(barrel_effect_mult({}, None, prop="hr") - 1.0) < 1e-9
+
+
+# ---- still-valid legacy tests (recipe now includes ZoneFit+SwStr; exact caps dropped) ----
 
 def test_neutral_matchup_near_one():
     mid_h = {"pulled_barrel_rate": 0.065, "barrel_rate": 0.115, "hardhit_rate": 0.40,
@@ -28,7 +66,7 @@ def test_neutral_matchup_near_one():
 
 def test_thin_sample_shrinks_toward_one():
     thin = dict(_STRONG); thin["bbe"] = 4     # 4/40 = 0.1 trust
-    full = barrel_effect_mult(_STRONG, _VULN_P) - 1.0     # +0.20
+    full = barrel_effect_mult(_STRONG, _VULN_P) - 1.0
     small = barrel_effect_mult(thin, _VULN_P) - 1.0
     assert 0 < small < full and abs(small - full * 0.1) < 1e-9
 
