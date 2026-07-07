@@ -145,3 +145,14 @@ def test_profiles_have_iso_and_xwoba():
     assert "iso" in b and "xwoba" in b
     p = pitcher_profile_from_events(evs, as_of="2026-06-01", player_id=9)
     assert "xwoba_allowed" in p        # pitcher gets xwoba-allowed (no ISO)
+
+
+def test_batter_profile_has_zone_dmg_pitcher_has_zone_freq():
+    evs = [_brow("2026-04-01", "home_run", ls=105, la=27, lsa=6, bb="fly_ball")]
+    evs[0]["zone"] = 5; evs[0]["estimated_woba_using_speedangle"] = 1.5
+    b = batter_profile_from_events(evs, as_of="2026-06-01", player_id=1)
+    assert "zone_dmg" in b and isinstance(b["zone_dmg"], dict)
+    evs2 = [{"game_date": "2026-04-01", "events": None, "launch_speed": None,
+             "description": "ball", "zone": 5}]
+    p = pitcher_profile_from_events(evs2, as_of="2026-06-01", player_id=9)
+    assert "zone_freq" in p and isinstance(p["zone_freq"], dict)

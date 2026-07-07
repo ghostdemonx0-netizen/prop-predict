@@ -11,7 +11,7 @@ from model.projections import LEAGUE_HR_RATE
 from model.matchup import LEAGUE_K, LEAGUE_HIT
 from model.run_props import RECENT_GAMES_WINDOW
 from model.barrel import barrel_metrics
-from model.pitch_metrics import pitch_rates
+from model.pitch_metrics import pitch_rates, zone_damage, zone_freq
 from model.xstats import iso, xwoba
 
 _HR_R, _K_R, _HIT_R = 300.0, 200.0, 200.0
@@ -105,6 +105,7 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
         **pitch_rates(events, as_of=as_of),
         **iso(events, as_of=as_of),
         **xwoba(events, as_of=as_of),
+        "zone_dmg": zone_damage(events, as_of=as_of),
     }
 
 
@@ -142,15 +143,15 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
     ks = sum(1 for e in pa_rows if e["events"] in _K_EVENTS)
     hits = sum(1 for e in pa_rows if e["events"] in _HIT_EVENTS)
     hr = sum(1 for e in pa_rows if e["events"] == "home_run")
-    ks_by_game: dict = {e["game_pk"]: 0 for e in past if e["game_pk"] is not None}
+    ks_by_game: dict = {e["game_pk"]: 0 for e in past if e.get("game_pk") is not None}
     for e in pa_rows:
-        if e["game_pk"] is not None and e["events"] in _K_EVENTS:
+        if e.get("game_pk") is not None and e["events"] in _K_EVENTS:
             ks_by_game[e["game_pk"]] += 1
 
     # Workload (expected_bf) + k_line: true starts only when a started set is given.
     if started_game_pks is not None:
         start_ks = {gp: k for gp, k in ks_by_game.items() if gp in started_game_pks}
-        start_pa = sum(1 for e in pa_rows if e["game_pk"] in started_game_pks)
+        start_pa = sum(1 for e in pa_rows if e.get("game_pk") in started_game_pks)
         if len(start_ks) >= _MIN_TRUE_STARTS:
             expected_bf = start_pa / len(start_ks)
             line = k_line_from_starts(list(start_ks.values()), fallback=k_line)
@@ -177,6 +178,7 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
         **barrel_metrics(events, as_of=as_of, allowed=True),
         **pitch_rates(events, as_of=as_of),
         **xwoba(events, as_of=as_of, allowed=True),
+        "zone_freq": zone_freq(events, as_of=as_of),
     }
 
 
