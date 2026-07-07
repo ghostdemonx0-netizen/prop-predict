@@ -18,6 +18,7 @@ from model.cache import get_or_compute
 from model.pipeline import build_hr_rows, build_strikeout_rows, build_games, build_hits_rows, build_total_bases_rows, build_runs_rows, build_rbi_rows, build_hrr_rows
 from model.prop_score import prop_score
 from model.matchup import hr_platoon_mult
+from model.pitch_metrics import zone_fit
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
 _DATE_FILE = re.compile(r"^\d{4}-\d{2}-\d{2}\.json$")
@@ -359,6 +360,12 @@ def _hitter_board(b: dict, opp: dict | None, order: int, team: str) -> dict:
             "la": round(b.get("la_mean") or 0.0, 1),
             "xwobacon": round(b.get("xwobacon") or 0.0, 3),
             "hrfb": _pct(b.get("hrfb_rate")),
+            "swstr": _pct(b.get("swstr")),
+            "csw": _pct(b.get("csw")),
+            "ball": _pct(b.get("ball")),
+            "iso": _pct(b.get("iso")),
+            "xwoba": round((b.get("xwoba") or 0.0), 3),
+            "zonefit": zone_fit(b.get("zone_dmg") or {}, opp.get("zone_freq") or {}) if opp else 0.0,
         },
     }
 
@@ -374,6 +381,10 @@ def _pitcher_board(p: dict, opp_team: str) -> dict:
             "brlbip": _pct(p.get("barrel_rate_allowed")),
             "fb": _pct(p.get("fb_rate_allowed")),
             "hh": _pct(p.get("hardhit_rate_allowed")),
+            "swstr": _pct(p.get("swstr")),
+            "csw": _pct(p.get("csw")),
+            "ball": _pct(p.get("ball")),
+            "xwoba": round((p.get("xwoba_allowed") or 0.0), 3),
         },
     }
 
