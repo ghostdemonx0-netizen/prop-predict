@@ -25,6 +25,7 @@ from model.projections import (
 from model.matchup import matchup, hr_platoon_mult, bvp_k_mult, classify_lean
 from model.counts import count_ge_prob
 from model.blend import regress
+from model.barrel_effect import barrel_effect_mult
 
 _LG_1B, _LG_2B, _LG_3B = 0.138, 0.045, 0.005
 _COMP_R = 200.0
@@ -105,6 +106,8 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     park_mult=eff_park, weather_mult=weather_mult,
                     expected_pa=expected_pa_for_slot(slot),
                 )
+                barrel_mult = barrel_effect_mult(b, opp)
+                prob_beff = prob * barrel_mult
                 baseline_prob = hr_probability(
                     season_hr=b["season_hr"], season_pa=b["season_pa"],
                     expected_pa=expected_pa_for_slot(slot),
@@ -126,7 +129,10 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     "player_id": b.get("player_id"),
                     "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                     "player": b["name"], "team": team, "park": game["park_team"],
-                    "probability": prob, "wind_out_mph": wod,
+                    "probability": prob,
+                    "barrel_mult": barrel_mult,
+                    "probability_beff": prob_beff,
+                    "wind_out_mph": wod,
                     "weather_mult": weather_mult, "park_mult": eff_park, "spray_pull": sp["pull"],
                     "spray_mult": spray_mult,
                     "baseline_prob": baseline_prob, "pace": hr_pace,
