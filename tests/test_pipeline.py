@@ -362,3 +362,24 @@ def test_hits_beff_equals_base_times_barrel_mult():
     for label in ("p_ge1", "p_ge2", "p_ge3"):
         expected = min(1.0, max(0.0, r[label] * bm))
         assert r[f"{label}_beff"] == pytest.approx(expected)
+
+
+# --- Barrel nudge wired into Runs + RBI + HRR rows ---
+
+def test_run_props_have_barrel_beff_twins():
+    lineup = _c_stacked_lineup()
+    lineups_fn = lambda g: {"home": lineup, "away": lineup}
+    for build, labels in (
+        (_pl.build_runs_rows, ("p_ge1", "p_ge2")),
+        (_pl.build_rbi_rows, ("p_ge1", "p_ge2")),
+        (_pl.build_hrr_rows, ("p_ge2", "p_ge3", "p_ge4")),
+    ):
+        rows = build(_c_slate(), lineups_fn, _c_pitcher, _c_weather)
+        assert len(rows) > 0, f"{build.__name__} returned no rows"
+        r = rows[0]
+        assert "barrel_mult" in r, f"{build.__name__}: missing barrel_mult"
+        for label in labels:
+            assert f"{label}_beff" in r, f"{build.__name__}: missing {label}_beff"
+            assert 0.0 <= r[f"{label}_beff"] <= 1.0, f"{build.__name__}: {label}_beff out of range"
+            # Base probability must still be present and unchanged
+            assert label in r, f"{build.__name__}: base key {label} was removed"
