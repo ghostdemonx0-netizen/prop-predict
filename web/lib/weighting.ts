@@ -197,8 +197,9 @@ export function toBoardRows(
   } else if (prop === "hits1" || prop === "hits2" || prop === "hits3") {
     const n = threshold as 1 | 2 | 3;
     rows = (data.hits ?? []).map((r) => {
-      const base = n === 1 ? r.p_ge1 : n === 2 ? r.p_ge2 : r.p_ge3;
-      const hist = n === 1 ? r.p_ge1_hist : n === 2 ? r.p_ge2_hist : r.p_ge3_hist;
+      const rec = r as unknown as Record<string, number | undefined>;
+      const base = rec[barrelEffect ? `p_ge${n}_beff` : `p_ge${n}`];
+      const hist = rec[barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
       return {
         id: `hits-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
         player: r.player,
@@ -235,8 +236,9 @@ export function toBoardRows(
   } else if (prop === "tb2" || prop === "tb3" || prop === "tb4") {
     const n = threshold as 2 | 3 | 4;
     rows = (data.total_bases ?? []).map((r) => {
-      const base = n === 2 ? r.p_ge2 : n === 3 ? r.p_ge3 : r.p_ge4;
-      const hist = n === 2 ? r.p_ge2_hist : n === 3 ? r.p_ge3_hist : r.p_ge4_hist;
+      const rec = r as unknown as Record<string, number | undefined>;
+      const base = rec[barrelEffect ? `p_ge${n}_beff` : `p_ge${n}`];
+      const hist = rec[barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
       return {
         id: `tb-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
         player: r.player,
@@ -273,8 +275,9 @@ export function toBoardRows(
   } else if (prop === "runs1" || prop === "runs2") {
     const n = threshold as 1 | 2;
     rows = (data.runs ?? []).map((r) => {
-      const base = n === 1 ? r.p_ge1 : r.p_ge2;
-      const hist = n === 1 ? r.p_ge1_hist : r.p_ge2_hist;
+      const rec = r as unknown as Record<string, number | undefined>;
+      const base = rec[barrelEffect ? `p_ge${n}_beff` : `p_ge${n}`];
+      const hist = rec[barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
       return {
         id: `runs-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
         player: r.player,
@@ -311,8 +314,9 @@ export function toBoardRows(
   } else if (prop === "rbi1" || prop === "rbi2") {
     const n = threshold as 1 | 2;
     rows = (data.rbi ?? []).map((r) => {
-      const base = n === 1 ? r.p_ge1 : r.p_ge2;
-      const hist = n === 1 ? r.p_ge1_hist : r.p_ge2_hist;
+      const rec = r as unknown as Record<string, number | undefined>;
+      const base = rec[barrelEffect ? `p_ge${n}_beff` : `p_ge${n}`];
+      const hist = rec[barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
       return {
         id: `rbi-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
         player: r.player,
@@ -350,8 +354,9 @@ export function toBoardRows(
     // hrr2 | hrr3 | hrr4
     const n = threshold as 2 | 3 | 4;
     rows = (data.hrr ?? []).map((r) => {
-      const base = n === 2 ? r.p_ge2 : n === 3 ? r.p_ge3 : r.p_ge4;
-      const hist = n === 2 ? r.p_ge2_hist : n === 3 ? r.p_ge3_hist : r.p_ge4_hist;
+      const rec = r as unknown as Record<string, number | undefined>;
+      const base = rec[barrelEffect ? `p_ge${n}_beff` : `p_ge${n}`];
+      const hist = rec[barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
       return {
         id: `hrr-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
         player: r.player,

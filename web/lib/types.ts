@@ -139,6 +139,14 @@ export type HitsRow = {
   p_ge1_hist?: number;
   p_ge2_hist?: number;
   p_ge3_hist?: number;
+  p_ge1_beff?: number;
+  p_ge1_beff_hist?: number;
+  p_ge2_beff?: number;
+  p_ge2_beff_hist?: number;
+  p_ge3_beff?: number;
+  p_ge3_beff_hist?: number;
+  barrel_mult?: number;
+  barrel_mult_hist?: number;
 };
 
 export type TbRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | "p_ge2_hist" | "p_ge3_hist"> & {
@@ -148,6 +156,8 @@ export type TbRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | "
   p_ge2_hist?: number;
   p_ge3_hist?: number;
   p_ge4_hist?: number;
+  p_ge4_beff?: number;
+  p_ge4_beff_hist?: number;
   park_weather_factor?: number;
   park_weather_factor_hist?: number;
   spray_mult?: number; // weather × spray = today's park&weather total (no double-count)
@@ -182,6 +192,8 @@ export type HrrRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | 
   p_ge2_hist?: number;
   p_ge3_hist?: number;
   p_ge4_hist?: number;
+  p_ge4_beff?: number;
+  p_ge4_beff_hist?: number;
   park_weather_factor?: number;
   park_weather_factor_hist?: number;
   hard_hit_form?: number;

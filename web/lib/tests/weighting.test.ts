@@ -23,4 +23,39 @@ describe("toBoardRows", () => {
     expect(off).toBeCloseTo(0.15);
     expect(on).toBeCloseTo(0.18);
   });
+
+  it("barrelEffect picks the _beff twin for a hits threshold prop", () => {
+    const hitsRow = {
+      player: "A", team: "NYY", player_id: 10, game_id: 2,
+      p_ge2: 0.40, p_ge2_hist: 0.42,
+      p_ge2_beff: 0.50, p_ge2_beff_hist: 0.52,
+      // other required fields with defaults
+      p_ge1: 0.70, p_ge3: 0.15,
+    };
+    const data = { hr: [], strikeouts: [], hits: [hitsRow] } as unknown as Projections;
+
+    const off = toBoardRows(data, "hits2", 2, "current", false)[0].prob;
+    const on  = toBoardRows(data, "hits2", 2, "current", true)[0].prob;
+    expect(off).toBeCloseTo(0.40);
+    expect(on).toBeCloseTo(0.50);
+
+    // blend source: averages the _beff twins when barrelEffect=true
+    const onBlend = toBoardRows(data, "hits2", 2, "blend", true)[0].prob;
+    expect(onBlend).toBeCloseTo((0.50 + 0.52) / 2);
+  });
+
+  it("barrelEffect picks the _beff twin for a run prop (runs1)", () => {
+    const runsRow = {
+      player: "B", team: "LAD", player_id: 20, game_id: 3,
+      p_ge1: 0.35, p_ge1_hist: 0.38,
+      p_ge1_beff: 0.45, p_ge1_beff_hist: 0.48,
+      p_ge2: 0.10,
+    };
+    const data = { hr: [], strikeouts: [], runs: [runsRow] } as unknown as Projections;
+
+    const off = toBoardRows(data, "runs1", 1, "current", false)[0].prob;
+    const on  = toBoardRows(data, "runs1", 1, "current", true)[0].prob;
+    expect(off).toBeCloseTo(0.35);
+    expect(on).toBeCloseTo(0.45);
+  });
 });
