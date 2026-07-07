@@ -74,7 +74,9 @@ def _hitter_index(hitter: dict, pitcher: dict | None, spec: dict) -> float:
     total = 0.0
     for key, ((lo, hi), w) in spec.items():
         if key in _MATCHUP:
-            val = zone_fit(hitter.get("zone_dmg") or {}, pitcher.get("zone_freq") or {}) if pitcher else None
+            zd = hitter.get("zone_dmg")
+            zf = pitcher.get("zone_freq") if pitcher else None
+            val = zone_fit(zd, zf) if (zd and zf) else None   # neutral when either side lacks zone data
         else:
             val = hitter.get(key)
         dev = _dev(val, lo, hi)

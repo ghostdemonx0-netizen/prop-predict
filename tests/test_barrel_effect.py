@@ -90,3 +90,15 @@ def test_no_data_is_neutral():
 
 def test_output_in_cap_band():
     assert 0.80 <= barrel_effect_mult(_STRONG, _VULN_P) <= 1.20
+
+
+def test_zonefit_missing_data_is_neutral_not_negative():
+    # hitter with all barrel factors at their anchor MIDPOINTS (dev 0), no zone_dmg, no swstr;
+    # pitcher-allowed factors also at midpoints, no zone_freq. Nudge must be ~1.0 (neutral),
+    # NOT dragged below 1.0 by a spurious max-negative ZoneFit.
+    mid_h = {"bbe": 300, "pulled_barrel_rate": 0.065, "barrel_rate": 0.115,
+             "hardhit_rate": 0.40, "sweetspot_rate": 0.35, "fb_rate": 0.315, "xwobacon": 0.36}
+    mid_p = {"pulled_barrel_rate_allowed": 0.055, "barrel_rate_allowed": 0.08,
+             "hardhit_rate_allowed": 0.435, "fb_rate_allowed": 0.315, "hit_allowed_rate": 0.24}
+    m = barrel_effect_mult(mid_h, mid_p, prop="hr")
+    assert abs(m - 1.0) < 0.03, m   # was ~0.98 before the fix (spurious ZoneFit drag); ~1.0 after
