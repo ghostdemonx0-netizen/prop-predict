@@ -56,3 +56,13 @@ def test_respects_as_of_cutoff():
     evs = [_bb("2026-04-01", "home_run", lsa=6, bb="fly_ball"), _bb("2026-07-01", "home_run", lsa=6, bb="fly_ball")]
     m = barrel_metrics(evs, as_of="2026-06-01")  # only the April ball counts
     assert m["barrel_rate"] == 1.0
+
+
+def test_barrel_metrics_emits_bbe_count():
+    evs = [_bb("2026-04-01", "home_run", lsa=6, bb="fly_ball"),
+           _bb("2026-04-01", "single", lsa=5, bb="line_drive"),
+           _bb("2026-04-01", "strikeout", ls=None, bb=None)]  # not a BBE
+    m = barrel_metrics(evs, as_of="2026-06-01")
+    assert m["bbe"] == 2
+    ma = barrel_metrics(evs, as_of="2026-06-01", allowed=True)
+    assert ma["bbe_allowed"] == 2

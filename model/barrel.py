@@ -11,7 +11,7 @@ _SWEETSPOT_LO, _SWEETSPOT_HI = 8.0, 32.0
 _HARDHIT_MPH = 95.0
 
 _KEYS = ("barrel_rate", "pulled_barrel_rate", "sweetspot_rate", "fb_rate",
-         "hardhit_rate", "la_mean", "xwobacon", "hrfb_rate")
+         "hardhit_rate", "la_mean", "xwobacon", "hrfb_rate", "bbe")
 
 
 def is_barrel(row: dict) -> bool:
@@ -69,6 +69,7 @@ def barrel_metrics(events: list[dict], *, as_of: str, allowed: bool = False) -> 
         "la_mean": (sum(la_vals) / len(la_vals)) if la_vals else 0.0,
         "xwobacon": (sum(xw_vals) / len(xw_vals)) if xw_vals else 0.0,
         "hrfb_rate": (hr_fb / len(fbs)) if fbs else 0.0,
+        "bbe": n,
     }
     if allowed:
         return {f"{k}_allowed": m[k] for k in _KEYS}
