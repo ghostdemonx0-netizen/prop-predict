@@ -136,3 +136,12 @@ def test_batter_profile_has_pitch_rates():
                 "description": "swinging_strike", "zone": 5})
     p = batter_profile_from_events(evs, as_of="2026-06-01", player_id=1)
     assert "swstr" in p and "csw" in p and "ball" in p and "pitches" in p
+
+
+def test_profiles_have_iso_and_xwoba():
+    evs = [_brow("2026-04-01", "home_run", ls=105, la=27, lsa=6, bb="fly_ball")]
+    evs[0]["woba_value"] = 2.0; evs[0]["woba_denom"] = 1
+    b = batter_profile_from_events(evs, as_of="2026-06-01", player_id=1)
+    assert "iso" in b and "xwoba" in b
+    p = pitcher_profile_from_events(evs, as_of="2026-06-01", player_id=9)
+    assert "xwoba_allowed" in p        # pitcher gets xwoba-allowed (no ISO)

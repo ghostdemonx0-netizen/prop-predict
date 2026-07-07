@@ -12,6 +12,7 @@ from model.matchup import LEAGUE_K, LEAGUE_HIT
 from model.run_props import RECENT_GAMES_WINDOW
 from model.barrel import barrel_metrics
 from model.pitch_metrics import pitch_rates
+from model.xstats import iso, xwoba
 
 _HR_R, _K_R, _HIT_R = 300.0, 200.0, 200.0
 
@@ -102,6 +103,8 @@ def batter_profile_from_events(events: list[dict], *, as_of: str, player_id: int
         "hit_rate": regress(hits, pa, LEAGUE_HIT, _HIT_R),
         **barrel_metrics(events, as_of=as_of),
         **pitch_rates(events, as_of=as_of),
+        **iso(events, as_of=as_of),
+        **xwoba(events, as_of=as_of),
     }
 
 
@@ -173,6 +176,7 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
         "bf": pa,
         **barrel_metrics(events, as_of=as_of, allowed=True),
         **pitch_rates(events, as_of=as_of),
+        **xwoba(events, as_of=as_of, allowed=True),
     }
 
 
