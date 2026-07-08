@@ -16,8 +16,8 @@ _RATIO_LO, _RATIO_HI = 0.5, 2.0   # clamp the barrel/league ratio
 
 def _implied(league_rate: float, signal, league_signal: float) -> float:
     """A pitcher's barrel-implied rate: league_rate scaled by how his barrel signal
-    compares to league (clamped). Missing signal -> league_rate (graceful)."""
-    if not league_signal or signal is None:
+    compares to league (clamped). Missing or zero signal -> league_rate (neutral)."""
+    if not signal or not league_signal:
         return league_rate
     ratio = signal / league_signal
     ratio = _RATIO_LO if ratio < _RATIO_LO else _RATIO_HI if ratio > _RATIO_HI else ratio

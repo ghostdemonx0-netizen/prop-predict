@@ -50,7 +50,7 @@ def test_pitcher_profile_from_events():
         {"game_date": "2026-06-06", "events": "strikeout", "game_pk": 12},
     ]
     p = pitcher_profile_from_events(events, as_of="2026-06-10", player_id=2, throws="L")
-    # no description/bb_type in these events → signal=0.0 → implied = league/2 (lower clamp)
+    # no description/bb_type in these events → signal=0.0 → implied = league (neutral)
     assert p["k_per_bf"] == pytest.approx(
         barrel_blended_rate(2, 4, signal=0.0, league_rate=LEAGUE_K, league_signal=_LG_SWSTR, votes=_VOTES_K))
     assert p["hit_allowed_rate"] == pytest.approx(
@@ -64,8 +64,8 @@ def test_pitcher_profile_from_events():
 
 def test_pitcher_profile_no_data_defaults():
     p = pitcher_profile_from_events([], as_of="2026-06-10", player_id=3)
-    # no data → pitch_rates returns swstr=0.0; implied = LEAGUE_K/2; with pa=0, votes dominate → LEAGUE_K/2
-    assert p["k_per_bf"] == pytest.approx(LEAGUE_K / 2)
+    # no data → pitch_rates returns swstr=0.0; zero signal → implied = LEAGUE_K (neutral); pa=0, votes dominate → LEAGUE_K
+    assert p["k_per_bf"] == pytest.approx(LEAGUE_K)
     assert p["expected_bf"] == 24.0
     assert p["bf"] == 0
 
@@ -373,11 +373,11 @@ def test_pitcher_current_rates_regressed_toward_league():
     ev = [{"game_date": "2026-05-01", "events": e, "game_pk": 1}
           for e in (["strikeout"] * 3 + ["single"] * 3 + ["field_out"] * 4)]   # 10 PA
     prof = P.pitcher_profile_from_events(ev, as_of="2026-07-01", player_id=1)
-    # no description/bb_type in fixture → signal=0.0 → barrel-blended toward implied = league/2
+    # no description/bb_type in fixture → signal=0.0 → barrel-blended toward implied = league (neutral)
     assert abs(prof["k_per_bf"] - barrel_blended_rate(
         3, 10, signal=0.0, league_rate=LEAGUE_K, league_signal=_LG_SWSTR, votes=_VOTES_K)) < 1e-9
     assert abs(prof["hit_allowed_rate"] - barrel_blended_rate(
         3, 10, signal=0.0, league_rate=LEAGUE_HIT, league_signal=_LG_HARDHIT, votes=_VOTES_HIT)) < 1e-9
     empty = P.pitcher_profile_from_events([], as_of="2026-07-01", player_id=1)
-    # no data → signal=0.0 → implied = LEAGUE_K/2; pa=0 → votes dominate → LEAGUE_K/2
-    assert empty["k_per_bf"] == pytest.approx(P.LEAGUE_K / 2)
+    # no data → signal=0.0 → implied = LEAGUE_K (neutral); pa=0 → votes dominate → LEAGUE_K
+    assert empty["k_per_bf"] == pytest.approx(P.LEAGUE_K)

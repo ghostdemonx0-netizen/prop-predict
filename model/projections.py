@@ -175,10 +175,10 @@ def pitcher_hr_mult(
 ) -> float:
     """How much the opposing pitcher inflates or suppresses HRs.
 
-    The pitcher's HR-allowed-per-batter rate is regressed toward league
-    average with ``regression_bf`` phantom batters faced, then expressed as
-    a multiplier vs league (1.0 = average), clamped to [0.75, 1.3].
+    ``hr_allowed_rate`` is already barrel-blended by the pitcher profile (the
+    profile handles all regression). ``bf`` and ``regression_bf`` are accepted
+    only for caller compatibility and are unused here.  The rate is expressed
+    as a multiplier vs league (1.0 = average), clamped to [0.75, 1.3].
     """
-    bf = max(0.0, bf)   # kept for caller compatibility; no longer used in computation
     reg = hr_allowed_rate   # already barrel-blended in the profile; do not double-regress
     return max(0.75, min(reg / league_hr_rate, 1.3))

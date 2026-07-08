@@ -7,7 +7,7 @@ def test_implied_scales_league_by_signal_ratio():
 
 def test_implied_clamps_and_handles_missing():
     assert _implied(0.033, 0.40, 0.08) == 0.033 * 2.0   # 5x ratio clamps to 2.0
-    assert _implied(0.033, 0.0, 0.08) == 0.033 * 0.5    # 0 ratio clamps to 0.5
+    assert _implied(0.033, 0.0, 0.08) == 0.033           # zero signal -> league (neutral)
     assert _implied(0.033, None, 0.08) == 0.033          # missing signal -> league
 
 def test_blend_thin_sample_leans_implied():
