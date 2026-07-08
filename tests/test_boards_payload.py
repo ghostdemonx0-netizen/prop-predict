@@ -316,6 +316,68 @@ def test_oracle_strong_barrel_bat_flags_true():
     assert h["oracle"] == 1, f"expected oracle=1 for elite barrel bat, got {h.get('oracle')} (score={h.get('oracle_score')})"
 
 
+# ===========================================================================
+# Board headline scores — Matchup + HR Form (hitter) + P Score + K Score (pitcher)
+# ===========================================================================
+
+def test_board_score_keys_present_on_hitter_and_pitcher():
+    """matchup (30-90) + hrform (20-90) on hitter; pscore (30-60) + kscore (30-60) on pitcher."""
+    boards = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(_P),
+    )
+    h = boards["games"][0]["awayHitters"][0]["stats"]
+    assert "matchup" in h, "matchup key missing from hitter stats"
+    assert "hrform" in h, "hrform key missing from hitter stats"
+    assert 30 <= h["matchup"] <= 90, f"matchup out of range: {h['matchup']}"
+    assert 20 <= h["hrform"] <= 90, f"hrform out of range: {h['hrform']}"
+
+    p = boards["pitchers"][0]["stats"]
+    assert "pscore" in p, "pscore key missing from pitcher stats"
+    assert "kscore" in p, "kscore key missing from pitcher stats"
+    assert 30 <= p["pscore"] <= 60, f"pscore out of range: {p['pscore']}"
+    assert 30 <= p["kscore"] <= 60, f"kscore out of range: {p['kscore']}"
+
+
+def test_high_whiff_pitcher_gets_higher_kscore_than_low_whiff():
+    """A pitcher with elite K rate must outscore a low-K pitcher on kscore."""
+    high_k_p = dict(_P, k_per_bf=0.35)   # well above league (0.225)
+    low_k_p  = dict(_P, k_per_bf=0.10)   # well below league
+
+    def make_boards(pitcher_profile):
+        return build_boards_payload(
+            _slate(),
+            lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+            pitcher_fn=lambda pid: dict(pitcher_profile),
+        )
+
+    high_kscore = make_boards(high_k_p)["pitchers"][0]["stats"]["kscore"]
+    low_kscore  = make_boards(low_k_p)["pitchers"][0]["stats"]["kscore"]
+    assert high_kscore > low_kscore, (
+        f"expected high-K pitcher kscore ({high_kscore}) > low-K pitcher kscore ({low_kscore})"
+    )
+
+
+def test_hot_form_hitter_gets_higher_hrform_than_cold():
+    """A batter on a hot streak (form_mult > 1) must outscore a cold one (form_mult < 1)."""
+    hot_h  = dict(_H, recent_form_mult=1.3)
+    cold_h = dict(_H, recent_form_mult=0.7)
+
+    def make_boards(hitter_profile):
+        return build_boards_payload(
+            _slate(),
+            lineups_fn=lambda g: {"home": [dict(hitter_profile)], "away": [dict(hitter_profile)]},
+            pitcher_fn=lambda pid: dict(_P),
+        )
+
+    hot_hrform  = make_boards(hot_h)["games"][0]["awayHitters"][0]["stats"]["hrform"]
+    cold_hrform = make_boards(cold_h)["games"][0]["awayHitters"][0]["stats"]["hrform"]
+    assert hot_hrform > cold_hrform, (
+        f"expected hot hitter hrform ({hot_hrform}) > cold hitter hrform ({cold_hrform})"
+    )
+
+
 def test_oracle_average_bat_flags_false():
     """A league-average bat (all None stats, quality < gate) must surface stats.oracle == 0."""
     avg_h = {

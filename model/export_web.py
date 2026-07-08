@@ -17,7 +17,7 @@ from model import spray as _spray
 from model.cache import get_or_compute
 from model.pipeline import build_hr_rows, build_strikeout_rows, build_games, build_hits_rows, build_total_bases_rows, build_runs_rows, build_rbi_rows, build_hrr_rows
 from model.prop_score import prop_score
-from model.matchup import hr_platoon_mult
+from model.matchup import hr_platoon_mult, LEAGUE_HIT, LEAGUE_K
 from model.pitch_metrics import zone_fit
 from model.barrel_effect import barrel_effect_mult
 from model.oracle import oracle
@@ -367,6 +367,20 @@ def _hand(bats: str) -> str:
     return bats if bats in ("R", "L") else "R"
 
 
+def _hrform_score(b: dict) -> int:
+    """Recent HR/power form -> 20-90 display score. SEED."""
+    form = b.get("recent_form_mult") or 1.0
+    return max(20, min(90, round(55 + (form - 1.0) * 130)))
+
+
+def _matchup_score(b: dict, opp: dict | None, pmult: float) -> int:
+    """Overall matchup favorability (hitter production x pitcher vulnerability x platoon) -> 30-90. SEED."""
+    if not opp:
+        return 50
+    hit_fav = (b.get("hit_rate", LEAGUE_HIT) / LEAGUE_HIT) * (opp.get("hit_allowed_rate", LEAGUE_HIT) / LEAGUE_HIT) * pmult
+    return max(30, min(90, round(55 + (hit_fav - 1.0) * 60)))
+
+
 def _hitter_board(b: dict, opp: dict | None, order: int, team: str) -> dict:
     pmult = hr_platoon_mult(b.get("bats", "R"), opp.get("throws", "R")) if opp else 1.0
     bmult = barrel_effect_mult(b, opp, prop="hr") if opp else 1.0
@@ -397,8 +411,24 @@ def _hitter_board(b: dict, opp: dict | None, order: int, team: str) -> dict:
             "iso": round((b.get("iso") or 0.0), 3),
             "xwoba": round((b.get("xwoba") or 0.0), 3),
             "zonefit": zone_fit(b.get("zone_dmg") or {}, opp.get("zone_freq") or {}) if opp else 0.0,
+            "matchup": _matchup_score(b, opp, pmult),
+            "hrform": _hrform_score(b),
         },
     }
+
+
+def _kscore(p: dict) -> int:
+    """Pitcher strikeout ability -> 30-60 display score. SEED."""
+    kpb = p.get("k_per_bf") or LEAGUE_K
+    return max(30, min(60, round(45 + (kpb / LEAGUE_K - 1.0) * 40)))
+
+
+def _pscore(p: dict) -> int:
+    """Overall pitcher quality: whiff + contact suppression -> 30-60 display score. SEED."""
+    kpb = p.get("k_per_bf") or LEAGUE_K
+    ha = p.get("hit_allowed_rate") or LEAGUE_HIT
+    quality = (kpb / LEAGUE_K + LEAGUE_HIT / max(ha, 0.05)) / 2.0
+    return max(30, min(60, round(45 + (quality - 1.0) * 30)))
 
 
 def _pitcher_board(p: dict, opp_team: str) -> dict:
@@ -416,6 +446,8 @@ def _pitcher_board(p: dict, opp_team: str) -> dict:
             "csw": _pct(p.get("csw")),
             "ball": _pct(p.get("ball")),
             "xwoba": round((p.get("xwoba_allowed") or 0.0), 3),
+            "pscore": _pscore(p),
+            "kscore": _kscore(p),
         },
     }
 
