@@ -166,9 +166,19 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
         hr, ks, hits, tb, runs, rbi, hrr = export_web.build_board_with_history(
             fresh_slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, wfn, bfn)
         games = build_games(fresh_slate, wfn)
+        # Per-player factor map for driver columns on the Boards page.
+        factors_by_pid = {
+            r["player_id"]: {
+                "park_mult": r.get("park_mult"),
+                "weather_mult": r.get("weather_mult"),
+                "pitcher_mult": r.get("pitcher_mult"),
+            }
+            for r in hr if r.get("player_id")
+        }
         # Barrel Boards payload (heatmaps + Oracle badges) — same as export_web.main
         # emits. The robot's board omitted this, so production had no Boards page.
-        boards = export_web.build_boards_payload(fresh_slate, lineups_fn, pitcher_fn)
+        boards = export_web.build_boards_payload(fresh_slate, lineups_fn, pitcher_fn,
+                                                 factors_by_pid=factors_by_pid)
 
     payload = {
         "date": date_str,

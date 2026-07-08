@@ -370,8 +370,21 @@ def make_bvp_fn():
     return bvp_fn
 
 
+_MIN_PITCHES_FOR_RATE = 50  # guard thin-sample swstr/csw
+
+
 def _pct(x) -> float:
     return round((x or 0.0) * 100.0, 1)
+
+
+def _pct_delta(m):
+    """Convert a multiplier (e.g. 1.05) to a percent-delta display value (+5.0).
+
+    Returns None when m is not a real number (so the frontend shows "—"
+    for a factor that was never computed)."""
+    if not isinstance(m, (int, float)):
+        return None
+    return round((m - 1.0) * 100, 1)
 
 
 def _hand(bats: str) -> str:
@@ -394,11 +407,15 @@ def _matchup_score(b: dict, opp: dict | None, pmult: float) -> int:
     return max(30, min(90, round(55 + (hit_fav - 1.0) * 60)))
 
 
-def _hitter_board(b: dict, opp: dict | None, order: int, team: str) -> dict:
+def _hitter_board(b: dict, opp: dict | None, order: int, team: str,
+                  factors_by_pid=None) -> dict:
     pmult = hr_platoon_mult(b.get("bats", "R"), opp.get("throws", "R")) if opp else 1.0
     bmult = barrel_effect_mult(b, opp, prop="hr") if opp else 1.0
     orc = oracle(b, barrel_mult=bmult, platoon_mult=pmult)
     score = prop_score(b, opp, platoon_mult=pmult) if opp else 0.0
+    f = (factors_by_pid or {}).get(b.get("player_id")) or {}
+    pitches = b.get("pitches")
+    _thin = pitches is not None and pitches < _MIN_PITCHES_FOR_RATE
     return {
         "id": b.get("player_id"),
         "name": b.get("name", ""),
@@ -418,14 +435,20 @@ def _hitter_board(b: dict, opp: dict | None, order: int, team: str) -> dict:
             "la": round(b.get("la_mean") or 0.0, 1),
             "xwobacon": round(b.get("xwobacon") or 0.0, 3),
             "hrfb": _pct(b.get("hrfb_rate")),
-            "swstr": _pct(b.get("swstr")),
-            "csw": _pct(b.get("csw")),
+            "swstr": None if _thin else _pct(b.get("swstr")),
+            "csw": None if _thin else _pct(b.get("csw")),
             "ball": _pct(b.get("ball")),
             "iso": round((b.get("iso") or 0.0), 3),
             "xwoba": round((b.get("xwoba") or 0.0), 3),
             "zonefit": zone_fit(b.get("zone_dmg") or {}, opp.get("zone_freq") or {}) if opp else 0.0,
             "matchup": _matchup_score(b, opp, pmult),
             "hrform": _hrform_score(b),
+            # Driver columns (percent-delta of each multiplier; None = not computed yet)
+            "park": _pct_delta(f.get("park_mult")),
+            "weather": _pct_delta(f.get("weather_mult")),
+            "pitcher": _pct_delta(f.get("pitcher_mult")),
+            "platoon": _pct_delta(pmult),
+            "form": _pct_delta(b.get("recent_form_mult")),
         },
     }
 
@@ -445,6 +468,8 @@ def _pscore(p: dict) -> int:
 
 
 def _pitcher_board(p: dict, opp_team: str) -> dict:
+    pitches = p.get("pitches")
+    _thin = pitches is not None and pitches < _MIN_PITCHES_FOR_RATE
     return {
         "name": p.get("name", ""),
         "team": "",
@@ -455,8 +480,8 @@ def _pitcher_board(p: dict, opp_team: str) -> dict:
             "brlbip": _pct(p.get("barrel_rate_allowed")),
             "fb": _pct(p.get("fb_rate_allowed")),
             "hh": _pct(p.get("hardhit_rate_allowed")),
-            "swstr": _pct(p.get("swstr")),
-            "csw": _pct(p.get("csw")),
+            "swstr": None if _thin else _pct(p.get("swstr")),
+            "csw": None if _thin else _pct(p.get("csw")),
             "ball": _pct(p.get("ball")),
             "xwoba": round((p.get("xwoba_allowed") or 0.0), 3),
             "pscore": _pscore(p),
@@ -465,10 +490,15 @@ def _pitcher_board(p: dict, opp_team: str) -> dict:
     }
 
 
-def build_boards_payload(slate: list[dict], lineups_fn, pitcher_fn) -> dict:
+def build_boards_payload(slate: list[dict], lineups_fn, pitcher_fn,
+                         factors_by_pid=None) -> dict:
     """Per-game barrel boards (display only): each team's hitters (real barrel
     stats + Prop Score) vs the pitcher they face, plus a slate-pitchers list of
-    barrel-allowed rows. Not-yet-real columns are omitted (frontend shows "—")."""
+    barrel-allowed rows.
+
+    factors_by_pid: optional {player_id: {"park_mult": …, "weather_mult": …,
+    "pitcher_mult": …}} map built from the HR rows so the driver columns
+    (park / weather / pitcher / platoon / form) can be surfaced on the board."""
     games, pitchers, seen_p = [], [], set()
     for game in slate:
         if game.get("started"):
@@ -478,8 +508,10 @@ def build_boards_payload(slate: list[dict], lineups_fn, pitcher_fn) -> dict:
         away_p = pitcher_fn(game["away_pitcher_id"]) if game.get("away_pitcher_id") else None
         lns = lineups_fn(game)
         # away batters face the HOME pitcher; home batters face the AWAY pitcher
-        away_hitters = [_hitter_board(b, home_p, i + 1, away) for i, b in enumerate(lns.get("away", []))]
-        home_hitters = [_hitter_board(b, away_p, i + 1, home) for i, b in enumerate(lns.get("home", []))]
+        away_hitters = [_hitter_board(b, home_p, i + 1, away, factors_by_pid)
+                        for i, b in enumerate(lns.get("away", []))]
+        home_hitters = [_hitter_board(b, away_p, i + 1, home, factors_by_pid)
+                        for i, b in enumerate(lns.get("home", []))]
         games.append({
             "id": f"{away}-{home}",
             "away": away, "home": home,
@@ -515,6 +547,17 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
     hr_rows, k_rows, hits_rows, tb_rows, runs_rows, rbi_rows, hrr_rows = build_board_with_history(
         slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, weather_fn, bvp_fn)
 
+    # Build per-player factor map from HR rows so the Boards page can surface
+    # the park / weather / pitcher driver columns (same compute, display-only).
+    factors_by_pid = {
+        r["player_id"]: {
+            "park_mult": r.get("park_mult"),
+            "weather_mult": r.get("weather_mult"),
+            "pitcher_mult": r.get("pitcher_mult"),
+        }
+        for r in hr_rows if r.get("player_id")
+    }
+
     payload = {
         "date": date_str,
         "updated": dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -526,7 +569,8 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
         "rbi": rbi_rows,
         "hrr": hrr_rows,
         "games": build_games(slate, weather_fn),
-        "boards": build_boards_payload(slate, lineups_fn, pitcher_fn),
+        "boards": build_boards_payload(slate, lineups_fn, pitcher_fn,
+                                       factors_by_pid=factors_by_pid),
     }
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     (DATA_DIR / f"{date_str}.json").write_text(json.dumps(payload, indent=2))
