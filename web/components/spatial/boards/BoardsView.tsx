@@ -25,6 +25,16 @@ function fmt(v: number): string {
   return String(Math.round(v * 10) / 10);
 }
 
+/** Legend explaining which columns move your number vs. context-only. */
+function ColumnLegend() {
+  return (
+    <div className="sp-board-legend">
+      <span style={{ color: "var(--iris-cyan)" }}>●</span>{" moves your number · "}
+      <span style={{ fontStyle: "italic", opacity: 0.65 }}>○</span>{" context (reading only)"}
+    </div>
+  );
+}
+
 function HeatTable({
   title, hitters, columns,
 }: {
@@ -87,12 +97,7 @@ function HeatTable({
           </tbody>
         </table>
       </div>
-      {columns.some((c) => c.context) && (
-        <div className="sp-board-legend">
-          <span style={{ color: "var(--iris-cyan)" }}>●</span>{" moves your number · "}
-          <span style={{ fontStyle: "italic", opacity: 0.65 }}>○</span>{" context (reading only)"}
-        </div>
-      )}
+      {columns.some((c) => c.context) && <ColumnLegend />}
     </div>
   );
 }
@@ -133,6 +138,7 @@ function PitcherBoard({ pitchers }: { pitchers: BoardPitcher[] }) {
           </tbody>
         </table>
       </div>
+      {PITCHER_COLUMNS.some((c) => c.context) && <ColumnLegend />}
     </details>
   );
 }
