@@ -169,7 +169,7 @@ function PitcherBoard({ pitchers, source }: { pitchers: BoardPitcher[]; source: 
       : cmpStat(statVal(a.stats, sort.sortKey, source), statVal(b.stats, sort.sortKey, source), sort.sortDir),
   );
   return (
-    <details open className="sp-boardsec" style={{ marginBottom: 24 }}>
+    <details className="sp-boardsec" style={{ marginBottom: 24 }}>
       <summary className="sp-boardsec-head">Slate Pitchers</summary>
       <div style={{ overflowX: "auto", marginTop: 10 }} className="sp-float">
         <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 12 }}>
@@ -325,7 +325,7 @@ export function BoardsView({ lens, boards, source = "current" }: BoardsViewProps
       <TopReads games={games} lens={lens} source={source} />
 
       {games.map((g) => (
-        <details key={g.id} open className="sp-boardsec" style={{ marginBottom: 24 }}>
+        <details key={g.id} className="sp-boardsec" style={{ marginBottom: 24 }}>
           <summary className="sp-boardsec-head">
             {g.away} @ {g.home}
             <span style={{ opacity: 0.55, fontSize: 13, fontWeight: 400, marginLeft: 10 }}>
