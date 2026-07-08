@@ -66,6 +66,7 @@ import {
   PitcherIcon,
   ParkIcon,
   ParkWeatherIcon,
+  BarrelIcon,
 } from "./factorIcons";
 
 // Shared inline-icon sizing for factor rows + inline notes.
@@ -87,6 +88,8 @@ export interface PlayerModalProps {
   threshold?: number;
   date?: string;
   source: Source;
+  /** When true the 🛢️ Barrel row is shown in each factor component. */
+  barrelEffect?: boolean;
   onClose: () => void;
   /** Cross-navigation: clicking a linked player opens their modal. */
   onOpenPlayer?: (playerId: string, prop: ModalProp) => void;
@@ -354,7 +357,7 @@ function ModalTop({
 //  Per-prop factor rows (reproduce the current player page exactly)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function HrFactors({ r }: { r: HrRow; source: Source }) {
+function HrFactors({ r, barrelEffect }: { r: HrRow; source: Source; barrelEffect: boolean }) {
   const parkFriendly = r.park_mult >= 1;
   return (
     <>
@@ -395,6 +398,10 @@ function HrFactors({ r }: { r: HrRow; source: Source }) {
         />
       )}
       <FactorBar icon={<FlameIcon size={FI} />} label="Recent form" mult={r.recent_form_mult} note="The blended net of hard-hit + production form." />
+      {barrelEffect && typeof r.barrel_mult === "number" && (
+        <FactorBar icon={<BarrelIcon size={FI} />} label="🛢️ Barrel" mult={r.barrel_mult}
+                   note="barrel matchup vs this pitcher" />
+      )}
       {r.vs && r.pitcher_mult !== undefined && (
         <FactorBar
           icon={<PitcherIcon size={FI} />}
@@ -423,7 +430,7 @@ function HrFactors({ r }: { r: HrRow; source: Source }) {
   );
 }
 
-function HitsFactors({ r, source }: { r: HitsRow; source: Source }) {
+function HitsFactors({ r, source, barrelEffect }: { r: HitsRow; source: Source; barrelEffect: boolean }) {
   const pick = makePick(source);
   const hh = pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist);
   const prod = pick(r.production_form ?? 1, r.production_form_hist);
@@ -446,6 +453,10 @@ function HitsFactors({ r, source }: { r: HitsRow; source: Source }) {
         />
       )}
       <FactorBar icon={<FlameIcon size={FI} />} label="Recent form" mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)} note="The blended net of hard-hit + production form." />
+      {barrelEffect && typeof r.barrel_mult === "number" && (
+        <FactorBar icon={<BarrelIcon size={FI} />} label="🛢️ Barrel" mult={r.barrel_mult}
+                   note="barrel matchup vs this pitcher" />
+      )}
       {r.vs && (
         <FactorBar
           icon={<PitcherIcon size={FI} />}
@@ -471,7 +482,7 @@ function HitsFactors({ r, source }: { r: HitsRow; source: Source }) {
   );
 }
 
-function TbFactors({ r, source }: { r: TbRow; source: Source }) {
+function TbFactors({ r, source, barrelEffect }: { r: TbRow; source: Source; barrelEffect: boolean }) {
   const pick = makePick(source);
   const hh = pick(r.hard_hit_form ?? 1, r.hard_hit_form_hist);
   const prod = pick(r.production_form ?? 1, r.production_form_hist);
@@ -494,6 +505,10 @@ function TbFactors({ r, source }: { r: TbRow; source: Source }) {
         />
       )}
       <FactorBar icon={<FlameIcon size={FI} />} label="Recent form" mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)} note="The blended net of hard-hit + production form." />
+      {barrelEffect && typeof r.barrel_mult === "number" && (
+        <FactorBar icon={<BarrelIcon size={FI} />} label="🛢️ Barrel" mult={r.barrel_mult}
+                   note="barrel matchup vs this pitcher" />
+      )}
       {r.vs && (
         <FactorBar
           icon={<PitcherIcon size={FI} />}
@@ -537,10 +552,12 @@ function LineupFactors({
   r,
   source,
   prop,
+  barrelEffect,
 }: {
   r: RunsRow | HrrRow;
   source: Source;
   prop: "runs" | "rbi" | "hrr";
+  barrelEffect: boolean;
 }) {
   const pick = makePick(source);
   const eyebrow = prop === "runs" ? "Run" : prop === "rbi" ? "RBI" : "Hits+Runs+RBI";
@@ -574,6 +591,10 @@ function LineupFactors({
         note={prod > 1 ? "Producing at a higher rate than his season pace lately." : prod < 1 ? "Producing below his season pace recently." : "Producing around his season pace."}
       />
       <FactorBar icon={<FlameIcon size={FI} />} label="Recent form" mult={pick(r.recent_form_mult ?? 1, r.recent_form_mult_hist)} note="The blended net of hard-hit + production form." />
+      {barrelEffect && typeof r.barrel_mult === "number" && (
+        <FactorBar icon={<BarrelIcon size={FI} />} label="🛢️ Barrel" mult={r.barrel_mult}
+                   note="barrel matchup vs this pitcher" />
+      )}
       {r.vs && (
         <FactorBar
           icon={<PitcherIcon size={FI} />}
@@ -605,6 +626,7 @@ function BatterBody({
   id,
   threshold,
   source,
+  barrelEffect,
   onOpenPlayer,
   onClose,
 }: {
@@ -613,6 +635,7 @@ function BatterBody({
   id: string;
   threshold: number;
   source: Source;
+  barrelEffect: boolean;
   onOpenPlayer?: (playerId: string, prop: ModalProp) => void;
   onClose: () => void;
 }) {
@@ -642,7 +665,7 @@ function BatterBody({
       vs = row.vs;
       stats = [{ value: pct(p), label: "1+ HR probability", glow: true }, { value: strengthLabel(p), label: "our read", glow: false }];
       baseline = <BaselineBlock baseline={row.baseline_prob} baselineHist={row.baseline_prob_hist} pace={row.pace} paceHist={row.pace_hist} kind="hr" source={source} />;
-      factors = <HrFactors r={row} source={source} />;
+      factors = <HrFactors r={row} source={source} barrelEffect={barrelEffect} />;
     }
   } else if (prop === "hits") {
     const row = findBy(data.hits ?? []);
@@ -662,7 +685,7 @@ function BatterBody({
       ];
       read = <ReadCopy n={n} prob={headlineProb} kind={kind} />;
       baseline = <BaselineBlock baseline={baselineKey(row, n)} baselineHist={baselineKey(row, n, true)} pace={row.pace} paceHist={row.pace_hist} kind={kind} source={source} />;
-      factors = <HitsFactors r={row} source={source} />;
+      factors = <HitsFactors r={row} source={source} barrelEffect={barrelEffect} />;
     }
   } else if (prop === "tb") {
     const row = findBy(data.total_bases ?? []);
@@ -682,7 +705,7 @@ function BatterBody({
       ];
       read = <ReadCopy n={n} prob={headlineProb} kind={kind} />;
       baseline = <BaselineBlock baseline={baselineKey(row, n)} baselineHist={baselineKey(row, n, true)} pace={row.pace} paceHist={row.pace_hist} kind={kind} source={source} />;
-      factors = <TbFactors r={row} source={source} />;
+      factors = <TbFactors r={row} source={source} barrelEffect={barrelEffect} />;
     }
   } else if (prop === "runs" || prop === "rbi") {
     const row = findBy((prop === "runs" ? data.runs : data.rbi) ?? []);
@@ -701,7 +724,7 @@ function BatterBody({
       ];
       read = <ReadCopy n={n} prob={headlineProb} kind={kind} noisyLabel={label} />;
       baseline = <BaselineBlock baseline={baselineKey(row, n)} baselineHist={baselineKey(row, n, true)} pace={row.pace} paceHist={row.pace_hist} kind={kind} source={source} />;
-      factors = <LineupFactors r={row} source={source} prop={prop} />;
+      factors = <LineupFactors r={row} source={source} prop={prop} barrelEffect={barrelEffect} />;
     }
   } else {
     // hrr
@@ -722,7 +745,7 @@ function BatterBody({
       ];
       read = <ReadCopy n={n} prob={headlineProb} kind={kind} noisyLabel="Hits+Runs+RBI" />;
       baseline = <BaselineBlock baseline={baselineKey(row, n)} baselineHist={baselineKey(row, n, true)} pace={row.pace} paceHist={row.pace_hist} kind={kind} source={source} />;
-      factors = <LineupFactors r={row} source={source} prop="hrr" />;
+      factors = <LineupFactors r={row} source={source} prop="hrr" barrelEffect={barrelEffect} />;
     }
   }
 
@@ -915,6 +938,7 @@ export function PlayerModal({
   threshold = prop === "tb" || prop === "hrr" ? 2 : 1,
   date,
   source,
+  barrelEffect = false,
   onClose,
   onOpenPlayer,
   projections,
@@ -965,6 +989,7 @@ export function PlayerModal({
             id={id}
             threshold={threshold}
             source={source}
+            barrelEffect={barrelEffect}
             onOpenPlayer={onOpenPlayer}
             onClose={onClose}
           />

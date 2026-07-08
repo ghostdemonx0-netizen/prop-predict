@@ -679,6 +679,7 @@ export default function Home() {
         threshold={selection?.threshold}
         date={selectedDate}
         source={source}
+        barrelEffect={barrelEffect}
         onClose={closePlayer}
         onOpenPlayer={(id, p) => openPlayer(id, p)}
         projections={data}

@@ -110,3 +110,16 @@ export function BaselineIcon({ size = 14, style, className }: IconProps) {
     </svg>
   );
 }
+
+/** Barrel — vertical cylinder / drum (barrel matchup vs pitcher). */
+export function BarrelIcon({ size = 14, style, className }: IconProps) {
+  return (
+    <svg {...base(size)} style={style} className={className}>
+      <ellipse cx="12" cy="7" rx="8" ry="2.5" />
+      <line x1="4" y1="7" x2="4" y2="17" />
+      <line x1="20" y1="7" x2="20" y2="17" />
+      <ellipse cx="12" cy="17" rx="8" ry="2.5" />
+      <path d="M4 12c0 1.38 3.58 2.5 8 2.5s8-1.12 8-2.5" />
+    </svg>
+  );
+}
