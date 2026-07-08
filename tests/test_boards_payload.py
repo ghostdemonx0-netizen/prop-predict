@@ -406,3 +406,139 @@ def test_oracle_average_bat_flags_false():
     assert "oracle" in h, "oracle key missing from stats"
     assert "oracle_score" in h, "oracle_score key missing from stats"
     assert h["oracle"] == 0, f"expected oracle=0 for league-average bat, got {h.get('oracle')} (score={h.get('oracle_score')})"
+
+
+# ===========================================================================
+# Gap 1 — Driver columns (park / weather / pitcher / platoon / form) surfaced
+# ===========================================================================
+
+def test_driver_columns_present_when_factors_by_pid_provided():
+    """park, weather, pitcher, platoon, form must be numeric when factors are supplied.
+
+    _H bats=R vs _P throws=L -> platoon advantage -> hr_platoon_mult returns 1.06
+    -> _pct_delta(1.06) = round(6.0, 1) = 6.0
+    """
+    factors = {1: {"park_mult": 1.05, "weather_mult": 0.95, "pitcher_mult": 1.20}}
+    boards = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(_P),
+        factors_by_pid=factors,
+    )
+    h = boards["games"][0]["awayHitters"][0]["stats"]
+    assert h["park"]    == round((1.05 - 1.0) * 100, 1),  f"park wrong: {h['park']}"
+    assert h["weather"] == round((0.95 - 1.0) * 100, 1),  f"weather wrong: {h['weather']}"
+    assert h["pitcher"] == round((1.20 - 1.0) * 100, 1),  f"pitcher wrong: {h['pitcher']}"
+    assert h["platoon"] == round((1.06 - 1.0) * 100, 1),  f"platoon wrong: {h['platoon']}"
+    # _H has no recent_form_mult -> form = None (not a number)
+    assert h["form"] is None, f"expected form=None for hitter without recent_form_mult, got {h['form']}"
+
+
+def test_driver_columns_form_numeric_when_recent_form_mult_set():
+    """form column must carry the percent-delta of recent_form_mult when present."""
+    hitter = dict(_H, recent_form_mult=1.10)
+    factors = {1: {"park_mult": 1.0, "weather_mult": 1.0, "pitcher_mult": 1.0}}
+    boards = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [hitter], "away": [hitter]},
+        pitcher_fn=lambda pid: dict(_P),
+        factors_by_pid=factors,
+    )
+    h = boards["games"][0]["awayHitters"][0]["stats"]
+    assert h["form"] == round((1.10 - 1.0) * 100, 1), f"form wrong: {h['form']}"
+
+
+def test_driver_columns_none_when_no_factors_by_pid():
+    """park / weather / pitcher must be None when no factors_by_pid provided (backward compat)."""
+    boards = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(_P),
+    )
+    h = boards["games"][0]["awayHitters"][0]["stats"]
+    assert h["park"] is None,    "park should be None without factors_by_pid"
+    assert h["weather"] is None, "weather should be None without factors_by_pid"
+    assert h["pitcher"] is None, "pitcher should be None without factors_by_pid"
+
+
+def test_existing_stats_unchanged_with_factors():
+    """Adding factors_by_pid must not alter trueScore, oracle, barrel cols, matchup, hrform."""
+    factors = {1: {"park_mult": 1.10, "weather_mult": 1.05, "pitcher_mult": 0.90}}
+    boards_with = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(_P),
+        factors_by_pid=factors,
+    )
+    boards_without = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(_P),
+    )
+    h_with    = boards_with["games"][0]["awayHitters"][0]["stats"]
+    h_without = boards_without["games"][0]["awayHitters"][0]["stats"]
+    for key in ("trueScore", "oracle", "oracle_score", "brl", "pbrl", "matchup", "hrform",
+                "hh", "swstr", "csw", "xwobacon", "zonefit"):
+        assert h_with[key] == h_without[key], (
+            f"{key} changed when adding factors: {h_with[key]} != {h_without[key]}"
+        )
+
+
+# ===========================================================================
+# Gap 2 — Tiny-sample swstr / csw gated by pitch count
+# ===========================================================================
+
+def test_thin_pitch_sample_hitter_swstr_csw_none():
+    """A hitter with fewer than 50 pitches seen must get swstr=None and csw=None."""
+    thin_h = dict(_H, pitches=30)   # 30 < MIN_PITCHES_FOR_RATE (50)
+    boards = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [thin_h], "away": [thin_h]},
+        pitcher_fn=lambda pid: dict(_P),
+    )
+    h = boards["games"][0]["awayHitters"][0]["stats"]
+    assert h["swstr"] is None, f"expected swstr=None for thin-sample hitter, got {h['swstr']}"
+    assert h["csw"]   is None, f"expected csw=None for thin-sample hitter, got {h['csw']}"
+    # ball is NOT gated — should still come through
+    assert h["ball"] is not None, "ball should not be gated by pitch count"
+
+
+def test_well_sampled_hitter_keeps_swstr_csw():
+    """A hitter with >= 50 pitches seen must retain numeric swstr and csw."""
+    good_h = dict(_H, pitches=200)
+    boards = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [good_h], "away": [good_h]},
+        pitcher_fn=lambda pid: dict(_P),
+    )
+    h = boards["games"][0]["awayHitters"][0]["stats"]
+    assert h["swstr"] == 10.0, f"expected swstr=10.0 for well-sampled hitter, got {h['swstr']}"
+    assert h["csw"]   == 30.0, f"expected csw=30.0 for well-sampled hitter, got {h['csw']}"
+
+
+def test_thin_pitch_sample_pitcher_swstr_csw_none():
+    """A pitcher with fewer than 50 pitches thrown must get swstr=None and csw=None."""
+    thin_p = dict(_P, pitches=10)
+    boards = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(thin_p),
+    )
+    p = boards["pitchers"][0]["stats"]
+    assert p["swstr"] is None, f"expected pitcher swstr=None for thin sample, got {p['swstr']}"
+    assert p["csw"]   is None, f"expected pitcher csw=None for thin sample, got {p['csw']}"
+    # ball not gated
+    assert p["ball"] is not None, "pitcher ball should not be gated"
+
+
+def test_well_sampled_pitcher_keeps_swstr_csw():
+    """A pitcher with >= 50 pitches thrown must retain numeric swstr and csw."""
+    good_p = dict(_P, pitches=300)
+    boards = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(good_p),
+    )
+    p = boards["pitchers"][0]["stats"]
+    assert p["swstr"] == 12.0, f"expected pitcher swstr=12.0 for well-sampled, got {p['swstr']}"
+    assert p["csw"]   == 31.0, f"expected pitcher csw=31.0 for well-sampled, got {p['csw']}"
