@@ -43,7 +43,10 @@ const CURRENT_ONLY_STATS = new Set(["form", "hrform"]);
 function statVal(
   stats: Record<string, number>, key: string, source: Source = "current",
 ): number | undefined {
-  if (source !== "current" && CURRENT_ONLY_STATS.has(key)) return undefined;
+  // Form is "—" ONLY in pure History (a 3-yr baseline has no recent form). In
+  // Blend it flows through the 50/50 below → a muted (dampened) form, since the
+  // history twin is neutral: blend = (current + neutral) / 2.
+  if (source === "hist" && CURRENT_ONLY_STATS.has(key)) return undefined;
   const cur = stats[key];
   if (source === "current") return cur;
   const hist = stats[`${key}_hist`];
