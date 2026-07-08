@@ -27,28 +27,30 @@ const DRIVER_COLUMNS: ColumnDef[] = [
 
 /** Barrel-recipe columns that light up when Barrel Effect is ON.
  *  (Matchup + HH already live in DRIVER_COLUMNS; these are the barrel adds.) */
+// Active (barrel-recipe) columns first; read-only context columns pushed to the
+// end, with LA dead last, so the board reads important → context left-to-right.
 const BARREL_HIGHLIGHTS: ColumnDef[] = [
   { key: "brl",      label: "Brl/BIP", min: 3, max: 20, highlight: true },
   { key: "pbrl",     label: "PullBrl", min: 1, max: 12, highlight: true },
   { key: "sweet",    label: "Sweet%",  min: 25, max: 45, highlight: true },
   { key: "zonefit",  label: "ZoneFit", min: 0.28, max: 0.52, highlight: true },
-  { key: "iso",      label: "ISO",     min: 0.08, max: 0.30, context: true },
   { key: "hrform",   label: "HR Form", min: 20, max: 90, highlight: true },
-  { key: "xwoba",    label: "xwOBA",   min: 0.26, max: 0.42, context: true },
   { key: "xwobacon", label: "xwOBAc",  min: 0.26, max: 0.46, highlight: true },
   { key: "fb",       label: "FB%",     min: 18, max: 45, highlight: true },
-  { key: "la",       label: "LA",      min: 8, max: 24, context: true },
+  // context (grayed) — last, LA dead last
+  { key: "iso",      label: "ISO",     min: 0.08, max: 0.30, context: true },
+  { key: "xwoba",    label: "xwOBA",   min: 0.26, max: 0.42, context: true },
   { key: "hrfb",     label: "HR/FB%",  min: 5, max: 35, context: true },
+  { key: "la",       label: "LA",      min: 8, max: 24, context: true },
 ];
 
-/** The Kasper/Barrel-Lab replica column set (no park/weather). */
+/** The Kasper/Barrel-Lab replica column set (no park/weather). Active first,
+ *  context (grayed) last with LA dead last. */
 const REPLICA_COLUMNS: ColumnDef[] = [
   { key: "trueScore", label: "Prop Score", min: 20, max: 90 },
   { key: "matchup",   label: "Matchup", min: 30, max: 90 },
   { key: "zonefit",   label: "ZoneFit", min: 0.28, max: 0.52 },
   { key: "hrform",    label: "HR Form", min: 20, max: 90 },
-  { key: "iso",       label: "ISO",     min: 0.08, max: 0.30, context: true },
-  { key: "xwoba",     label: "xwOBA",   min: 0.26, max: 0.42, context: true },
   { key: "xwobacon",  label: "xwOBAc",  min: 0.26, max: 0.46 },
   { key: "swstr",     label: "SwStr",   min: 5, max: 18, higherBetter: false },
   { key: "pbrl",      label: "PullBrl", min: 1, max: 12 },
@@ -56,8 +58,11 @@ const REPLICA_COLUMNS: ColumnDef[] = [
   { key: "sweet",     label: "Sweet%",  min: 25, max: 45 },
   { key: "fb",        label: "FB%",     min: 18, max: 45 },
   { key: "hh",        label: "HH%",     min: 25, max: 55 },
-  { key: "la",        label: "LA",      min: 8, max: 24, context: true },
+  // context (grayed) — last, LA dead last
+  { key: "iso",       label: "ISO",     min: 0.08, max: 0.30, context: true },
+  { key: "xwoba",     label: "xwOBA",   min: 0.26, max: 0.42, context: true },
   { key: "hrfb",      label: "HR/FB%",  min: 5, max: 35, context: true },
+  { key: "la",        label: "LA",      min: 8, max: 24, context: true },
 ];
 
 export function boardsColumnsFor(lens: BoardsLens): ColumnDef[] {
@@ -70,14 +75,15 @@ export function boardsColumnsFor(lens: BoardsLens): ColumnDef[] {
 export const PITCHER_COLUMNS: ColumnDef[] = [
   { key: "pscore", label: "P Score", min: 30, max: 60 },
   { key: "kscore", label: "K Score", min: 30, max: 60 },
-  { key: "xwoba",  label: "xwOBA",   min: 0.26, max: 0.40, higherBetter: false, context: true },
   { key: "csw",    label: "CSW%",    min: 22, max: 34 },
   { key: "swstr",  label: "SwStr%",  min: 6, max: 18 },
-  { key: "ball",   label: "Ball%",   min: 30, max: 42, higherBetter: false, context: true },
   { key: "pbrl",   label: "PBrl%",   min: 3, max: 8, higherBetter: false },
   { key: "brlbip", label: "Brl BIP", min: 4, max: 12, higherBetter: false },
   { key: "fb",     label: "FB%",     min: 18, max: 45, higherBetter: false },
   { key: "hh",     label: "HH%",     min: 35, max: 52, higherBetter: false },
+  // context (grayed) — last
+  { key: "xwoba",  label: "xwOBA",   min: 0.26, max: 0.40, higherBetter: false, context: true },
+  { key: "ball",   label: "Ball%",   min: 30, max: 42, higherBetter: false, context: true },
 ];
 
 /**

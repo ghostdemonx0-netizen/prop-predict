@@ -6,6 +6,7 @@
  */
 "use client";
 
+import { useState } from "react";
 import "../spatial.css";
 import type { BoardsLens } from "../../../lib/barrelLens";
 import { boardsColumnsFor, heatColor, PITCHER_COLUMNS, type ColumnDef } from "../../../lib/barrelColumns";
@@ -36,6 +37,27 @@ function ColumnLegend() {
   );
 }
 
+/** Click-to-sort state for a board table (default = a stat key, desc). */
+function useColumnSort(defaultKey: string) {
+  const [sortKey, setSortKey] = useState<string>(defaultKey);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const click = (key: string) => {
+    if (key === sortKey) setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+    else { setSortKey(key); setSortDir("desc"); }
+  };
+  const arrow = (key: string) => (sortKey === key ? (sortDir === "desc" ? " ▼" : " ▲") : "");
+  return { sortKey, sortDir, click, arrow };
+}
+
+/** Numeric comparator; missing/null values always sort last. */
+function cmpStat(a: number | null | undefined, b: number | null | undefined, dir: "asc" | "desc"): number {
+  const an = a === undefined || a === null, bn = b === undefined || b === null;
+  if (an && bn) return 0;
+  if (an) return 1;
+  if (bn) return -1;
+  return dir === "desc" ? (b as number) - (a as number) : (a as number) - (b as number);
+}
+
 function HeatTable({
   title, hitters, columns,
 }: {
@@ -43,8 +65,11 @@ function HeatTable({
   hitters: BoardHitter[];
   columns: ColumnDef[];
 }) {
-  const rows = [...hitters].sort(
-    (a, b) => (b.stats.trueScore ?? 0) - (a.stats.trueScore ?? 0),
+  const sort = useColumnSort("trueScore");
+  const rows = [...hitters].sort((a, b) =>
+    sort.sortKey === "__name"
+      ? (sort.sortDir === "desc" ? -1 : 1) * a.name.localeCompare(b.name)
+      : cmpStat(a.stats[sort.sortKey], b.stats[sort.sortKey], sort.sortDir),
   );
   return (
     <div style={{ marginBottom: 22 }}>
@@ -53,19 +78,21 @@ function HeatTable({
         <table className="sp-boardstable" style={{ borderCollapse: "collapse", width: "100%", fontSize: 12 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "6px 10px", position: "sticky", left: 0 }}>Player</th>
+              <th onClick={() => sort.click("__name")} style={{ textAlign: "left", padding: "6px 10px", position: "sticky", left: 0, cursor: "pointer" }}>Player{sort.arrow("__name")}</th>
               {columns.map((c) => (
                 <th
                   key={c.key}
+                  onClick={() => sort.click(c.key)}
                   style={{
                     padding: "6px 8px",
                     textAlign: "center",
+                    cursor: "pointer",
                     opacity: c.context ? 0.55 : (c.highlight ? 1 : 0.85),
                     color: c.context ? undefined : (c.highlight ? "var(--iris-cyan)" : undefined),
                     fontStyle: c.context ? "italic" : undefined,
                   }}
                 >
-                  {c.label}
+                  {c.label}{sort.arrow(c.key)}
                 </th>
               ))}
             </tr>
@@ -75,7 +102,7 @@ function HeatTable({
               <tr key={r.id}>
                 <td style={{ padding: "5px 10px", whiteSpace: "nowrap", position: "sticky", left: 0 }}>
                   <span style={{ opacity: 0.5, marginRight: 6 }}>#{r.order}</span>
-                  {r.name} <HandChip hand={r.hand} />{r.stats.oracle === 1 && <BarrelFlag />}
+                  {r.name} <HandChip hand={r.hand} adv={(r.stats.platoon ?? 0) > 0} />{r.stats.oracle === 1 && <span style={{ marginLeft: 6 }}><BarrelFlag /></span>}
                 </td>
                 {columns.map((c) => {
                   const raw = r.stats[c.key];
@@ -104,7 +131,12 @@ function HeatTable({
 }
 
 function PitcherBoard({ pitchers }: { pitchers: BoardPitcher[] }) {
-  const rows = [...pitchers].sort((a, b) => (b.stats.brlbip ?? 0) - (a.stats.brlbip ?? 0));
+  const sort = useColumnSort("brlbip");
+  const rows = [...pitchers].sort((a, b) =>
+    sort.sortKey === "__name"
+      ? (sort.sortDir === "desc" ? -1 : 1) * a.name.localeCompare(b.name)
+      : cmpStat(a.stats[sort.sortKey], b.stats[sort.sortKey], sort.sortDir),
+  );
   return (
     <details open className="sp-boardsec" style={{ marginBottom: 24 }}>
       <summary className="sp-boardsec-head">Slate Pitchers</summary>
@@ -112,10 +144,10 @@ function PitcherBoard({ pitchers }: { pitchers: BoardPitcher[] }) {
         <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 12 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "6px 10px" }}>Pitcher</th>
+              <th onClick={() => sort.click("__name")} style={{ textAlign: "left", padding: "6px 10px", cursor: "pointer" }}>Pitcher{sort.arrow("__name")}</th>
               <th style={{ padding: "6px 8px" }}>Opp</th>
               {PITCHER_COLUMNS.map((c) => (
-                <th key={c.key} style={{ padding: "6px 8px", textAlign: "center", opacity: c.context ? 0.55 : 0.85, fontStyle: c.context ? "italic" : undefined }}>{c.label}</th>
+                <th key={c.key} onClick={() => sort.click(c.key)} style={{ padding: "6px 8px", textAlign: "center", cursor: "pointer", opacity: c.context ? 0.55 : 0.85, fontStyle: c.context ? "italic" : undefined }}>{c.label}{sort.arrow(c.key)}</th>
               ))}
             </tr>
           </thead>
@@ -268,12 +300,14 @@ export function BoardsView({ lens, boards }: BoardsViewProps) {
             </span>
           </summary>
           <div style={{ marginTop: 12 }}>
-            {/* Opposing pitcher's slate row sits on top of the lineup facing them */}
-            <PitcherStatRow name={g.homePitcher} pitchers={slatePitchers} />
-            <HeatTable title={`${g.away} hitters vs ${g.homePitcher}`} hitters={g.awayHitters} columns={columns} />
-            <div style={{ height: 16 }} />
+            {/* awayPitcher = the pitcher the AWAY team FACES (the opponent);
+                homePitcher = the pitcher the HOME team faces. Each lineup sits
+                under the pitcher it BATS AGAINST — do NOT swap these. */}
             <PitcherStatRow name={g.awayPitcher} pitchers={slatePitchers} />
-            <HeatTable title={`${g.home} hitters vs ${g.awayPitcher}`} hitters={g.homeHitters} columns={columns} />
+            <HeatTable title={`${g.away} hitters vs ${g.awayPitcher}`} hitters={g.awayHitters} columns={columns} />
+            <div style={{ height: 16 }} />
+            <PitcherStatRow name={g.homePitcher} pitchers={slatePitchers} />
+            <HeatTable title={`${g.home} hitters vs ${g.homePitcher}`} hitters={g.homeHitters} columns={columns} />
           </div>
         </details>
       ))}
