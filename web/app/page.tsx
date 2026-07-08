@@ -645,6 +645,7 @@ export default function Home() {
               threshold={activeThresholdNum(prop, threshold)}
               source={source}
               onOpenPlayer={handleOpenPlayer}
+              oraclePidMap={data.oracle_by_pid}
             />
           )}
           {section === "hub" && (

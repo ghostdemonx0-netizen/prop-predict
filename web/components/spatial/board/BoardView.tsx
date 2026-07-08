@@ -28,6 +28,7 @@ import type { Source, SpatialRow } from "../../../lib/weighting";
 import { useLiveFor } from "../../LiveProvider";
 import type { LiveKind } from "../../../lib/live";
 import { WindIcon, TempIcon, RainIcon, ClockIcon } from "../../Icons";
+import { BarrelFlag } from "../BarrelFlag";
 
 import { GlassCard } from "../GlassCard";
 import { ProbabilityOrb } from "../ProbabilityOrb";
@@ -49,6 +50,7 @@ export interface BoardViewProps {
   /** Weighting source (rows are already computed with it); kept for symmetry. */
   source?: Source;
   onOpenPlayer: (playerId: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -214,11 +216,13 @@ function PropCard({
   prop,
   index,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   r: SpatialRow;
   prop: PropKind;
   index: number;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   const liveFor = useLiveFor();
   const lv = liveFor(r, prop as LiveKind);
@@ -234,6 +238,11 @@ function PropCard({
         <div className="sp-topr-l">
           <div className="sp-pname-row">
             <span className="sp-pname">{r.player}</span>
+            {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
+              <span style={{ marginLeft: 6 }}>
+                <BarrelFlag />
+              </span>
+            )}
             {pHand && <HandChip hand={pHand} adv={adv} />}
             {r.status && <TagChip status={tagStatus(r.status)} order={r.bat_order} />}
           </div>
@@ -283,15 +292,17 @@ function CardsGrid({
   rows,
   prop,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   rows: SpatialRow[];
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   return (
     <div className="sp-board-grid">
       {rows.map((r, i) => (
-        <PropCard key={r.id} r={r} prop={prop} index={i} onOpenPlayer={onOpenPlayer} />
+        <PropCard key={r.id} r={r} prop={prop} index={i} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />
       ))}
     </div>
   );
@@ -305,10 +316,12 @@ function BoardTable({
   rows,
   prop,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   rows: SpatialRow[];
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   const liveFor = useLiveFor();
   const isK = prop === "k";
@@ -348,6 +361,11 @@ function BoardTable({
                 <td className="sp-pl-cell">
                   <span className="sp-pl-name">
                     <span className="sp-tp">{r.player}</span>
+                    {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
+                      <span style={{ marginLeft: 6 }}>
+                        <BarrelFlag />
+                      </span>
+                    )}
                     {pHand && <HandChip hand={pHand} adv={adv} />}
                   </span>
                   {(r.status || (!isK && r.form)) && (
@@ -422,10 +440,12 @@ function SplitView({
   rows,
   prop,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   rows: SpatialRow[];
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   const top = rows.slice(0, 3);
   const rest = rows.slice(3);
@@ -435,14 +455,14 @@ function SplitView({
         <div className="sp-eyebrow" style={{ marginBottom: "0.6rem" }}>
           ★ Top plays
         </div>
-        <CardsGrid rows={top} prop={prop} onOpenPlayer={onOpenPlayer} />
+        <CardsGrid rows={top} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />
       </div>
       {rest.length > 0 && (
         <div>
           <div className="sp-eyebrow" style={{ margin: "1.25rem 0 0.4rem" }}>
             Full board
           </div>
-          <BoardTable rows={rest} prop={prop} onOpenPlayer={onOpenPlayer} />
+          <BoardTable rows={rest} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />
         </div>
       )}
     </div>
@@ -458,10 +478,12 @@ function BoardRowLine({
   r,
   prop,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   r: SpatialRow;
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   const liveFor = useLiveFor();
   const lv = liveFor(r, prop as LiveKind);
@@ -484,6 +506,11 @@ function BoardRowLine({
       <span className="sp-mrow-name">
         <span className="sp-mrow-nmrow">
           <span className="sp-mrow-nm">{r.player}</span>
+          {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
+            <span style={{ marginLeft: 6 }}>
+              <BarrelFlag />
+            </span>
+          )}
           {pHand && <HandChip hand={pHand} adv={adv} />}
         </span>
         {!isK && r.form && (
@@ -506,11 +533,13 @@ function TeamSplit({
   rows,
   prop,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   matchup: string;
   rows: SpatialRow[];
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   const [away, home] = matchup.split(" @ ");
   const awayRows = rows.filter((r) => r.team === away);
@@ -521,7 +550,7 @@ function TeamSplit({
     return (
       <>
         {rows.map((r) => (
-          <BoardRowLine key={r.id} r={r} prop={prop} onOpenPlayer={onOpenPlayer} />
+          <BoardRowLine key={r.id} r={r} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />
         ))}
       </>
     );
@@ -548,7 +577,7 @@ function TeamSplit({
               )}
             </div>
             {rs.map((r) => (
-              <BoardRowLine key={r.id} r={r} prop={prop} onOpenPlayer={onOpenPlayer} />
+              <BoardRowLine key={r.id} r={r} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />
             ))}
           </div>
         );
@@ -574,10 +603,12 @@ function MatchupsView({
   rows,
   prop,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   rows: SpatialRow[];
   prop: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   const isK = prop === "k";
 
@@ -606,7 +637,7 @@ function MatchupsView({
           <div key={g.key} className="sp-mgroup">
             <GroupHead label={g.label} time={g.rows[0].time} />
             {g.rows.map((r) => (
-              <BoardRowLine key={r.id} r={r} prop={prop} onOpenPlayer={onOpenPlayer} />
+              <BoardRowLine key={r.id} r={r} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />
             ))}
           </div>
         ))}
@@ -634,7 +665,7 @@ function MatchupsView({
               {groupStatus && <TagChip status={tagStatus(groupStatus)} />}
               <span className="sp-mcount">{g.rows.length} hitters</span>
             </summary>
-            <TeamSplit matchup={g.label} rows={g.rows} prop={prop} onOpenPlayer={onOpenPlayer} />
+            <TeamSplit matchup={g.label} rows={g.rows} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />
           </details>
         );
       })}
@@ -659,14 +690,14 @@ function EmptyState() {
 //  Root dispatch
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function BoardView({ rows, view, prop, onOpenPlayer }: BoardViewProps) {
+export function BoardView({ rows, view, prop, onOpenPlayer, oraclePidMap }: BoardViewProps) {
   if (rows.length === 0) return <EmptyState />;
 
-  if (view === "table") return <BoardTable rows={rows} prop={prop} onOpenPlayer={onOpenPlayer} />;
+  if (view === "table") return <BoardTable rows={rows} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />;
   if (view === "matchups")
-    return <MatchupsView rows={rows} prop={prop} onOpenPlayer={onOpenPlayer} />;
-  if (view === "split") return <SplitView rows={rows} prop={prop} onOpenPlayer={onOpenPlayer} />;
-  return <CardsGrid rows={rows} prop={prop} onOpenPlayer={onOpenPlayer} />;
+    return <MatchupsView rows={rows} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />;
+  if (view === "split") return <SplitView rows={rows} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />;
+  return <CardsGrid rows={rows} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />;
 }
 
 export default BoardView;

@@ -32,6 +32,7 @@ import { useLiveFor } from "../LiveProvider";
 import type { LiveKind } from "../../lib/live";
 
 import { ProbabilityOrb } from "./ProbabilityOrb";
+import { BarrelFlag } from "./BarrelFlag";
 import { CatDot, LeanPair } from "./GlassDot";
 import { HandChip, TagChip, FormChip } from "./chips";
 import { LiveChip } from "./LiveChipSpatial";
@@ -152,6 +153,7 @@ function BatterRow({
   rbiKind,
   hrrKind,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   hrRow: BoardRow;
   hitsRow?: BoardRow;
@@ -165,6 +167,7 @@ function BatterRow({
   rbiKind: PropKind;
   hrrKind: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   const liveFor = useLiveFor();
   const pHand = handGlyph(hrRow.playerHand);
@@ -224,6 +227,11 @@ function BatterRow({
       <span className="sp-bn">
         <span className="sp-bn-nmrow">
           <span className="sp-bn-nm">{hrRow.player}</span>
+          {oraclePidMap?.[String(hrRow.player_id)]?.oracle === 1 && (
+            <span style={{ marginLeft: 4 }}>
+              <BarrelFlag />
+            </span>
+          )}
           {pHand && <HandChip hand={pHand} adv={adv} />}
         </span>
         {(form || hrRow.status) && (
@@ -263,6 +271,7 @@ function ColTeam({
   rbiKind,
   hrrKind,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   team: string;
   side: string;
@@ -278,6 +287,7 @@ function ColTeam({
   rbiKind: PropKind;
   hrrKind: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   const [sort, setSort] = useState<SortState>({ col: "hr", dir: -1 });
   const onSort = (col: SortCol) =>
@@ -337,6 +347,7 @@ function ColTeam({
             rbiKind={rbiKind}
             hrrKind={hrrKind}
             onOpenPlayer={onOpenPlayer}
+            oraclePidMap={oraclePidMap}
           />
         ))}
       </div>
@@ -362,6 +373,7 @@ export interface BatterGridProps {
   rbiKind?: PropKind;
   hrrKind?: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }
 
 export function BatterGrid({
@@ -378,6 +390,7 @@ export function BatterGrid({
   rbiKind = "rbi1",
   hrrKind = "hrr2",
   onOpenPlayer,
+  oraclePidMap,
 }: BatterGridProps) {
   const [away, home] = matchup.split(" @ ");
   const hitsByPlayer = new Map(hitsRows.map((r) => [r.player, r]));
@@ -418,6 +431,7 @@ export function BatterGrid({
           rbiKind={rbiKind}
           hrrKind={hrrKind}
           onOpenPlayer={onOpenPlayer}
+          oraclePidMap={oraclePidMap}
         />
       ))}
     </div>

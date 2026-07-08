@@ -45,6 +45,7 @@ import { CatDot } from "./GlassDot";
 import { HandChip, FormChip } from "./chips";
 import { LiveChip } from "./LiveChipSpatial";
 import { SegmentedControl } from "./SegmentedControl";
+import { BarrelFlag } from "./BarrelFlag";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Public types
@@ -160,6 +161,7 @@ function TopPlayRow({
   showPitcher = true,
   showForm = false,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   r: SpatialRow;
   rank: number;
@@ -171,6 +173,7 @@ function TopPlayRow({
    *  boards (Pitcher-K, Contact, Batter-K) pass false so no chip renders. */
   showForm?: boolean;
   onOpenPlayer: (playerId: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
   const pHand = handGlyph(r.playerHand);
@@ -195,6 +198,11 @@ function TopPlayRow({
       <div className="sp-linfo">
         <div className="sp-lname">
           <span>{r.player}</span>
+          {oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
+            <span style={{ marginLeft: 6 }}>
+              <BarrelFlag />
+            </span>
+          )}
           {pHand && <HandChip hand={pHand} adv={adv} />}
           {showForm && r.form && <FormChip kind={r.form} />}
         </div>
@@ -278,6 +286,7 @@ function LeaderSection({
 export function TopPlays({ projections, source, threshold, onThreshold, onOpenPlayer }: TopPlaysProps) {
   const [count, setCount] = useState<string>("10");
   const liveFor = useLiveFor();
+  const oracleMap = projections.oracle_by_pid;
 
   // Prop kinds derived from the shared per-prop thresholds.
   const hitsKind = `hits${threshold.hits}` as PropKind;
@@ -347,6 +356,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               live={chip(r, "hr")}
               sphere={<ProbabilityOrb prob={r.prob} kind="hr" size={52} />}
               onOpenPlayer={onOpenPlayer}
+              oraclePidMap={oracleMap}
             />
           )}
         />
@@ -384,6 +394,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               live={chip(r, "contact")}
               sphere={<CatDot kind="C" prob={r.hitProb ?? 0} size={52} />}
               onOpenPlayer={onOpenPlayer}
+              oraclePidMap={oracleMap}
             />
           )}
         />
@@ -402,6 +413,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               live={chip(r, "batterK")}
               sphere={<CatDot kind="K" prob={r.kProb ?? 0} size={52} />}
               onOpenPlayer={onOpenPlayer}
+              oraclePidMap={oracleMap}
             />
           )}
         />
@@ -422,6 +434,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               live={chip(r, hitsKind)}
               sphere={<ProbabilityOrb prob={r.prob} kind={hitsKind} size={52} />}
               onOpenPlayer={onOpenPlayer}
+              oraclePidMap={oracleMap}
             />
           )}
         />
@@ -442,6 +455,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               live={chip(r, tbKind)}
               sphere={<ProbabilityOrb prob={r.prob} kind={tbKind} size={52} />}
               onOpenPlayer={onOpenPlayer}
+              oraclePidMap={oracleMap}
             />
           )}
         />
@@ -462,6 +476,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               live={chip(r, runsKind)}
               sphere={<ProbabilityOrb prob={r.prob} kind={runsKind} size={52} />}
               onOpenPlayer={onOpenPlayer}
+              oraclePidMap={oracleMap}
             />
           )}
         />
@@ -482,6 +497,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               live={chip(r, rbiKind)}
               sphere={<ProbabilityOrb prob={r.prob} kind={rbiKind} size={52} />}
               onOpenPlayer={onOpenPlayer}
+              oraclePidMap={oracleMap}
             />
           )}
         />
@@ -502,6 +518,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
               live={chip(r, hrrKind)}
               sphere={<ProbabilityOrb prob={r.prob} kind={hrrKind} size={52} />}
               onOpenPlayer={onOpenPlayer}
+              oraclePidMap={oracleMap}
             />
           )}
         />

@@ -209,6 +209,7 @@ function GameBreakdown({
   rbiKind,
   hrrKind,
   onOpenPlayer,
+  oraclePidMap,
 }: {
   g: Game;
   rows: {
@@ -227,6 +228,7 @@ function GameBreakdown({
   rbiKind: PropKind;
   hrrKind: PropKind;
   onOpenPlayer: (id: number, prop: PropKind) => void;
+  oraclePidMap?: Record<string, { oracle: number; oracle_score: number }>;
 }) {
   const gameId = g.game_id != null ? String(g.game_id) : undefined;
   const inGame = (r: BoardRow) => (gameId != null ? r.gameId === gameId : r.matchup === g.matchup);
@@ -278,6 +280,7 @@ function GameBreakdown({
             rbiKind={rbiKind}
             hrrKind={hrrKind}
             onOpenPlayer={onOpenPlayer}
+            oraclePidMap={oraclePidMap}
           />
         </>
       )}
@@ -361,6 +364,7 @@ export function GameHub({ games, projections, thresholds, source, onOpenPlayer }
                   rbiKind={rbiKind}
                   hrrKind={hrrKind}
                   onOpenPlayer={onOpenPlayer}
+                  oraclePidMap={projections.oracle_by_pid}
                 />
               </details>
             </GlassCard>

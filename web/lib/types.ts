@@ -238,4 +238,5 @@ export type Projections = {
   rbi?: RbiRow[];
   hrr?: HrrRow[];
   boards?: BoardsData;
+  oracle_by_pid?: Record<string, { oracle: number; oracle_score: number }>;
 };
