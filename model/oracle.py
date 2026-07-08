@@ -14,12 +14,12 @@ _GATE_MIN = 0.60     # quality (0..1, league-avg 0.5) to be a real barrel bat; S
 _MIN_BBE = 40.0      # sample trust-gate; SEED
 
 # --- edges (once gated), each normalized to 0..1 ---
-_W_PLATOON, _W_MATCHUP, _W_FORM = 0.45, 0.40, 0.15   # sum 1.0
+_W_PLATOON, _W_MATCHUP, _W_FORM = 0.30, 0.50, 0.20   # sum 1.0
 _PLATOON_LO, _PLATOON_HI = 0.97, 1.06   # hr_platoon_mult favorable range; SEED
 _MATCHUP_LO, _MATCHUP_HI = 1.00, 1.20   # barrel_mult positive tilt (HR cap); SEED
 _FORM_LO, _FORM_HI = 1.00, 1.20         # recent_form_mult hot range; SEED
 
-_FLAG_BAR = 0.62     # premium: blended score to flag (rare); SEED
+_FLAG_BAR = 0.68     # premium: blended score to flag (rare); SEED
 
 
 def _clamp01(x: float) -> float:
