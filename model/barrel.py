@@ -4,7 +4,7 @@ Statcast's own quality class lives in `launch_speed_angle` (1-6); value 6 = Barr
 Fly balls come from `bb_type`; xwOBAcon = mean `estimated_woba_using_speedangle`
 over batted balls. Pull side reuses model.spray. No I/O; no lookahead.
 """
-from model.spray import spray_angle, field_of
+from model.spray import spray_angle
 
 _BARREL_CODE = 6
 _SWEETSPOT_LO, _SWEETSPOT_HI = 8.0, 32.0
@@ -20,13 +20,23 @@ def is_barrel(row: dict) -> bool:
 
 
 def is_pulled_barrel(row: dict) -> bool:
-    """A barrel hit to the batter's pull side (needs hit coords + handedness)."""
+    """A barrel hit to the batter's pull half of the field.
+
+    Follows the Statcast / Barrel-Lab standard: any barrel whose spray angle
+    (measured from home plate via atan2) falls strictly on the batter's pull
+    side — negative angle for RHB (toward LF), positive for LHB (toward RF).
+    No center exclusion zone. This aligns pulled_barrel_rate with the
+    published reference values; the old ±15° center zone was systematically
+    under-counting pull barrels by 30-60% vs Barrel Lab.
+    Missing hc_x / hc_y → False (excluded from pull count, stays in BBE denom).
+    """
     if not is_barrel(row):
         return False
     hx, hy, stand = row.get("hc_x"), row.get("hc_y"), row.get("stand")
     if hx is None or hy is None or not stand:
         return False
-    return field_of(spray_angle(hx, hy), stand) == "pull"
+    angle = spray_angle(hx, hy)
+    return angle < 0 if stand == "R" else angle > 0
 
 
 def barrel_metrics(events: list[dict], *, as_of: str, allowed: bool = False) -> dict:
