@@ -47,10 +47,15 @@ THRESHOLDS: dict[str, list[tuple[str, str]]] = {
 _FACTOR_KEYS: tuple[str, ...] = (
     # HR family
     "park_mult",
+    "park_mult_hist",
     "weather_mult",
+    "weather_mult_hist",
     "matchup_mult",
+    "matchup_mult_hist",
     "pitcher_mult",
+    "pitcher_mult_hist",
     "bvp_mult",
+    "bvp_mult_hist",
     # cross-family (HR + threshold)
     "recent_form_mult",
     # threshold families (hits / tb / runs / rbi / hrr)
@@ -76,10 +81,13 @@ _FACTOR_KEYS: tuple[str, ...] = (
     "lineup_slot_hist",
     "lineup_teammate",
     "lineup_teammate_hist",
+    "platoon_mult",
+    "platoon_mult_hist",
     # Approach: corner-wind spray
     "spray_pull",
     "spray_pull_hist",
     "spray_mult",  # net spray contribution (directional/neutral weather) on HR + TB — for grader-driven dial tuning
+    "spray_mult_hist",
     "bat_order",   # batting-order slot 1-9 (context for per-slot calibration)
     # BvP hit dial (Hits/TB contact components)
     "bvp_hit_mult",

@@ -231,6 +231,16 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
         r["barrel_mult_hist"] = h.get("barrel_mult")
         r["baseline_prob_hist"] = h.get("baseline_prob")
         r["pace_hist"] = h.get("pace")
+        r["matchup_mult_hist"] = h.get("matchup_mult")
+        r["park_mult_hist"] = h.get("park_mult")
+        r["weather_mult_hist"] = h.get("weather_mult")
+        r["pitcher_mult_hist"] = h.get("pitcher_mult")
+        r["hard_hit_form_hist"] = h.get("hard_hit_form")
+        r["production_form_hist"] = h.get("production_form")
+        r["recent_form_mult_hist"] = h.get("recent_form_mult")
+        r["bvp_mult_hist"] = h.get("bvp_mult")
+        r["spray_pull_hist"] = h.get("spray_pull")
+        r["spray_mult_hist"] = h.get("spray_mult")
         if r.get("vs") and h.get("vs"):
             _copy_vs(r["vs"], h["vs"])
     for r in ks:
@@ -253,9 +263,11 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
     # park_weather_factor is meaningful only for Total Bases, so it's omitted
     # from the hits twin set (it would always be an inert 1.0 on hits rows).
     _hits_factor_fields = ("recent_form_mult", "pitcher_factor", "hard_hit_form", "production_form",
-                           "pace", "baseline_p_ge1", "baseline_p_ge2", "baseline_p_ge3")
+                           "pace", "baseline_p_ge1", "baseline_p_ge2", "baseline_p_ge3",
+                           "bvp_hit_mult", "spray_pull")
     _tb_factor_fields = ("recent_form_mult", "pitcher_factor", "park_weather_factor", "hard_hit_form", "production_form",
-                         "pace", "baseline_p_ge2", "baseline_p_ge3", "baseline_p_ge4")
+                         "pace", "baseline_p_ge2", "baseline_p_ge3", "baseline_p_ge4",
+                         "bvp_hit_mult", "spray_pull", "spray_mult")
 
     for r in hits:
         h = hits_h.get(_key(r))
@@ -310,7 +322,8 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
     _hrr_thresholds = ("p_ge2", "p_ge3", "p_ge4")
     _run_factor_fields = ("recent_form_mult", "pitcher_factor", "park_weather_factor", "hard_hit_form", "production_form",
                           "lineup_mult", "lineup_slot", "lineup_teammate",
-                          "pace", "baseline_p_ge1", "baseline_p_ge2", "baseline_p_ge3", "baseline_p_ge4")
+                          "pace", "baseline_p_ge1", "baseline_p_ge2", "baseline_p_ge3", "baseline_p_ge4",
+                          "platoon_mult")
 
     def _attach(rows, hist_map, thresholds):
         for r in rows:

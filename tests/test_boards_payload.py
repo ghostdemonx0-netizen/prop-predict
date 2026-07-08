@@ -406,3 +406,156 @@ def test_oracle_average_bat_flags_false():
     assert "oracle" in h, "oracle key missing from stats"
     assert "oracle_score" in h, "oracle_score key missing from stats"
     assert h["oracle"] == 0, f"expected oracle=0 for league-average bat, got {h.get('oracle')} (score={h.get('oracle_score')})"
+
+
+# ===========================================================================
+# Gap-3 completeness fix — _hist factor twins for HR, Hits, TB, Runs/RBI/HRR
+# ===========================================================================
+
+def test_hr_factor_hist_twins_complete(monkeypatch):
+    """All 10 previously-missing HR factor _hist twins must be attached."""
+    import model.export_web as ew
+
+    _cur_lf  = object()
+    _hist_lf = object()
+
+    cur_row  = {"player_id": 1, "game_id": 301, "probability": 0.10,
+                "matchup_mult": 1.1, "park_mult": 1.05, "weather_mult": 0.95,
+                "pitcher_mult": 1.2, "hard_hit_form": 1.1, "production_form": 0.9,
+                "recent_form_mult": 1.05, "bvp_mult": 1.1, "spray_pull": True, "spray_mult": 1.03}
+    hist_row = {"player_id": 1, "game_id": 301, "probability": 0.09,
+                "matchup_mult": 1.15, "park_mult": 1.06, "weather_mult": 0.94,
+                "pitcher_mult": 1.25, "hard_hit_form": 1.12, "production_form": 0.88,
+                "recent_form_mult": 1.08, "bvp_mult": 1.12, "spray_pull": True, "spray_mult": 1.04}
+
+    def fake_hr(slate, lf, pf, wf, bvp_fn=None):
+        return [dict(hist_row)] if lf is _hist_lf else [dict(cur_row)]
+
+    monkeypatch.setattr(ew, "build_hr_rows", fake_hr)
+    monkeypatch.setattr(ew, "build_strikeout_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hits_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_total_bases_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_runs_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_rbi_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hrr_rows", lambda *a, **kw: [])
+
+    hr, _, _, _, _, _, _ = ew.build_board_with_history(
+        [], _cur_lf, None, _hist_lf, None, None, None)
+
+    row = hr[0]
+    # newly-added twins
+    assert row.get("matchup_mult_hist") == 1.15
+    assert row.get("park_mult_hist") == 1.06
+    assert row.get("weather_mult_hist") == 0.94
+    assert row.get("pitcher_mult_hist") == 1.25
+    assert row.get("hard_hit_form_hist") == 1.12
+    assert row.get("production_form_hist") == 0.88
+    assert row.get("recent_form_mult_hist") == 1.08
+    assert row.get("bvp_mult_hist") == 1.12
+    assert row.get("spray_pull_hist") is True
+    assert row.get("spray_mult_hist") == 1.04
+    # existing current-mode values UNCHANGED (additive-only check)
+    assert row.get("probability") == 0.10
+    assert row.get("matchup_mult") == 1.1
+    assert row.get("park_mult") == 1.05
+
+
+def test_hits_bvp_hit_mult_and_spray_pull_hist_twins(monkeypatch):
+    """bvp_hit_mult and spray_pull must get _hist twins on hits rows."""
+    import model.export_web as ew
+
+    _cur_lf  = object()
+    _hist_lf = object()
+
+    cur_row  = {"player_id": 2, "game_id": 302, "p_ge1": 0.70, "bvp_hit_mult": 1.05, "spray_pull": True}
+    hist_row = {"player_id": 2, "game_id": 302, "p_ge1": 0.68, "bvp_hit_mult": 1.06, "spray_pull": False}
+
+    def fake_hits(slate, lf, pf, wf, bvp_fn=None):
+        return [dict(hist_row)] if lf is _hist_lf else [dict(cur_row)]
+
+    monkeypatch.setattr(ew, "build_hits_rows", fake_hits)
+    monkeypatch.setattr(ew, "build_hr_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_strikeout_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_total_bases_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_runs_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_rbi_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hrr_rows", lambda *a, **kw: [])
+
+    _, _, hits, _, _, _, _ = ew.build_board_with_history(
+        [], _cur_lf, None, _hist_lf, None, None, None)
+
+    row = hits[0]
+    assert row.get("bvp_hit_mult_hist") == 1.06
+    assert row.get("spray_pull_hist") is False
+    # current values unchanged
+    assert row.get("bvp_hit_mult") == 1.05
+    assert row.get("spray_pull") is True
+    assert row.get("p_ge1") == 0.70
+
+
+def test_tb_bvp_hit_spray_hist_twins(monkeypatch):
+    """bvp_hit_mult, spray_pull, spray_mult must get _hist twins on TB rows."""
+    import model.export_web as ew
+
+    _cur_lf  = object()
+    _hist_lf = object()
+
+    cur_row  = {"player_id": 3, "game_id": 303, "p_ge2": 0.60,
+                "bvp_hit_mult": 1.03, "spray_pull": True, "spray_mult": 1.02}
+    hist_row = {"player_id": 3, "game_id": 303, "p_ge2": 0.58,
+                "bvp_hit_mult": 1.04, "spray_pull": False, "spray_mult": 1.01}
+
+    def fake_tb(slate, lf, pf, wf, bvp_fn=None):
+        return [dict(hist_row)] if lf is _hist_lf else [dict(cur_row)]
+
+    monkeypatch.setattr(ew, "build_total_bases_rows", fake_tb)
+    monkeypatch.setattr(ew, "build_hr_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_strikeout_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hits_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_runs_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_rbi_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hrr_rows", lambda *a, **kw: [])
+
+    _, _, _, tb, _, _, _ = ew.build_board_with_history(
+        [], _cur_lf, None, _hist_lf, None, None, None)
+
+    row = tb[0]
+    assert row.get("bvp_hit_mult_hist") == 1.04
+    assert row.get("spray_pull_hist") is False
+    assert row.get("spray_mult_hist") == 1.01
+    # current values unchanged
+    assert row.get("bvp_hit_mult") == 1.03
+    assert row.get("spray_pull") is True
+    assert row.get("spray_mult") == 1.02
+    assert row.get("p_ge2") == 0.60
+
+
+def test_runs_platoon_mult_hist_twin(monkeypatch):
+    """platoon_mult must get a _hist twin on runs/rbi rows."""
+    import model.export_web as ew
+
+    _cur_lf  = object()
+    _hist_lf = object()
+
+    cur_row  = {"player_id": 4, "game_id": 304, "p_ge1": 0.55, "platoon_mult": 1.05}
+    hist_row = {"player_id": 4, "game_id": 304, "p_ge1": 0.53, "platoon_mult": 1.08}
+
+    def fake_runs(slate, lf, pf, wf, bvp_fn=None):
+        return [dict(hist_row)] if lf is _hist_lf else [dict(cur_row)]
+
+    monkeypatch.setattr(ew, "build_runs_rows", fake_runs)
+    monkeypatch.setattr(ew, "build_hr_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_strikeout_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hits_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_total_bases_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_rbi_rows", lambda *a, **kw: [])
+    monkeypatch.setattr(ew, "build_hrr_rows", lambda *a, **kw: [])
+
+    _, _, _, _, runs, _, _ = ew.build_board_with_history(
+        [], _cur_lf, None, _hist_lf, None, None, None)
+
+    row = runs[0]
+    assert row.get("platoon_mult_hist") == 1.08
+    # current values unchanged
+    assert row.get("platoon_mult") == 1.05
+    assert row.get("p_ge1") == 0.55
