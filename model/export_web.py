@@ -510,8 +510,6 @@ def build_boards_payload(slate: list[dict], lineups_fn, pitcher_fn,
     games, pitchers, seen_p = [], [], set()
     use_hist = lineups_hist_fn is not None and pitcher_hist_fn is not None
     for game in slate:
-        if game.get("started"):
-            continue
         away, home = game.get("away", "?"), game.get("home", "?")
         home_p = pitcher_fn(game["home_pitcher_id"]) if game.get("home_pitcher_id") else None
         away_p = pitcher_fn(game["away_pitcher_id"]) if game.get("away_pitcher_id") else None

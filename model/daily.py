@@ -157,50 +157,37 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
 
     hr, ks, hits, tb, runs, rbi, hrr, games = [], [], [], [], [], [], [], []
     boards = {"games": [], "pitchers": []}
-    if fresh_slate:
-        (starters_fn or export_web._ensure_starters)(fresh_slate)
-        fns = profile_fns or export_web.make_profile_fns(fresh_slate, int(date_str[:4]), date_str)
+    if slate:
+        # Profile fns cover the full slate (fresh + started) so the Boards page
+        # can show ALL games.  Prop-row computation stays fresh-only.
+        (starters_fn or export_web._ensure_starters)(slate)
+        fns = profile_fns or export_web.make_profile_fns(slate, int(date_str[:4]), date_str)
         lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn = fns
         wfn = weather_fn or fetch.make_weather_fn()
         bfn = bvp_fn or export_web.make_bvp_fn()
-        hr, ks, hits, tb, runs, rbi, hrr = export_web.build_board_with_history(
-            fresh_slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, wfn, bfn)
-        games = build_games(fresh_slate, wfn)
+        if fresh_slate:
+            # Prop rows are only (re)computed for not-started games; started games
+            # keep their frozen rows from the existing record (see `frozen` above).
+            hr, ks, hits, tb, runs, rbi, hrr = export_web.build_board_with_history(
+                fresh_slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, wfn, bfn)
+            games = build_games(fresh_slate, wfn)
         # Per-player factor map for driver columns on the Boards page.
+        # Include frozen started-game rows so their driver columns remain visible.
         factors_by_pid = {
             r["player_id"]: {
                 "park_mult": r.get("park_mult"),
                 "weather_mult": r.get("weather_mult"),
                 "pitcher_mult": r.get("pitcher_mult"),
             }
-            for r in hr if r.get("player_id")
+            for r in hr + frozen["hr"] if r.get("player_id")
         }
-        # Barrel Boards payload (heatmaps + Oracle badges) — same as export_web.main
-        # emits. The robot's board omitted this, so production had no Boards page.
-        boards = export_web.build_boards_payload(fresh_slate, lineups_fn, pitcher_fn,
+        # Barrel Boards payload — built from the FULL slate so started games are
+        # never omitted.  build_boards_payload no longer skips started games, so
+        # no freeze-merge from the existing record is needed (and would duplicate).
+        boards = export_web.build_boards_payload(slate, lineups_fn, pitcher_fn,
                                                  factors_by_pid=factors_by_pid,
                                                  lineups_hist_fn=lineups_hist_fn,
                                                  pitcher_hist_fn=pitcher_hist_fn)
-
-    # Merge frozen started-game board entries from the existing boards payload.
-    # build_boards_payload skips started games, so without this merge they would
-    # vanish from the Boards page once a game starts.  The existing record
-    # carries the last pre-game build; we append any of its board games whose
-    # game_id is in started_ids, then preserve the pitchers those games reference.
-    eb = (existing.get("boards") or {}) if existing else {}
-    if eb and started_ids:
-        frozen_bgames = [g for g in eb.get("games", []) if g.get("game_id") in started_ids]
-        boards["games"] = boards["games"] + frozen_bgames
-        if frozen_bgames:
-            frozen_pnames = {
-                n for g in frozen_bgames
-                for n in (g.get("awayPitcher"), g.get("homePitcher")) if n
-            }
-            cur_pnames = {p["name"] for p in boards["pitchers"]}
-            for ep in eb.get("pitchers", []):
-                if ep.get("name") in frozen_pnames and ep.get("name") not in cur_pnames:
-                    boards["pitchers"].append(ep)
-                    cur_pnames.add(ep.get("name"))
 
     payload = {
         "date": date_str,

@@ -36,11 +36,14 @@ def test_boards_payload_shape_and_real_values():
     p = boards["pitchers"][0]
     assert p["stats"]["brlbip"] == 10.0 and p["stats"]["pbrl"] == 6.0
 
-def test_started_games_skipped():
+def test_started_games_included():
+    """build_boards_payload must include started games — they must never vanish from
+    the Boards page once a game begins."""
     slate = [{"away": "NYY", "home": "BOS", "away_pitcher_id": 9, "home_pitcher_id": 9,
               "park_name": "Fenway", "started": True}]
     boards = build_boards_payload(slate, lambda g: {"home": [], "away": []}, lambda pid: dict(_P))
-    assert boards["games"] == []
+    assert len(boards["games"]) == 1, "started game must be built into boards"
+    assert boards["games"][0]["away"] == "NYY"
 
 
 def test_boards_surfaces_pitch_level_fields():
