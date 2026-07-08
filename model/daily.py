@@ -156,6 +156,7 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
     }
 
     hr, ks, hits, tb, runs, rbi, hrr, games = [], [], [], [], [], [], [], []
+    boards = {"games": [], "pitchers": []}
     if fresh_slate:
         (starters_fn or export_web._ensure_starters)(fresh_slate)
         fns = profile_fns or export_web.make_profile_fns(fresh_slate, int(date_str[:4]), date_str)
@@ -165,6 +166,9 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
         hr, ks, hits, tb, runs, rbi, hrr = export_web.build_board_with_history(
             fresh_slate, lineups_fn, pitcher_fn, lineups_hist_fn, pitcher_hist_fn, wfn, bfn)
         games = build_games(fresh_slate, wfn)
+        # Barrel Boards payload (heatmaps + Oracle badges) — same as export_web.main
+        # emits. The robot's board omitted this, so production had no Boards page.
+        boards = export_web.build_boards_payload(fresh_slate, lineups_fn, pitcher_fn)
 
     payload = {
         "date": date_str,
@@ -178,6 +182,7 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
         "rbi": sorted(rbi + frozen.get("rbi", []), key=lambda r: r["p_ge1"], reverse=True),
         "hrr": sorted(hrr + frozen.get("hrr", []), key=lambda r: r["p_ge2"], reverse=True),
         "games": sorted(games + frozen["games"], key=lambda g: g["env"], reverse=True),
+        "boards": boards,
     }
 
     def _body(d: dict) -> str:

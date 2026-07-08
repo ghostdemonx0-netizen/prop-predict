@@ -26,6 +26,22 @@ def test_refresh_today_first_run_writes_board(tmp_path, monkeypatch):
     assert json.loads((tmp_path / "index.json").read_text())["dates"] == ["2026-06-10"]
 
 
+def test_refresh_today_includes_barrel_boards_payload(tmp_path, monkeypatch):
+    """The robot's board must carry the barrel Boards payload (heatmaps + Oracle),
+    not just prop rows. Regression guard: prod shipped without `boards` because
+    refresh_today built its own payload and omitted build_boards_payload."""
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0])], **_kw())
+    data = json.loads((tmp_path / "2026-06-10.json").read_text())
+    assert "boards" in data, "robot payload must include the barrel Boards page"
+    assert isinstance(data["boards"].get("games"), list) and len(data["boards"]["games"]) == 1
+    assert isinstance(data["boards"].get("pitchers"), list)
+    g = data["boards"]["games"][0]
+    hitters = (g.get("awayHitters") or []) + (g.get("homeHitters") or [])
+    assert hitters and "oracle" in hitters[0]["stats"], "hitter rows must carry the Oracle field"
+
+
 def test_refresh_today_unchanged_inputs_return_false_and_do_not_rewrite(tmp_path, monkeypatch):
     from model import export_web
     monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
