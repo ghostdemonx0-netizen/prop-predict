@@ -169,6 +169,18 @@ def test_hr_identity_fields():
     assert rec["lineup_status"] == "projected"
     assert rec["matchup"] == "AAA @ BBB"
 
+def test_hr_oracle_recorded_when_passed():
+    rec = record_from_row(HR_ROW_SOON, "hr", oracle=1, oracle_score=0.81)
+    assert rec["oracle"] == 1 and rec["oracle_score"] == 0.81
+
+def test_hr_no_oracle_field_when_absent():
+    assert "oracle" not in record_from_row(HR_ROW_SOON, "hr")
+
+def test_strikeouts_never_get_oracle():
+    # pitcher K prop has no per-hitter Oracle flag even if one is passed
+    rec = record_from_row(K_ROW_SOON, "strikeouts", oracle=1, oracle_score=0.9)
+    assert "oracle" not in rec
+
 def test_hr_no_date_or_captured_at_added_by_record_from_row():
     # record_from_row does NOT stamp date/captured_at (that's archive_records' job)
     rec = record_from_row(HR_ROW_SOON, "hr")

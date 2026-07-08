@@ -19,7 +19,9 @@ _PLATOON_LO, _PLATOON_HI = 0.97, 1.06   # hr_platoon_mult favorable range; SEED
 _MATCHUP_LO, _MATCHUP_HI = 1.00, 1.20   # barrel_mult positive tilt (HR cap); SEED
 _FORM_LO, _FORM_HI = 1.00, 1.20         # recent_form_mult hot range; SEED
 
-_FLAG_BAR = 0.68     # premium: blended score to flag (rare); SEED
+_FLAG_BAR = 0.73     # premium: blended score to flag (~10% rate; raised from 0.68 after the
+                     # PullBrl fix lifted pulled-barrel rates → gate → ~13%). Rate varies by
+                     # slate; grader tunes this from real flagged-vs-unflagged hit rates. SEED
 
 
 def _clamp01(x: float) -> float:

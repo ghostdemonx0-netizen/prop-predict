@@ -159,11 +159,16 @@ def dedup_new(existing: list[dict], candidates: list[dict]) -> list[dict]:
     return result
 
 
-def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:
+def record_from_row(row: dict[str, Any], prop: str, *,
+                    oracle: int | None = None,
+                    oracle_score: float | None = None) -> dict[str, Any]:
     """
     Build one structured archive record from a board row.
 
     `prop`    — lowercase prop name, e.g. "hr", "strikeouts", "runs".
+    `oracle`/`oracle_score` — the hitter's per-player Oracle flag (from the board's
+      `oracle_by_pid` map); recorded so a LATER analysis can compare flagged-vs-
+      unflagged hit rates (barrel+edges vs barrel-alone). Hitter props only.
     `date` and `captured_at` are NOT added here; archive_records() stamps them.
     """
     prop_lower = prop.lower()
@@ -255,6 +260,13 @@ def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:
 
     rec["probs"] = probs
 
+    # -- Oracle (per-player barrel-standout flag) --------------------------
+    # Recorded so a later analysis can compare flagged-vs-unflagged hit rates.
+    # Hitter props only; strikeouts (pitcher) have no oracle.
+    if oracle is not None and prop_lower != "strikeouts":
+        rec["oracle"] = oracle
+        rec["oracle_score"] = oracle_score
+
     # -- Factors -----------------------------------------------------------
     # Tolerate missing keys — capture whatever is present on this row.
     factors: dict[str, Any] = {}
@@ -285,6 +297,7 @@ def archive_records(
 
     started = set(board.get("started_ids") or [])  # tolerate a null started_ids
     date    = board.get("date")
+    oracle_by_pid = board.get("oracle_by_pid") or {}  # per-player Oracle flag
 
     # Prop list keys in the board (order doesn't matter for correctness)
     prop_list_keys = ("hr", "strikeouts", "hits", "total_bases", "runs", "rbi", "hrr")
@@ -302,7 +315,9 @@ def archive_records(
             if key in seen:
                 continue
             seen.add(key)
-            rec = record_from_row(row, prop_name)
+            orc = oracle_by_pid.get(str(row.get("player_id"))) or oracle_by_pid.get(row.get("player_id")) or {}
+            rec = record_from_row(row, prop_name,
+                                  oracle=orc.get("oracle"), oracle_score=orc.get("oracle_score"))
             rec["date"]        = date
             rec["captured_at"] = now_iso
             records.append(rec)

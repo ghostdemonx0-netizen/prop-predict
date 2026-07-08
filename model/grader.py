@@ -39,7 +39,7 @@ def _count_actual(prop: str, bat: dict) -> int:
 
 
 def _base(pred: dict, now_iso: str) -> dict:
-    return {
+    base = {
         "date":      pred.get("date"),
         "game_id":   pred.get("game_id"),
         "player_id": pred.get("player_id"),
@@ -48,6 +48,12 @@ def _base(pred: dict, now_iso: str) -> dict:
         "prop":      pred.get("prop"),
         "graded_at": now_iso,
     }
+    # Carry the Oracle flag through so a later analysis can compare flagged-vs-
+    # unflagged hit rates (barrel+edges vs barrel-alone).
+    if pred.get("oracle") is not None:
+        base["oracle"] = pred["oracle"]
+        base["oracle_score"] = pred.get("oracle_score")
+    return base
 
 
 def grade_prediction(pred: dict, outcome: dict | None, *,
