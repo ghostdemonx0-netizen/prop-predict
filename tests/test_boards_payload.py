@@ -155,3 +155,68 @@ def test_runs_barrel_mult_beff_surface_as_hist(monkeypatch):
 
     assert runs[0].get("barrel_mult_hist") == 1.05, "barrel_mult_hist not attached for runs"
     assert runs[0].get("p_ge1_beff_hist") == 0.57, "p_ge1_beff_hist not attached for runs"
+
+
+# ===========================================================================
+# Task 2 — oracle + oracle_score emitted on board hitters
+# ===========================================================================
+
+def test_oracle_strong_barrel_bat_flags_true():
+    """A strong-barrel bat (elite stats + bbe=300) vs a barrel-vulnerable pitcher
+    (maxed allowed rates) must surface stats.oracle == 1."""
+    strong_h = {
+        "barrel_rate": 0.15, "pulled_barrel_rate": 0.08, "sweetspot_rate": 0.40,
+        "fb_rate": 0.30, "hardhit_rate": 0.55, "la_mean": 18.0, "xwobacon": 0.42,
+        "hrfb_rate": 0.25, "player_id": 10, "name": "Oracle Bat", "bats": "R",
+        "swstr": 0.10, "csw": 0.30, "ball": 0.35, "iso": 0.25, "xwoba": 0.38,
+        "zone_dmg": {5: 1.2},
+        "bbe": 300, "recent_form_mult": 1.1,
+    }
+    vuln_p = {
+        "barrel_rate_allowed": 0.12, "pulled_barrel_rate_allowed": 0.06,
+        "fb_rate_allowed": 0.45, "hardhit_rate_allowed": 0.52,
+        "player_id": 99, "name": "Barrel Vuln", "throws": "L",
+        "swstr": 0.12, "csw": 0.31, "ball": 0.34, "xwoba_allowed": 0.35,
+        "zone_freq": {5: 0.5},
+    }
+    slate = [{"away": "NYY", "home": "BOS", "away_pitcher_id": 99, "home_pitcher_id": 99,
+              "park_name": "Fenway Park", "started": False}]
+    boards = build_boards_payload(
+        slate,
+        lineups_fn=lambda g: {"home": [dict(strong_h)], "away": [dict(strong_h)]},
+        pitcher_fn=lambda pid: dict(vuln_p),
+    )
+    h = boards["games"][0]["awayHitters"][0]["stats"]
+    assert "oracle" in h, "oracle key missing from stats"
+    assert "oracle_score" in h, "oracle_score key missing from stats"
+    assert h["oracle"] == 1, f"expected oracle=1 for elite barrel bat, got {h.get('oracle')} (score={h.get('oracle_score')})"
+
+
+def test_oracle_average_bat_flags_false():
+    """A league-average bat (all None stats, quality < gate) must surface stats.oracle == 0."""
+    avg_h = {
+        "barrel_rate": None, "pulled_barrel_rate": None, "sweetspot_rate": None,
+        "fb_rate": None, "hardhit_rate": None, "xwobacon": None,
+        "player_id": 11, "name": "Average Bat", "bats": "R",
+        "swstr": None, "csw": None, "ball": None, "iso": None, "xwoba": None,
+        "la_mean": None, "hrfb_rate": None, "zone_dmg": {},
+        "bbe": 300, "recent_form_mult": 1.0,
+    }
+    avg_p = {
+        "barrel_rate_allowed": None, "pulled_barrel_rate_allowed": None,
+        "fb_rate_allowed": None, "hardhit_rate_allowed": None,
+        "player_id": 98, "name": "Average Arm", "throws": "R",
+        "swstr": None, "csw": None, "ball": None, "xwoba_allowed": None,
+        "zone_freq": {},
+    }
+    slate = [{"away": "CHI", "home": "CLE", "away_pitcher_id": 98, "home_pitcher_id": 98,
+              "park_name": "Wrigley Field", "started": False}]
+    boards = build_boards_payload(
+        slate,
+        lineups_fn=lambda g: {"home": [dict(avg_h)], "away": [dict(avg_h)]},
+        pitcher_fn=lambda pid: dict(avg_p),
+    )
+    h = boards["games"][0]["awayHitters"][0]["stats"]
+    assert "oracle" in h, "oracle key missing from stats"
+    assert "oracle_score" in h, "oracle_score key missing from stats"
+    assert h["oracle"] == 0, f"expected oracle=0 for league-average bat, got {h.get('oracle')} (score={h.get('oracle_score')})"

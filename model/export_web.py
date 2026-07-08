@@ -19,6 +19,8 @@ from model.pipeline import build_hr_rows, build_strikeout_rows, build_games, bui
 from model.prop_score import prop_score
 from model.matchup import hr_platoon_mult
 from model.pitch_metrics import zone_fit
+from model.barrel_effect import barrel_effect_mult
+from model.oracle import oracle
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
 _DATE_FILE = re.compile(r"^\d{4}-\d{2}-\d{2}\.json$")
@@ -357,6 +359,8 @@ def _hand(bats: str) -> str:
 
 def _hitter_board(b: dict, opp: dict | None, order: int, team: str) -> dict:
     pmult = hr_platoon_mult(b.get("bats", "R"), opp.get("throws", "R")) if opp else 1.0
+    bmult = barrel_effect_mult(b, opp, prop="hr") if opp else 1.0
+    orc = oracle(b, barrel_mult=bmult, platoon_mult=pmult)
     score = prop_score(b, opp, platoon_mult=pmult) if opp else 0.0
     return {
         "id": b.get("player_id"),
@@ -366,6 +370,8 @@ def _hitter_board(b: dict, opp: dict | None, order: int, team: str) -> dict:
         "order": order,
         "stats": {
             "trueScore": score,
+            "oracle": 1 if orc["oracle"] else 0,
+            "oracle_score": orc["oracle_score"],
             "brl": _pct(b.get("barrel_rate")),
             "pbrl": _pct(b.get("pulled_barrel_rate")),
             "sweet": _pct(b.get("sweetspot_rate")),
