@@ -435,3 +435,49 @@ def test_run_props_have_barrel_beff_twins():
             assert 0.0 <= r[f"{label}_beff"] <= 1.0, f"{build.__name__}: {label}_beff out of range"
             # Base probability must still be present and unchanged
             assert label in r, f"{build.__name__}: base key {label} was removed"
+
+
+def test_run_props_have_bweight_keys():
+    """Runs / RBI / HRR rows carry p_geN_bweight per threshold."""
+    lineup = _c_stacked_lineup()
+    lineups_fn = lambda g: {"home": lineup, "away": lineup}
+    for build, labels in (
+        (_pl.build_runs_rows, ("p_ge1", "p_ge2")),
+        (_pl.build_rbi_rows, ("p_ge1", "p_ge2")),
+        (_pl.build_hrr_rows, ("p_ge2", "p_ge3", "p_ge4")),
+    ):
+        rows = build(_c_slate(), lineups_fn, _c_pitcher, _c_weather)
+        assert len(rows) > 0, f"{build.__name__} returned no rows"
+        r = rows[0]
+        for label in labels:
+            assert f"{label}_bweight" in r, f"{build.__name__}: missing {label}_bweight"
+            assert 0.0 <= r[f"{label}_bweight"] <= 1.0, (
+                f"{build.__name__}: {label}_bweight out of range"
+            )
+            # Base prob and _beff must remain intact
+            assert label in r, f"{build.__name__}: base {label} was removed"
+            assert f"{label}_beff" in r, f"{build.__name__}: {label}_beff was removed"
+
+
+def test_run_props_bweight_equals_baseline_times_barrel60():
+    """p_geN_bweight = clamp(baseline_p_geN × barrel_effect_mult(cap=0.60), 0, 1)."""
+    from model.barrel_effect import barrel_effect_mult
+    lineup = _c_stacked_lineup()
+    lineups_fn = lambda g: {"home": lineup, "away": lineup}
+    for build, labels, bprop in (
+        (_pl.build_runs_rows, ("p_ge1", "p_ge2"), "runs"),
+        (_pl.build_rbi_rows, ("p_ge1", "p_ge2"), "rbi"),
+        (_pl.build_hrr_rows, ("p_ge2", "p_ge3", "p_ge4"), "hrr"),
+    ):
+        rows = build(_c_slate(), lineups_fn, _c_pitcher, _c_weather)
+        r = rows[0]
+        # The first batter in the home lineup faces the away pitcher
+        bat = lineups_fn(_c_slate()[0])["home"][0]
+        opp = _c_pitcher(_c_slate()[0]["away_pitcher_id"])
+        bw_mult = barrel_effect_mult(bat, opp, prop=bprop, cap=0.60)
+        for label in labels:
+            expected = min(1.0, max(0.0, r[f"baseline_{label}"] * bw_mult))
+            assert abs(r[f"{label}_bweight"] - expected) < 1e-9, (
+                f"{build.__name__} {label}_bweight mismatch: "
+                f"got {r[f'{label}_bweight']}, expected {expected}"
+            )

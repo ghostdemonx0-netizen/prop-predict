@@ -515,6 +515,7 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
                 blended = _run_props.blend_forms(hard_hit, production)
                 bprop = prop.lower()
                 barrel_mult = barrel_effect_mult(b, opp, prop=bprop)
+                bw_mult = barrel_effect_mult(b, opp, prop=bprop, cap=0.60)
 
                 # --- Approach C: lineup context ---
                 status = b.get("lineup_status", "confirmed")
@@ -574,6 +575,10 @@ def _run_prop_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop):
                 for _field, _n in cfg["thresholds"]:
                     if _field in row:
                         row[f"{_field}_beff"] = min(1.0, max(0.0, row[_field] * barrel_mult))
+                for _field, _n in cfg["thresholds"]:
+                    _baseline_key = f"baseline_{_field}"
+                    if _baseline_key in row:
+                        row[f"{_field}_bweight"] = min(1.0, max(0.0, row[_baseline_key] * bw_mult))
                 rows.append(row)
     rows.sort(key=lambda r: r[cfg["thresholds"][0][0]], reverse=True)
     return rows
