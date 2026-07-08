@@ -237,6 +237,13 @@ def blended_batter_profile(events_by_season: dict, *, as_of: str, current_season
     # Pooled 3-season barrel metrics (equal weight — Marcel weighting is a later refinement)
     pooled = [e for evs in seasons for e in evs]
     prof.update(barrel_metrics(pooled, as_of=as_of))
+    # Recompute pitch-level / expected stats on the SAME pooled window so that
+    # ISO, xwOBA, SwStr, CSW, and ZoneFit all change with the timeframe selector
+    # (switching Current→Blend was previously frozen at current-season values).
+    prof.update(pitch_rates(pooled, as_of=as_of))
+    prof.update(iso(pooled, as_of=as_of))
+    prof.update(xwoba(pooled, as_of=as_of))
+    prof["zone_dmg"] = zone_damage(pooled, as_of=as_of)
     return prof
 
 
@@ -278,6 +285,12 @@ def blended_pitcher_profile(events_by_season: dict, *, as_of: str, current_seaso
                            signal=bm.get("barrel_rate_allowed"),
                            league_rate=LEAGUE_HR_RATE, league_signal=_LG_BARREL, votes=_VOTES_HR)
     prof.update(bm)
+    # Recompute pitch-level / expected stats on the SAME pooled window so that
+    # SwStr, CSW, xwOBA-allowed, and ZoneFit all change with the timeframe selector
+    # (pr was already computed for the k_per_bf signal above; merge it now).
+    prof.update(pr)
+    prof.update(xwoba(pooled, as_of=as_of, allowed=True))
+    prof["zone_freq"] = zone_freq(pooled, as_of=as_of)
     return prof
 
 
