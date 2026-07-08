@@ -264,12 +264,20 @@ def blended_pitcher_profile(events_by_season: dict, *, as_of: str, current_seaso
     ks_made, eff_pa = marcel_blend([(c[1], c[0]) for c in counts])
     hits_made, _ = marcel_blend([(c[2], c[0]) for c in counts])
     hr_made, _ = marcel_blend([(c[3], c[0]) for c in counts])
-    prof["k_per_bf"] = regress(ks_made, eff_pa, LEAGUE_K, _K_R)
-    prof["hit_allowed_rate"] = regress(hits_made, eff_pa, LEAGUE_HIT, _HIT_R)
-    prof["hr_allowed_rate"] = regress(hr_made, eff_pa, LEAGUE_HR_RATE, _HR_R)
-    # Pooled 3-season barrel metrics allowed (equal weight — Marcel weighting is a later refinement)
+    # Pooled 3-season barrel/pitch metrics (equal weight — Marcel weighting is a later refinement)
     pooled = [e for evs in seasons for e in evs]
-    prof.update(barrel_metrics(pooled, as_of=as_of, allowed=True))
+    bm = barrel_metrics(pooled, as_of=as_of, allowed=True)
+    pr = pitch_rates(pooled, as_of=as_of)
+    # Replace plain regress with barrel-blended rate, same signal→rate mapping as current-season profile
+    prof["k_per_bf"] = barrel_blended_rate(ks_made, eff_pa, signal=pr.get("swstr"),
+                           league_rate=LEAGUE_K, league_signal=_LG_SWSTR, votes=_VOTES_K)
+    prof["hit_allowed_rate"] = barrel_blended_rate(hits_made, eff_pa,
+                           signal=bm.get("hardhit_rate_allowed"),
+                           league_rate=LEAGUE_HIT, league_signal=_LG_HARDHIT, votes=_VOTES_HIT)
+    prof["hr_allowed_rate"] = barrel_blended_rate(hr_made, eff_pa,
+                           signal=bm.get("barrel_rate_allowed"),
+                           league_rate=LEAGUE_HR_RATE, league_signal=_LG_BARREL, votes=_VOTES_HR)
+    prof.update(bm)
     return prof
 
 

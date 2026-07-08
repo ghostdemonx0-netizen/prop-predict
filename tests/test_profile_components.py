@@ -188,3 +188,38 @@ def test_pitcher_profile_k_uses_barrel_blend():
     p = pitcher_profile_from_events(pa_evs + swstr_evs, as_of="2026-06-01", player_id=99)
     # swstr = 1.0 >> league 0.11 → barrel-blend pulls k_per_bf above plain regress value
     assert p["k_per_bf"] > regress(5, 20, LEAGUE_K, _K_R)
+
+
+# ---------------------------------------------------------------------------
+# Task 3: blended (multi-season) profile uses barrel-blend rates
+# ---------------------------------------------------------------------------
+
+def test_blended_pitcher_barrel_blend_rates():
+    """blended_pitcher_profile k/hit/hr rates use pooled barrel signals
+    (barrel_blended_rate), not plain regress.
+
+    Fixture: 3 seasons × 10 barrel field_outs each — no HRs anywhere,
+    so Marcel hr_made=0.  But barrel_rate_allowed=1.0 in the pool →
+    the barrel-blend lifts hr_allowed_rate well ABOVE LEAGUE_HR_RATE,
+    while plain regress(0, eff_pa, LEAGUE_HR_RATE, _HR_R) would be
+    BELOW LEAGUE_HR_RATE.  Same logic proves the blend path is wired.
+    """
+    from model.projections import LEAGUE_HR_RATE
+
+    def barrel_ev(d, gp):
+        """field_out with max barrel signal: lsa=6, fly_ball → barrel=True."""
+        return _brow(d, "field_out", ls=103.0, la=25.0, lsa=6, bb="fly_ball", gp=gp)
+
+    by_season = {
+        2026: [barrel_ev(f"2026-04-{i+1:02d}", i + 1) for i in range(10)],
+        2025: [barrel_ev(f"2025-04-{i+1:02d}", i + 1) for i in range(10)],
+        2024: [barrel_ev(f"2024-04-{i+1:02d}", i + 1) for i in range(10)],
+    }
+    p = blended_pitcher_profile(by_season, as_of="2026-06-01", current_season=2026,
+                                player_id=99)
+    # sanity: pooled barrel signal is maxed out
+    assert p["barrel_rate_allowed"] == 1.0
+    # barrel_blended_rate with barrel_rate_allowed=1.0 vs _LG_BARREL=0.08:
+    #   ratio clamped at 2.0 → implied = 2×LEAGUE_HR_RATE → hr_allowed_rate > LEAGUE_HR_RATE
+    # plain regress(0, ~24, LEAGUE_HR_RATE, 300) < LEAGUE_HR_RATE — fails this assertion
+    assert p["hr_allowed_rate"] > LEAGUE_HR_RATE

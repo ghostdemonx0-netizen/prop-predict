@@ -38,6 +38,8 @@ def test_blended_pitcher_keeps_current_workload_blends_rates():
     p = blended_pitcher_profile(ebs, as_of="2026-06-17", current_season=2026, player_id=3, name="P", throws="R")
     blended_k = (5*30 + 4*180 + 3*150) / 5
     blended_pa = (5*120 + 4*600 + 3*600) / 5
-    assert math.isclose(p["k_per_bf"], (blended_k + 0.225*200) / (blended_pa + 200))
+    # k_per_bf is now barrel_blended_rate; fixture has no pitch descriptions → swstr=0 → signal
+    # treated as no-data → implied = LEAGUE_K (neutral). Votes constant is _VOTES_K=175, not _K_R=200.
+    assert math.isclose(p["k_per_bf"], (blended_k + 0.225 * 175) / (blended_pa + 175))
     # bf/expected_bf reflect CURRENT season only (120 PA), not the blend
     assert p["bf"] == 120
