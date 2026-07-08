@@ -135,7 +135,7 @@ export function toBoardRows(
 
   if (prop === "hr") {
     const curField  = barrelWeight ? "probability_bweight"      : barrelEffect ? "probability_beff"      : "probability";
-    const histField = barrelWeight ? "probability_hist_bweight" : barrelEffect ? "probability_hist_beff" : "probability_hist";
+    const histField = barrelWeight ? "probability_bweight_hist" : barrelEffect ? "probability_hist_beff" : "probability_hist";
     rows = data.hr.map((r) => ({
       id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
       player: r.player,

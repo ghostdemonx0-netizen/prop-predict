@@ -67,7 +67,7 @@ describe("toBoardRows", () => {
         player: "X", team: "BOS", player_id: 1, game_id: 1,
         probability: 0.15,       probability_hist: 0.16,
         probability_beff: 0.18,  probability_hist_beff: 0.19,
-        probability_bweight: 0.20, probability_hist_bweight: 0.22,
+        probability_bweight: 0.20, probability_bweight_hist: 0.22,
       }],
     } as unknown as Projections;
 
@@ -90,7 +90,7 @@ describe("toBoardRows", () => {
       hr: [{
         player: "X", team: "BOS", player_id: 1, game_id: 1,
         probability: 0.15,       probability_hist: 0.16,
-        probability_bweight: 0.20, probability_hist_bweight: 0.22,
+        probability_bweight: 0.20, probability_bweight_hist: 0.22,
       }],
     } as unknown as Projections;
 

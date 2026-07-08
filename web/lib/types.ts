@@ -52,7 +52,7 @@ export type HrRow = {
   probability_beff?: number;
   probability_hist_beff?: number;
   probability_bweight?: number;
-  probability_hist_bweight?: number;
+  probability_bweight_hist?: number;
   barrel_mult?: number;
   barrel_mult_hist?: number;
 };
