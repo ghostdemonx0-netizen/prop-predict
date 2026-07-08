@@ -112,6 +112,9 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     season_hr=b["season_hr"], season_pa=b["season_pa"],
                     expected_pa=expected_pa_for_slot(slot),
                 )  # all multipliers default 1.0 → neutral base chance
+                # b-weight: pure base × barrel at ±60% cap (sauce OFF)
+                bw_mult_hr = barrel_effect_mult(b, opp, prop="hr", cap=0.60)
+                prob_bweight = min(1.0, max(0.0, baseline_prob * bw_mult_hr))
                 _g = b.get("games", 0)
                 hr_pace = (b["season_hr"] / _g) if _g else 0.0
                 vs = None
@@ -132,6 +135,7 @@ def build_hr_rows(slate: list[dict], lineups_fn, pitcher_fn, weather_fn, bvp_fn=
                     "probability": prob,
                     "barrel_mult": barrel_mult,
                     "probability_beff": prob_beff,
+                    "probability_bweight": prob_bweight,
                     "wind_out_mph": wod,
                     "weather_mult": weather_mult, "park_mult": eff_park, "spray_pull": sp["pull"],
                     "spray_mult": spray_mult,
@@ -332,6 +336,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                 form = _run_props.blend_forms(hard, prod, w_hard=0.60)
                 bprop = "hits" if units == "hits" else "tb"
                 barrel_mult = barrel_effect_mult(b, opp, prop=bprop)
+                bw_mult = barrel_effect_mult(b, opp, prop=bprop, cap=0.60)
                 actual_vec, neutral_vec = _batter_outcome_vector(
                     b, opp, eff_park, weather_mult, slot, bvp,
                     apply_xbh_park=(units == "bases"),
@@ -434,6 +439,7 @@ def _threshold_rows(slate, lineups_fn, pitcher_fn, weather_fn, bvp_fn, *, prop, 
                     row[label] = count_ge_prob(outcomes, epa, nthresh)
                     row[f"baseline_{label}"] = count_ge_prob(boutcomes, epa, nthresh)
                     row[f"{label}_beff"] = min(1.0, max(0.0, row[label] * barrel_mult))
+                    row[f"{label}_bweight"] = min(1.0, max(0.0, row[f"baseline_{label}"] * bw_mult))
                 rows.append(row)
     rows.sort(key=lambda r: r[thresholds[0][0]], reverse=True)
     return rows

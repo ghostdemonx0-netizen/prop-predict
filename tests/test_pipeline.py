@@ -366,6 +366,58 @@ def test_hits_beff_equals_base_times_barrel_mult():
 
 # --- Barrel nudge wired into Runs + RBI + HRR rows ---
 
+def test_hits_rows_have_bweight_keys():
+    rows = _pl.build_hits_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    assert len(rows) > 0
+    r = rows[0]
+    for label in ("p_ge1", "p_ge2", "p_ge3"):
+        assert f"{label}_bweight" in r, f"missing {label}_bweight"
+        assert 0.0 <= r[f"{label}_bweight"] <= 1.0
+        # Normal prob and _beff must be present and unchanged
+        assert label in r
+        assert f"{label}_beff" in r
+        assert abs(r[f"{label}_beff"] - min(1.0, max(0.0, r[label] * r["barrel_mult"]))) < 1e-9
+
+
+def test_tb_rows_have_bweight_keys():
+    rows = _pl.build_total_bases_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    assert len(rows) > 0
+    r = rows[0]
+    for label in ("p_ge2", "p_ge3", "p_ge4"):
+        assert f"{label}_bweight" in r, f"missing {label}_bweight"
+        assert 0.0 <= r[f"{label}_bweight"] <= 1.0
+        # Normal prob and _beff must be present and unchanged
+        assert label in r
+        assert f"{label}_beff" in r
+        assert abs(r[f"{label}_beff"] - min(1.0, max(0.0, r[label] * r["barrel_mult"]))) < 1e-9
+
+
+def test_hits_bweight_equals_baseline_times_barrel60():
+    """_bweight = clamp(baseline_prob × barrel_effect_mult(cap=0.60), 0, 1)."""
+    from model.barrel_effect import barrel_effect_mult
+    rows = _pl.build_hits_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    r = rows[0]
+    home_bat = fake_lineups_fn(SAMPLE_SLATE[0])["home"][0]
+    opp_pitcher = fake_pitcher_fn(SAMPLE_SLATE[0]["away_pitcher_id"])
+    bw_mult = barrel_effect_mult(home_bat, opp_pitcher, prop="hits", cap=0.60)
+    for label in ("p_ge1", "p_ge2", "p_ge3"):
+        expected = min(1.0, max(0.0, r[f"baseline_{label}"] * bw_mult))
+        assert abs(r[f"{label}_bweight"] - expected) < 1e-9, f"{label}_bweight mismatch"
+
+
+def test_tb_bweight_equals_baseline_times_barrel60():
+    """_bweight = clamp(baseline_prob × barrel_effect_mult(cap=0.60), 0, 1)."""
+    from model.barrel_effect import barrel_effect_mult
+    rows = _pl.build_total_bases_rows(SAMPLE_SLATE, fake_lineups_fn, fake_pitcher_fn, fake_weather_fn)
+    r = rows[0]
+    home_bat = fake_lineups_fn(SAMPLE_SLATE[0])["home"][0]
+    opp_pitcher = fake_pitcher_fn(SAMPLE_SLATE[0]["away_pitcher_id"])
+    bw_mult = barrel_effect_mult(home_bat, opp_pitcher, prop="tb", cap=0.60)
+    for label in ("p_ge2", "p_ge3", "p_ge4"):
+        expected = min(1.0, max(0.0, r[f"baseline_{label}"] * bw_mult))
+        assert abs(r[f"{label}_bweight"] - expected) < 1e-9, f"{label}_bweight mismatch"
+
+
 def test_run_props_have_barrel_beff_twins():
     lineup = _c_stacked_lineup()
     lineups_fn = lambda g: {"home": lineup, "away": lineup}

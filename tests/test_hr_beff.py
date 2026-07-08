@@ -29,3 +29,21 @@ def test_hr_row_has_barrel_mult_and_beff():
     assert r["barrel_mult"] > 1.0                       # strong bat vs vulnerable arm
     assert abs(r["probability_beff"] - r["probability"] * r["barrel_mult"]) < 1e-9
     assert r["probability"] > 0                          # normal prob untouched/present
+
+
+def test_hr_row_has_probability_bweight():
+    from model.barrel_effect import barrel_effect_mult
+    rows = build_hr_rows(_slate(), lambda g: {"home": [dict(_HITTER)], "away": []},
+                         lambda pid: dict(_PITCHER), _weather_fn, bvp_fn=None)
+    r = rows[0]
+    # key must be present
+    assert "probability_bweight" in r
+    # normal probability and beff must be byte-identical (unchanged)
+    assert r["probability"] > 0
+    assert abs(r["probability_beff"] - r["probability"] * r["barrel_mult"]) < 1e-9
+    # bweight = clamp(baseline_prob × barrel_effect_mult(prop="hr", cap=0.60), 0, 1)
+    bw_mult = barrel_effect_mult(dict(_HITTER), dict(_PITCHER), prop="hr", cap=0.60)
+    expected_bw = min(1.0, max(0.0, r["baseline_prob"] * bw_mult))
+    assert abs(r["probability_bweight"] - expected_bw) < 1e-9
+    # cap=0.60 leash is wider than beff cap (~0.20) → bw_mult > barrel_mult for a strong bat
+    assert bw_mult > r["barrel_mult"]
