@@ -491,15 +491,24 @@ def _pitcher_board(p: dict, opp_team: str) -> dict:
 
 
 def build_boards_payload(slate: list[dict], lineups_fn, pitcher_fn,
-                         factors_by_pid=None) -> dict:
+                         factors_by_pid=None,
+                         lineups_hist_fn=None, pitcher_hist_fn=None,
+                         factors_by_pid_hist=None) -> dict:
     """Per-game barrel boards (display only): each team's hitters (real barrel
     stats + Prop Score) vs the pitcher they face, plus a slate-pitchers list of
     barrel-allowed rows.
 
     factors_by_pid: optional {player_id: {"park_mult": …, "weather_mult": …,
     "pitcher_mult": …}} map built from the HR rows so the driver columns
-    (park / weather / pitcher / platoon / form) can be surfaced on the board."""
+    (park / weather / pitcher / platoon / form) can be surfaced on the board.
+
+    lineups_hist_fn / pitcher_hist_fn / factors_by_pid_hist: optional history
+    counterparts. When provided, every stat key on each hitter row's ``stats``
+    dict gets a ``<key>_hist`` twin computed from the blended history profile,
+    and each pitcher board row gets ``pscore_hist`` / ``kscore_hist`` etc.
+    The current-mode values are never modified (additive only)."""
     games, pitchers, seen_p = [], [], set()
+    use_hist = lineups_hist_fn is not None and pitcher_hist_fn is not None
     for game in slate:
         if game.get("started"):
             continue
@@ -512,7 +521,38 @@ def build_boards_payload(slate: list[dict], lineups_fn, pitcher_fn,
                         for i, b in enumerate(lns.get("away", []))]
         home_hitters = [_hitter_board(b, away_p, i + 1, home, factors_by_pid)
                         for i, b in enumerate(lns.get("home", []))]
+
+        # History twins: build a second set of rows from blended profiles and
+        # attach every stat as a <key>_hist onto the matching current row.
+        home_p_h = away_p_h = None
+        if use_hist:
+            home_p_h = pitcher_hist_fn(game["home_pitcher_id"]) if game.get("home_pitcher_id") else None
+            away_p_h = pitcher_hist_fn(game["away_pitcher_id"]) if game.get("away_pitcher_id") else None
+            lns_h = lineups_hist_fn(game)
+            # away hist hitters face home pitcher (hist); index by player_id for matching
+            away_hist_by_id = {
+                row["id"]: row
+                for row in [_hitter_board(b_h, home_p_h, i + 1, away, factors_by_pid_hist)
+                             for i, b_h in enumerate(lns_h.get("away", []))]
+            }
+            home_hist_by_id = {
+                row["id"]: row
+                for row in [_hitter_board(b_h, away_p_h, i + 1, home, factors_by_pid_hist)
+                             for i, b_h in enumerate(lns_h.get("home", []))]
+            }
+            for h in away_hitters:
+                h_hist = away_hist_by_id.get(h["id"])
+                if h_hist:
+                    for k, v in h_hist["stats"].items():
+                        h["stats"][f"{k}_hist"] = v
+            for h in home_hitters:
+                h_hist = home_hist_by_id.get(h["id"])
+                if h_hist:
+                    for k, v in h_hist["stats"].items():
+                        h["stats"][f"{k}_hist"] = v
+
         games.append({
+            "game_id": game.get("game_id"),
             "id": f"{away}-{home}",
             "away": away, "home": home,
             "venue": game.get("park_name", ""),
@@ -522,10 +562,15 @@ def build_boards_payload(slate: list[dict], lineups_fn, pitcher_fn,
             "awayHitters": away_hitters,
             "homeHitters": home_hitters,
         })
-        for p, opp in ((home_p, away), (away_p, home)):
+        for p, p_h, opp in ((home_p, home_p_h, away), (away_p, away_p_h, home)):
             if p and p.get("player_id") not in seen_p:
                 seen_p.add(p.get("player_id"))
-                pitchers.append(_pitcher_board(p, opp))
+                p_row = _pitcher_board(p, opp)
+                if p_h:
+                    p_h_row = _pitcher_board(p_h, opp)
+                    for k, v in p_h_row["stats"].items():
+                        p_row["stats"][f"{k}_hist"] = v
+                pitchers.append(p_row)
     return {"games": games, "pitchers": pitchers}
 
 
@@ -570,7 +615,9 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
         "hrr": hrr_rows,
         "games": build_games(slate, weather_fn),
         "boards": build_boards_payload(slate, lineups_fn, pitcher_fn,
-                                       factors_by_pid=factors_by_pid),
+                                       factors_by_pid=factors_by_pid,
+                                       lineups_hist_fn=lineups_hist_fn,
+                                       pitcher_hist_fn=pitcher_hist_fn),
     }
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     (DATA_DIR / f"{date_str}.json").write_text(json.dumps(payload, indent=2))

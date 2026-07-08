@@ -695,3 +695,83 @@ def test_well_sampled_pitcher_keeps_swstr_csw():
     p = boards["pitchers"][0]["stats"]
     assert p["swstr"] == 12.0, f"expected pitcher swstr=12.0 for well-sampled, got {p['swstr']}"
     assert p["csw"]   == 31.0, f"expected pitcher csw=31.0 for well-sampled, got {p['csw']}"
+
+
+# ===========================================================================
+# Part A — board games carry game_id (needed for freeze-started-game merge)
+# ===========================================================================
+
+def test_board_games_carry_game_id():
+    """Each board game entry must include game_id so refresh_today can match
+    frozen started games back onto the boards payload."""
+    slate = [{"game_id": 42, "away": "NYY", "home": "BOS", "away_pitcher_id": 9,
+              "home_pitcher_id": 9, "park_name": "Fenway Park", "started": False}]
+    boards = build_boards_payload(
+        slate,
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(_P),
+    )
+    assert boards["games"][0].get("game_id") == 42, (
+        f"board game must carry game_id=42, got {boards['games'][0].get('game_id')}"
+    )
+
+
+# ===========================================================================
+# Part B — History stat twins on board hitter and pitcher rows
+# ===========================================================================
+
+_H_HIST = dict(_H, barrel_rate=0.20, hardhit_rate=0.60, recent_form_mult=1.15)
+_P_HIST = dict(_P, k_per_bf=0.30, hit_allowed_rate=0.18)
+
+
+def test_boards_payload_hist_twins_on_hitter_stats():
+    """With hist fns provided, each hitter's stats dict carries _hist twin keys
+    (trueScore_hist, brl_hist, matchup_hist, oracle_hist, hrform_hist)."""
+    slate = [{"game_id": 1, "away": "NYY", "home": "BOS", "away_pitcher_id": 9,
+              "home_pitcher_id": 9, "park_name": "Fenway Park", "started": False}]
+    boards = build_boards_payload(
+        slate,
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(_P),
+        lineups_hist_fn=lambda g: {"home": [dict(_H_HIST)], "away": [dict(_H_HIST)]},
+        pitcher_hist_fn=lambda pid: dict(_P_HIST),
+    )
+    h_stats = boards["games"][0]["awayHitters"][0]["stats"]
+    for key in ("trueScore_hist", "brl_hist", "matchup_hist", "oracle_hist", "hrform_hist"):
+        assert key in h_stats, f"{key} missing from board hitter stats with hist fns"
+    # Additive: current brl value must remain unchanged
+    assert h_stats["brl"] == 15.0, "current brl must be unchanged after attaching hist twins"
+
+
+def test_boards_payload_hist_twins_on_pitcher_stats():
+    """With hist fns provided, each pitcher's stats dict carries pscore_hist and kscore_hist."""
+    slate = [{"game_id": 1, "away": "NYY", "home": "BOS", "away_pitcher_id": 9,
+              "home_pitcher_id": 9, "park_name": "Fenway Park", "started": False}]
+    boards = build_boards_payload(
+        slate,
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(_P),
+        lineups_hist_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_hist_fn=lambda pid: dict(_P_HIST),
+    )
+    p_stats = boards["pitchers"][0]["stats"]
+    for key in ("pscore_hist", "kscore_hist"):
+        assert key in p_stats, f"{key} missing from pitcher stats with hist fns"
+    # Additive: current brlbip must be unchanged
+    assert p_stats["brlbip"] == 10.0, "current brlbip must be unchanged after attaching hist twins"
+
+
+def test_boards_payload_no_hist_twins_without_hist_fns():
+    """Without hist fns, no _hist keys appear on hitter or pitcher stats (additive/back-compat)."""
+    boards = build_boards_payload(
+        _slate(),
+        lineups_fn=lambda g: {"home": [dict(_H)], "away": [dict(_H)]},
+        pitcher_fn=lambda pid: dict(_P),
+    )
+    h_stats = boards["games"][0]["awayHitters"][0]["stats"]
+    hist_keys = [k for k in h_stats if k.endswith("_hist")]
+    assert not hist_keys, f"no _hist keys expected without hist fns, found {hist_keys}"
+
+    p_stats = boards["pitchers"][0]["stats"]
+    p_hist_keys = [k for k in p_stats if k.endswith("_hist")]
+    assert not p_hist_keys, f"no _hist keys expected on pitcher stats without hist fns, found {p_hist_keys}"

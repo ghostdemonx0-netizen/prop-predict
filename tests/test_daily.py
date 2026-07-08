@@ -265,3 +265,34 @@ def test_should_skip_and_record_run_survive_corrupt_signature_file(tmp_path):
     daily.record_run("abc", published=True, cache_dir=tmp_path)   # overwrites garbage
     saved = json.loads((tmp_path / "last-signature.json").read_text())
     assert saved["sig"] == "abc"
+
+
+# ===========================================================================
+# Part A — Boards freeze: started games' board entries survive in boards payload
+# ===========================================================================
+
+def test_refresh_today_boards_freeze_started_games(tmp_path, monkeypatch):
+    """When a game starts, its board entry (hitters, awayPitcher, etc.) is preserved
+    from the last pre-game build; pitchers those frozen games reference are also kept."""
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+
+    # First run: game not started → boards builds game 1 entry with game_id
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0])], **_kw())
+    data1 = json.loads((tmp_path / "2026-06-10.json").read_text())
+    assert data1["boards"]["games"], "first run must produce board game entries"
+
+    # Second run: same game now marked started → fresh_slate is empty → boards must
+    # merge the frozen game 1 entry from the existing record
+    kw = _kw()
+    kw["profile_fns"] = (lambda g: 1 / 0, lambda pid: 1 / 0,   # crash if recomputed
+                         lambda g: 1 / 0, lambda pid: 1 / 0)
+    sched = lambda d: [dict(SAMPLE_SLATE[0], started=True)]
+    daily.refresh_today("2026-06-10", schedule_fn=sched, **kw)
+    data2 = json.loads((tmp_path / "2026-06-10.json").read_text())
+
+    board_game_ids = [g.get("game_id") for g in data2["boards"]["games"]]
+    assert 1 in board_game_ids, (
+        f"started game 1 must be frozen in boards['games'], got game_ids={board_game_ids}"
+    )
+    assert data2["boards"]["pitchers"], "boards['pitchers'] must be preserved from frozen game"

@@ -178,7 +178,29 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
         # Barrel Boards payload (heatmaps + Oracle badges) — same as export_web.main
         # emits. The robot's board omitted this, so production had no Boards page.
         boards = export_web.build_boards_payload(fresh_slate, lineups_fn, pitcher_fn,
-                                                 factors_by_pid=factors_by_pid)
+                                                 factors_by_pid=factors_by_pid,
+                                                 lineups_hist_fn=lineups_hist_fn,
+                                                 pitcher_hist_fn=pitcher_hist_fn)
+
+    # Merge frozen started-game board entries from the existing boards payload.
+    # build_boards_payload skips started games, so without this merge they would
+    # vanish from the Boards page once a game starts.  The existing record
+    # carries the last pre-game build; we append any of its board games whose
+    # game_id is in started_ids, then preserve the pitchers those games reference.
+    eb = (existing.get("boards") or {}) if existing else {}
+    if eb and started_ids:
+        frozen_bgames = [g for g in eb.get("games", []) if g.get("game_id") in started_ids]
+        boards["games"] = boards["games"] + frozen_bgames
+        if frozen_bgames:
+            frozen_pnames = {
+                n for g in frozen_bgames
+                for n in (g.get("awayPitcher"), g.get("homePitcher")) if n
+            }
+            cur_pnames = {p["name"] for p in boards["pitchers"]}
+            for ep in eb.get("pitchers", []):
+                if ep.get("name") in frozen_pnames and ep.get("name") not in cur_pnames:
+                    boards["pitchers"].append(ep)
+                    cur_pnames.add(ep.get("name"))
 
     payload = {
         "date": date_str,
