@@ -2827,3 +2827,12 @@
 .sp-root .sp-boardstable tbody td:first-child {
   background: var(--bg);
 }
+
+/* ── Board column legend (active vs context) ── */
+.sp-board-legend {
+  font-size: 11px;
+  opacity: 0.55;
+  margin-top: 6px;
+  padding-left: 4px;
+  letter-spacing: .01em;
+}

@@ -46,7 +46,13 @@ function HeatTable({
               {columns.map((c) => (
                 <th
                   key={c.key}
-                  style={{ padding: "6px 8px", textAlign: "center", opacity: c.highlight ? 1 : 0.85, color: c.highlight ? "var(--iris-cyan)" : undefined }}
+                  style={{
+                    padding: "6px 8px",
+                    textAlign: "center",
+                    opacity: c.context ? 0.55 : (c.highlight ? 1 : 0.85),
+                    color: c.context ? undefined : (c.highlight ? "var(--iris-cyan)" : undefined),
+                    fontStyle: c.context ? "italic" : undefined,
+                  }}
                 >
                   {c.label}
                 </th>
@@ -65,9 +71,13 @@ function HeatTable({
                   const has = raw !== undefined && raw !== null;
                   const v = has ? raw : 0;
                   return (
-                    <td key={c.key} style={{ padding: "5px 8px", textAlign: "center",
-                        background: has ? heatColor(v, c.min, c.max, c.higherBetter ?? true) : "transparent",
-                        outline: c.highlight ? "1px solid var(--iris-cyan)" : undefined }}>
+                    <td key={c.key} style={{
+                      padding: "5px 8px",
+                      textAlign: "center",
+                      background: has ? heatColor(v, c.min, c.max, c.higherBetter ?? true) : "transparent",
+                      outline: (!c.context && c.highlight) ? "1px solid var(--iris-cyan)" : undefined,
+                      opacity: c.context ? 0.55 : undefined,
+                    }}>
                       {has ? fmt(v) : "—"}
                     </td>
                   );
@@ -77,6 +87,12 @@ function HeatTable({
           </tbody>
         </table>
       </div>
+      {columns.some((c) => c.context) && (
+        <div className="sp-board-legend">
+          <span style={{ color: "var(--iris-cyan)" }}>●</span>{" moves your number · "}
+          <span style={{ fontStyle: "italic", opacity: 0.65 }}>○</span>{" context (reading only)"}
+        </div>
+      )}
     </div>
   );
 }
@@ -93,7 +109,7 @@ function PitcherBoard({ pitchers }: { pitchers: BoardPitcher[] }) {
               <th style={{ textAlign: "left", padding: "6px 10px" }}>Pitcher</th>
               <th style={{ padding: "6px 8px" }}>Opp</th>
               {PITCHER_COLUMNS.map((c) => (
-                <th key={c.key} style={{ padding: "6px 8px", textAlign: "center", opacity: 0.85 }}>{c.label}</th>
+                <th key={c.key} style={{ padding: "6px 8px", textAlign: "center", opacity: c.context ? 0.55 : 0.85, fontStyle: c.context ? "italic" : undefined }}>{c.label}</th>
               ))}
             </tr>
           </thead>
@@ -107,7 +123,7 @@ function PitcherBoard({ pitchers }: { pitchers: BoardPitcher[] }) {
                   const has = raw !== undefined && raw !== null;
                   const v = has ? raw : 0;
                   return (
-                    <td key={c.key} style={{ padding: "5px 8px", textAlign: "center", background: has ? heatColor(v, c.min, c.max, c.higherBetter ?? true) : "transparent" }}>
+                    <td key={c.key} style={{ padding: "5px 8px", textAlign: "center", background: has ? heatColor(v, c.min, c.max, c.higherBetter ?? true) : "transparent", opacity: c.context ? 0.55 : undefined }}>
                       {has ? (v < 1 && v !== 0 ? v.toFixed(2).replace(/^0/, "") : String(Math.round(v * 10) / 10)) : "—"}
                     </td>
                   );
@@ -135,7 +151,7 @@ function PitcherStatRow({ name, pitchers }: { name: string; pitchers: BoardPitch
           <tr>
             <th style={{ textAlign: "left", padding: "6px 10px", position: "sticky", left: 0, color: "var(--iris-cyan)" }}>vs Pitcher</th>
             {PITCHER_COLUMNS.map((c) => (
-              <th key={c.key} style={{ padding: "6px 8px", textAlign: "center", opacity: 0.85 }}>{c.label}</th>
+              <th key={c.key} style={{ padding: "6px 8px", textAlign: "center", opacity: c.context ? 0.55 : 0.85, fontStyle: c.context ? "italic" : undefined }}>{c.label}</th>
             ))}
           </tr>
         </thead>
@@ -149,7 +165,7 @@ function PitcherStatRow({ name, pitchers }: { name: string; pitchers: BoardPitch
               const has = raw !== undefined && raw !== null;
               const v = has ? raw : 0;
               return (
-                <td key={c.key} style={{ padding: "5px 8px", textAlign: "center", background: has ? heatColor(v, c.min, c.max, c.higherBetter ?? true) : "transparent" }}>
+                <td key={c.key} style={{ padding: "5px 8px", textAlign: "center", background: has ? heatColor(v, c.min, c.max, c.higherBetter ?? true) : "transparent", opacity: c.context ? 0.55 : undefined }}>
                   {has ? pnum(v) : "—"}
                 </td>
               );
