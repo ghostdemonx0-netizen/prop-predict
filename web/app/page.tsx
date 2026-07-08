@@ -348,6 +348,7 @@ export default function Home() {
     activeThresholdNum(prop, threshold),
     source,
     barrelEffect,
+    philosophy === "barrel",
   );
 
   // Unique games (id + first-pitch ms) for the live poller's active-window gate.

@@ -58,4 +58,66 @@ describe("toBoardRows", () => {
     expect(off).toBeCloseTo(0.35);
     expect(on).toBeCloseTo(0.45);
   });
+
+  // ── Barrel Weight tests ──────────────────────────────────────────────────
+
+  it("barrelWeight picks probability_bweight for HR (current source)", () => {
+    const data = {
+      hr: [{
+        player: "X", team: "BOS", player_id: 1, game_id: 1,
+        probability: 0.15,       probability_hist: 0.16,
+        probability_beff: 0.18,  probability_hist_beff: 0.19,
+        probability_bweight: 0.20, probability_hist_bweight: 0.22,
+      }],
+    } as unknown as Projections;
+
+    // barrelWeight=false, barrelEffect=false → normal
+    const norm = toBoardRows(data, "hr", 0, "current", false, false)[0].prob;
+    // barrelWeight=false, barrelEffect=true → beff
+    const beff = toBoardRows(data, "hr", 0, "current", true, false)[0].prob;
+    // barrelWeight=true → bweight wins (barrelEffect value irrelevant)
+    const bwOn  = toBoardRows(data, "hr", 0, "current", false, true)[0].prob;
+    const bwBoth = toBoardRows(data, "hr", 0, "current", true, true)[0].prob;
+
+    expect(norm).toBeCloseTo(0.15);
+    expect(beff).toBeCloseTo(0.18);
+    expect(bwOn).toBeCloseTo(0.20);
+    expect(bwBoth).toBeCloseTo(0.20); // bweight wins even when beff also on
+  });
+
+  it("barrelWeight picks probability_bweight for HR with blend source", () => {
+    const data = {
+      hr: [{
+        player: "X", team: "BOS", player_id: 1, game_id: 1,
+        probability: 0.15,       probability_hist: 0.16,
+        probability_bweight: 0.20, probability_hist_bweight: 0.22,
+      }],
+    } as unknown as Projections;
+
+    const bwBlend = toBoardRows(data, "hr", 0, "blend", false, true)[0].prob;
+    expect(bwBlend).toBeCloseTo((0.20 + 0.22) / 2);
+  });
+
+  it("barrelWeight picks p_geN_bweight for a hits threshold prop", () => {
+    const hitsRow = {
+      player: "A", team: "NYY", player_id: 10, game_id: 2,
+      p_ge1: 0.70, p_ge2: 0.40, p_ge3: 0.15,
+      p_ge2_hist: 0.42,
+      p_ge2_beff: 0.50, p_ge2_beff_hist: 0.52,
+      p_ge2_bweight: 0.55, p_ge2_bweight_hist: 0.57,
+    };
+    const data = { hr: [], strikeouts: [], hits: [hitsRow] } as unknown as Projections;
+
+    // barrelWeight=true: reads p_ge2_bweight
+    const bwOn = toBoardRows(data, "hits2", 2, "current", false, true)[0].prob;
+    expect(bwOn).toBeCloseTo(0.55);
+
+    // barrelWeight=true + blend: averages the bweight twins
+    const bwBlend = toBoardRows(data, "hits2", 2, "blend", false, true)[0].prob;
+    expect(bwBlend).toBeCloseTo((0.55 + 0.57) / 2);
+
+    // barrelWeight=false: barrelEffect still picks beff as before
+    const beff = toBoardRows(data, "hits2", 2, "current", true, false)[0].prob;
+    expect(beff).toBeCloseTo(0.50);
+  });
 });

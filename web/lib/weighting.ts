@@ -124,6 +124,7 @@ export function toBoardRows(
   threshold: number,
   source: Source,
   barrelEffect: boolean = false,
+  barrelWeight: boolean = false,
 ): SpatialRow[] {
   // Convenience wrappers bound to the requested source.
   const pN = (cur?: number, hist?: number): number =>
@@ -133,8 +134,8 @@ export function toBoardRows(
   let rows: SpatialRow[];
 
   if (prop === "hr") {
-    const curField  = barrelEffect ? "probability_beff" : "probability";
-    const histField = barrelEffect ? "probability_hist_beff" : "probability_hist";
+    const curField  = barrelWeight ? "probability_bweight"      : barrelEffect ? "probability_beff"      : "probability";
+    const histField = barrelWeight ? "probability_hist_bweight" : barrelEffect ? "probability_hist_beff" : "probability_hist";
     rows = data.hr.map((r) => ({
       id: `${r.player_id ?? r.player}-${r.game_id ?? ""}`,
       player: r.player,
@@ -198,8 +199,8 @@ export function toBoardRows(
     const n = threshold as 1 | 2 | 3;
     rows = (data.hits ?? []).map((r) => {
       const rec = r as unknown as Record<string, number | undefined>;
-      const base = rec[barrelEffect ? `p_ge${n}_beff` : `p_ge${n}`];
-      const hist = rec[barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
+      const base = rec[barrelWeight ? `p_ge${n}_bweight`      : barrelEffect ? `p_ge${n}_beff`      : `p_ge${n}`];
+      const hist = rec[barrelWeight ? `p_ge${n}_bweight_hist` : barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
       return {
         id: `hits-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
         player: r.player,
@@ -237,8 +238,8 @@ export function toBoardRows(
     const n = threshold as 2 | 3 | 4;
     rows = (data.total_bases ?? []).map((r) => {
       const rec = r as unknown as Record<string, number | undefined>;
-      const base = rec[barrelEffect ? `p_ge${n}_beff` : `p_ge${n}`];
-      const hist = rec[barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
+      const base = rec[barrelWeight ? `p_ge${n}_bweight`      : barrelEffect ? `p_ge${n}_beff`      : `p_ge${n}`];
+      const hist = rec[barrelWeight ? `p_ge${n}_bweight_hist` : barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
       return {
         id: `tb-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
         player: r.player,
@@ -276,8 +277,8 @@ export function toBoardRows(
     const n = threshold as 1 | 2;
     rows = (data.runs ?? []).map((r) => {
       const rec = r as unknown as Record<string, number | undefined>;
-      const base = rec[barrelEffect ? `p_ge${n}_beff` : `p_ge${n}`];
-      const hist = rec[barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
+      const base = rec[barrelWeight ? `p_ge${n}_bweight`      : barrelEffect ? `p_ge${n}_beff`      : `p_ge${n}`];
+      const hist = rec[barrelWeight ? `p_ge${n}_bweight_hist` : barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
       return {
         id: `runs-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
         player: r.player,
@@ -315,8 +316,8 @@ export function toBoardRows(
     const n = threshold as 1 | 2;
     rows = (data.rbi ?? []).map((r) => {
       const rec = r as unknown as Record<string, number | undefined>;
-      const base = rec[barrelEffect ? `p_ge${n}_beff` : `p_ge${n}`];
-      const hist = rec[barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
+      const base = rec[barrelWeight ? `p_ge${n}_bweight`      : barrelEffect ? `p_ge${n}_beff`      : `p_ge${n}`];
+      const hist = rec[barrelWeight ? `p_ge${n}_bweight_hist` : barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
       return {
         id: `rbi-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
         player: r.player,
@@ -355,8 +356,8 @@ export function toBoardRows(
     const n = threshold as 2 | 3 | 4;
     rows = (data.hrr ?? []).map((r) => {
       const rec = r as unknown as Record<string, number | undefined>;
-      const base = rec[barrelEffect ? `p_ge${n}_beff` : `p_ge${n}`];
-      const hist = rec[barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
+      const base = rec[barrelWeight ? `p_ge${n}_bweight`      : barrelEffect ? `p_ge${n}_beff`      : `p_ge${n}`];
+      const hist = rec[barrelWeight ? `p_ge${n}_bweight_hist` : barrelEffect ? `p_ge${n}_beff_hist` : `p_ge${n}_hist`];
       return {
         id: `hrr-${r.player_id ?? r.player}-${r.game_id ?? ""}`,
         player: r.player,
