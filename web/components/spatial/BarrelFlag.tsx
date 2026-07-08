@@ -8,8 +8,8 @@ import { LogoMark } from "./LogoMark";
 export function BarrelFlag() {
   return (
     <span
-      title="Barrel Edge — standout barrel play"
-      aria-label="Barrel Edge — standout barrel play"
+      title="Oracle — the model's standout barrel call"
+      aria-label="Oracle — the model's standout barrel call"
       style={{
         display: "inline-flex",
         verticalAlign: "middle",

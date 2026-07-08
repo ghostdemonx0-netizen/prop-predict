@@ -15,8 +15,6 @@ import { GlassCard } from "../GlassCard";
 import { HandChip } from "../chips";
 import { BarrelFlag } from "../BarrelFlag";
 
-const BARREL_FLAG_MIN = 70;  // Prop Score bar for the standout-barrel flag (grader-tunable SEED)
-
 export interface BoardsViewProps {
   lens: BoardsLens;
   boards?: BoardsData;
@@ -77,7 +75,7 @@ function HeatTable({
               <tr key={r.id}>
                 <td style={{ padding: "5px 10px", whiteSpace: "nowrap", position: "sticky", left: 0 }}>
                   <span style={{ opacity: 0.5, marginRight: 6 }}>#{r.order}</span>
-                  {r.name} <HandChip hand={r.hand} />{(r.stats.trueScore ?? 0) >= BARREL_FLAG_MIN && <BarrelFlag />}
+                  {r.name} <HandChip hand={r.hand} />{r.stats.oracle === 1 && <BarrelFlag />}
                 </td>
                 {columns.map((c) => {
                   const raw = r.stats[c.key];
