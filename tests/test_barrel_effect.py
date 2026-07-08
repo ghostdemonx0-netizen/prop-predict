@@ -115,3 +115,27 @@ def test_league_average_matchup_is_neutral_all_props():
     for prop in ("hr","tb","hits","runs","rbi","hrr"):
         m = barrel_effect_mult(avg_h, avg_p, prop=prop)
         assert abs(m - 1.0) < 0.01, (prop, m)
+
+
+def test_cap_override_reaches_wider_ceiling():
+    """With cap=0.60, maxed hitter vs vulnerable pitcher reaches 1.60 (not 1.20)."""
+    full_h = {"bbe": 400, "pulled_barrel_rate": 0.12, "barrel_rate": 0.20,
+              "hardhit_rate": 0.55, "sweetspot_rate": 0.45, "fb_rate": 0.45,
+              "xwobacon": 0.46, "swstr": 0.06,
+              "zone_dmg": {5: 1.0}}
+    full_p = {"pulled_barrel_rate_allowed": 0.08, "barrel_rate_allowed": 0.12,
+              "hardhit_rate_allowed": 0.52, "fb_rate_allowed": 0.45,
+              "zone_freq": {5: 1.0}}
+    assert barrel_effect_mult(full_h, full_p, prop="hr", cap=0.60) == pytest.approx(1.60)
+
+
+def test_cap_override_omitted_uses_recipe_cap():
+    """Without cap override, maxed hitter still uses recipe's 0.20 cap -> 1.20."""
+    full_h = {"bbe": 400, "pulled_barrel_rate": 0.12, "barrel_rate": 0.20,
+              "hardhit_rate": 0.55, "sweetspot_rate": 0.45, "fb_rate": 0.45,
+              "xwobacon": 0.46, "swstr": 0.06,
+              "zone_dmg": {5: 1.0}}
+    full_p = {"pulled_barrel_rate_allowed": 0.08, "barrel_rate_allowed": 0.12,
+              "hardhit_rate_allowed": 0.52, "fb_rate_allowed": 0.45,
+              "zone_freq": {5: 1.0}}
+    assert barrel_effect_mult(full_h, full_p, prop="hr") == pytest.approx(1.20)

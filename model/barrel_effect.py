@@ -97,7 +97,7 @@ def _pitcher_index(pitcher: dict, spec: dict) -> float:
 
 
 def barrel_effect_mult(hitter: dict, pitcher: dict | None, *, prop: str = "hr",
-                       n_stable: float = _N_STABLE) -> float:
+                       cap: float | None = None, n_stable: float = _N_STABLE) -> float:
     """Combined barrel nudge in [1-cap, 1+cap] for `prop`. Hitter recipe vs pitcher
     recipe, shrunk by the hitter's batted-ball sample (`bbe`). Neutral (1.0) with no data."""
     recipe = _RECIPES[prop]
@@ -108,4 +108,5 @@ def barrel_effect_mult(hitter: dict, pitcher: dict | None, *, prop: str = "hr",
     trust = min(bbe / n_stable, 1.0) if n_stable else 1.0
     d *= trust
     d = -1.0 if d < -1.0 else 1.0 if d > 1.0 else d
-    return 1.0 + d * recipe["cap"]
+    eff_cap = cap if cap is not None else recipe["cap"]
+    return 1.0 + d * eff_cap
