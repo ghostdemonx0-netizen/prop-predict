@@ -12,6 +12,7 @@ import type { BoardsLens } from "../../../lib/barrelLens";
 import { boardsColumnsFor, heatColor, PITCHER_COLUMNS, type ColumnDef } from "../../../lib/barrelColumns";
 import { MOCK_GAMES, MOCK_PITCHER_BOARD } from "../../../lib/barrelMock";
 import type { BoardsData, BoardHitter, BoardPitcher, BoardsGame } from "../../../lib/types";
+import type { Source } from "../../../lib/weighting";
 import { GlassCard } from "../GlassCard";
 import { HandChip } from "../chips";
 import { BarrelFlag } from "../BarrelFlag";
@@ -19,12 +20,31 @@ import { BarrelFlag } from "../BarrelFlag";
 export interface BoardsViewProps {
   lens: BoardsLens;
   boards?: BoardsData;
+  /** timeframe: current · blend (50/50) · hist — selects the board's data window */
+  source?: Source;
 }
 
 /** Format a stat for display (small decimals stay decimal, else integer). */
 function fmt(v: number): string {
   if (Math.abs(v) < 1 && v !== 0) return v.toFixed(3).replace(/^0/, "");
   return String(Math.round(v * 10) / 10);
+}
+
+/**
+ * Timeframe-aware stat read. current → the raw stat; hist → its `_hist` twin;
+ * blend → 50/50 of the two. Falls back to current when a twin is absent
+ * (e.g. park/weather driver cols, which are timeframe-invariant).
+ */
+function statVal(
+  stats: Record<string, number>, key: string, source: Source = "current",
+): number | undefined {
+  const cur = stats[key];
+  if (source === "current") return cur;
+  const hist = stats[`${key}_hist`];
+  if (hist === undefined || hist === null) return cur;
+  if (source === "hist") return hist;
+  if (cur === undefined || cur === null) return hist;
+  return (cur + hist) / 2;
 }
 
 /** Legend explaining which columns move your number vs. context-only. */
@@ -37,10 +57,19 @@ function ColumnLegend() {
   );
 }
 
-/** Click-to-sort state for a board table (default = a stat key, desc). */
+/** Click-to-sort state for a board table (default = a stat key, desc).
+ *  Re-defaults when `defaultKey` changes (e.g. switching Normal↔Barrel mode
+ *  flips the ranking from Matchup to Prop Score) — the set-during-render reset
+ *  pattern. Manual clicks still win until the next mode change. */
 function useColumnSort(defaultKey: string) {
   const [sortKey, setSortKey] = useState<string>(defaultKey);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [prevDefault, setPrevDefault] = useState<string>(defaultKey);
+  if (defaultKey !== prevDefault) {
+    setPrevDefault(defaultKey);
+    setSortKey(defaultKey);
+    setSortDir("desc");
+  }
   const click = (key: string) => {
     if (key === sortKey) setSortDir((d) => (d === "desc" ? "asc" : "desc"));
     else { setSortKey(key); setSortDir("desc"); }
@@ -59,17 +88,19 @@ function cmpStat(a: number | null | undefined, b: number | null | undefined, dir
 }
 
 function HeatTable({
-  title, hitters, columns,
+  title, hitters, columns, source, defaultSortKey,
 }: {
   title: string;
   hitters: BoardHitter[];
   columns: ColumnDef[];
+  source: Source;
+  defaultSortKey: string;
 }) {
-  const sort = useColumnSort("trueScore");
+  const sort = useColumnSort(defaultSortKey);
   const rows = [...hitters].sort((a, b) =>
     sort.sortKey === "__name"
       ? (sort.sortDir === "desc" ? -1 : 1) * a.name.localeCompare(b.name)
-      : cmpStat(a.stats[sort.sortKey], b.stats[sort.sortKey], sort.sortDir),
+      : cmpStat(statVal(a.stats, sort.sortKey, source), statVal(b.stats, sort.sortKey, source), sort.sortDir),
   );
   return (
     <div style={{ marginBottom: 22 }}>
@@ -105,7 +136,7 @@ function HeatTable({
                   {r.name} <HandChip hand={r.hand} adv={(r.stats.platoon ?? 0) > 0} />{r.stats.oracle === 1 && <span style={{ marginLeft: 6 }}><BarrelFlag /></span>}
                 </td>
                 {columns.map((c) => {
-                  const raw = r.stats[c.key];
+                  const raw = statVal(r.stats, c.key, source);
                   const has = raw !== undefined && raw !== null;
                   const v = has ? raw : 0;
                   return (
@@ -130,12 +161,12 @@ function HeatTable({
   );
 }
 
-function PitcherBoard({ pitchers }: { pitchers: BoardPitcher[] }) {
+function PitcherBoard({ pitchers, source }: { pitchers: BoardPitcher[]; source: Source }) {
   const sort = useColumnSort("brlbip");
   const rows = [...pitchers].sort((a, b) =>
     sort.sortKey === "__name"
       ? (sort.sortDir === "desc" ? -1 : 1) * a.name.localeCompare(b.name)
-      : cmpStat(a.stats[sort.sortKey], b.stats[sort.sortKey], sort.sortDir),
+      : cmpStat(statVal(a.stats, sort.sortKey, source), statVal(b.stats, sort.sortKey, source), sort.sortDir),
   );
   return (
     <details open className="sp-boardsec" style={{ marginBottom: 24 }}>
@@ -157,7 +188,7 @@ function PitcherBoard({ pitchers }: { pitchers: BoardPitcher[] }) {
                 <td style={{ padding: "5px 10px", whiteSpace: "nowrap" }}>{p.name} <span style={{ opacity: 0.5 }}>({p.throws})</span></td>
                 <td style={{ padding: "5px 8px", textAlign: "center", opacity: 0.7 }}>{p.opp}</td>
                 {PITCHER_COLUMNS.map((c) => {
-                  const raw = p.stats[c.key];
+                  const raw = statVal(p.stats, c.key, source);
                   const has = raw !== undefined && raw !== null;
                   const v = has ? raw : 0;
                   return (
@@ -180,7 +211,7 @@ const pnum = (v: number) =>
   v < 1 && v !== 0 ? v.toFixed(2).replace(/^0/, "") : String(Math.round(v * 10) / 10);
 
 /** The opposing pitcher's slate row, shown on top of the hitters who face them. */
-function PitcherStatRow({ name, pitchers }: { name: string; pitchers: BoardPitcher[] }) {
+function PitcherStatRow({ name, pitchers, source }: { name: string; pitchers: BoardPitcher[]; source: Source }) {
   const p = pitchers.find((x) => x.name === name);
   if (!p) return null;
   return (
@@ -200,7 +231,7 @@ function PitcherStatRow({ name, pitchers }: { name: string; pitchers: BoardPitch
               <span style={{ color: "var(--iris-cyan)", fontWeight: 700 }}>vs</span> {p.name} <span style={{ opacity: 0.5 }}>({p.throws})</span>
             </td>
             {PITCHER_COLUMNS.map((c) => {
-              const raw = p.stats[c.key];
+              const raw = statVal(p.stats, c.key, source);
               const has = raw !== undefined && raw !== null;
               const v = has ? raw : 0;
               return (
@@ -227,13 +258,13 @@ const BARREL_CELLS: [string, string][] = [
   ["PullBrl", "pbrl"], ["Brl/BIP", "brl"], ["ISO", "iso"],
 ];
 
-function TopReads({ games, lens }: { games: BoardsGame[]; lens: BoardsLens }) {
+function TopReads({ games, lens, source }: { games: BoardsGame[]; lens: BoardsLens; source: Source }) {
   const all = games.flatMap((g) => [
     ...g.awayHitters.map((h) => ({ h, vs: `${g.away} vs ${g.home}` })),
     ...g.homeHitters.map((h) => ({ h, vs: `${g.home} vs ${g.away}` })),
   ]);
-  // OFF = rank by your current-model score (mock: matchup); ON/Barrel = barrel score.
-  const scoreOf = (h: BoardHitter) => (lens === "normal" ? (h.stats.matchup ?? 0) : (h.stats.trueScore ?? 0));
+  // OFF = rank by your current-model score (matchup); ON/Barrel = barrel score.
+  const scoreOf = (h: BoardHitter) => (lens === "normal" ? (statVal(h.stats, "matchup", source) ?? 0) : (statVal(h.stats, "trueScore", source) ?? 0));
   const top = [...all].sort((a, b) => scoreOf(b.h) - scoreOf(a.h)).slice(0, 4);
   const cells = lens === "normal" ? DRIVER_CELLS : BARREL_CELLS;
   const tag = lens === "barrel" ? "prop score · barrel" : lens === "effect" ? "prop score · +barrel" : "prop score · current";
@@ -254,7 +285,7 @@ function TopReads({ games, lens }: { games: BoardsGame[]; lens: BoardsLens }) {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
             {cells.map(([label, key]) => {
-              const raw = h.stats[key];
+              const raw = statVal(h.stats, key, source);
               const has = raw !== undefined && raw !== null;
               return (
                 <div key={key} style={{ textAlign: "center", background: "rgba(255,255,255,.05)", borderRadius: 6, padding: "4px 2px" }}>
@@ -270,10 +301,12 @@ function TopReads({ games, lens }: { games: BoardsGame[]; lens: BoardsLens }) {
   );
 }
 
-export function BoardsView({ lens, boards }: BoardsViewProps) {
+export function BoardsView({ lens, boards, source = "current" }: BoardsViewProps) {
   const columns = boardsColumnsFor(lens);
   const games: BoardsGame[] = boards?.games ?? MOCK_GAMES;
   const slatePitchers: BoardPitcher[] = boards?.pitchers ?? MOCK_PITCHER_BOARD;
+  // Mode-aware default ranking: Normal ranks by Matchup, barrel modes by Prop Score.
+  const defaultSortKey = lens === "normal" ? "matchup" : "trueScore";
   const lensLabel =
     lens === "barrel" ? "Barrel Weight — replica" :
     lens === "effect" ? "Barrel Effect ON — barrel columns lit" :
@@ -287,9 +320,9 @@ export function BoardsView({ lens, boards }: BoardsViewProps) {
       </div>
 
       {/* Slate pitchers up top */}
-      <PitcherBoard pitchers={slatePitchers} />
+      <PitcherBoard pitchers={slatePitchers} source={source} />
 
-      <TopReads games={games} lens={lens} />
+      <TopReads games={games} lens={lens} source={source} />
 
       {games.map((g) => (
         <details key={g.id} open className="sp-boardsec" style={{ marginBottom: 24 }}>
@@ -303,11 +336,11 @@ export function BoardsView({ lens, boards }: BoardsViewProps) {
             {/* awayPitcher = the pitcher the AWAY team FACES (the opponent);
                 homePitcher = the pitcher the HOME team faces. Each lineup sits
                 under the pitcher it BATS AGAINST — do NOT swap these. */}
-            <PitcherStatRow name={g.awayPitcher} pitchers={slatePitchers} />
-            <HeatTable title={`${g.away} hitters vs ${g.awayPitcher}`} hitters={g.awayHitters} columns={columns} />
+            <PitcherStatRow name={g.awayPitcher} pitchers={slatePitchers} source={source} />
+            <HeatTable title={`${g.away} hitters vs ${g.awayPitcher}`} hitters={g.awayHitters} columns={columns} source={source} defaultSortKey={defaultSortKey} />
             <div style={{ height: 16 }} />
-            <PitcherStatRow name={g.homePitcher} pitchers={slatePitchers} />
-            <HeatTable title={`${g.home} hitters vs ${g.homePitcher}`} hitters={g.homeHitters} columns={columns} />
+            <PitcherStatRow name={g.homePitcher} pitchers={slatePitchers} source={source} />
+            <HeatTable title={`${g.home} hitters vs ${g.homePitcher}`} hitters={g.homeHitters} columns={columns} source={source} defaultSortKey={defaultSortKey} />
           </div>
         </details>
       ))}
