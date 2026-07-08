@@ -30,6 +30,11 @@ function fmt(v: number): string {
   return String(Math.round(v * 10) / 10);
 }
 
+/** Stats that are a CURRENT-season concept only — a 3-yr baseline (History/Blend)
+ *  has no "recent form", so these read "—" outside Current instead of a
+ *  misleading uniform neutral value. */
+const CURRENT_ONLY_STATS = new Set(["form", "hrform"]);
+
 /**
  * Timeframe-aware stat read. current → the raw stat; hist → its `_hist` twin;
  * blend → 50/50 of the two. Falls back to current when a twin is absent
@@ -38,6 +43,7 @@ function fmt(v: number): string {
 function statVal(
   stats: Record<string, number>, key: string, source: Source = "current",
 ): number | undefined {
+  if (source !== "current" && CURRENT_ONLY_STATS.has(key)) return undefined;
   const cur = stats[key];
   if (source === "current") return cur;
   const hist = stats[`${key}_hist`];
