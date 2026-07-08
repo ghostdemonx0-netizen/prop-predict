@@ -202,6 +202,7 @@ def refresh_today(date_str: str, *, schedule_fn=None, profile_fns=None,
         "hrr": sorted(hrr + frozen.get("hrr", []), key=lambda r: r["p_ge2"], reverse=True),
         "games": sorted(games + frozen["games"], key=lambda g: g["env"], reverse=True),
         "boards": boards,
+        "oracle_by_pid": export_web._build_oracle_by_pid(boards),
     }
 
     def _body(d: dict) -> str:

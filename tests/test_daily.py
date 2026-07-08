@@ -302,3 +302,44 @@ def test_refresh_today_boards_include_started_games(tmp_path, monkeypatch):
     assert board_game_ids2.count(1) == 1, (
         f"no duplicate on second run, got {board_game_ids2}"
     )
+
+
+def test_refresh_today_payload_carries_oracle_by_pid(tmp_path, monkeypatch):
+    """oracle_by_pid must be a top-level dict in the written payload,
+    keyed by string player_id with oracle + oracle_score fields."""
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0])], **_kw())
+    data = json.loads((tmp_path / "2026-06-10.json").read_text())
+    assert "oracle_by_pid" in data, "oracle_by_pid key must be in payload"
+    pid_map = data["oracle_by_pid"]
+    assert isinstance(pid_map, dict), "oracle_by_pid must be a dict"
+    # Every entry must have oracle (0 or 1) and oracle_score (float)
+    for pid_str, entry in pid_map.items():
+        assert isinstance(pid_str, str), f"key must be a string, got {type(pid_str)}"
+        assert "oracle" in entry and entry["oracle"] in (0, 1), (
+            f"oracle must be 0 or 1 for pid {pid_str}"
+        )
+        assert "oracle_score" in entry and isinstance(entry["oracle_score"], (int, float)), (
+            f"oracle_score must be numeric for pid {pid_str}"
+        )
+
+
+def test_oracle_by_pid_keys_match_board_hitter_ids(tmp_path, monkeypatch):
+    """All player_ids in oracle_by_pid must correspond to real hitters
+    in boards['games'] (awayHitters + homeHitters)."""
+    from model import export_web
+    monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
+    daily.refresh_today("2026-06-10", schedule_fn=lambda d: [dict(SAMPLE_SLATE[0])], **_kw())
+    data = json.loads((tmp_path / "2026-06-10.json").read_text())
+    # Collect every hitter id that appears in boards
+    board_ids = set()
+    for game in data.get("boards", {}).get("games", []):
+        for h in game.get("awayHitters", []) + game.get("homeHitters", []):
+            if h.get("id") is not None:
+                board_ids.add(str(h["id"]))
+    oracle_keys = set(data.get("oracle_by_pid", {}).keys())
+    # Every oracle_by_pid key must be a known board hitter
+    assert oracle_keys <= board_ids, (
+        f"oracle_by_pid has keys not in board hitters: {oracle_keys - board_ids}"
+    )

@@ -572,6 +572,29 @@ def build_boards_payload(slate: list[dict], lineups_fn, pitcher_fn,
     return {"games": games, "pitchers": pitchers}
 
 
+def _build_oracle_by_pid(boards: dict) -> dict:
+    """Flat {str(player_id): {oracle, oracle_score}} map from board hitters.
+
+    Built by deduping across all games' away/homeHitters. The last value wins
+    for any player that appears in multiple games (e.g. doubleheaders), which
+    is fine — oracle is per-player, not per-game.
+    Guards for empty / None boards gracefully.
+    """
+    result: dict = {}
+    for game in (boards or {}).get("games", []):
+        for h in list(game.get("awayHitters", [])) + list(game.get("homeHitters", [])):
+            pid = h.get("id")
+            if pid is None:
+                continue
+            s = h.get("stats", {})
+            if "oracle" in s:
+                result[str(pid)] = {
+                    "oracle": s["oracle"],
+                    "oracle_score": s.get("oracle_score", 0.0),
+                }
+    return result
+
+
 def main(date_str: str, max_games: int | None = None, include_started: bool = False) -> None:
     season = int(date_str[:4])
     slate = fetch.get_schedule(date_str)
@@ -601,6 +624,12 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
         for r in hr_rows if r.get("player_id")
     }
 
+    boards = build_boards_payload(
+        slate, lineups_fn, pitcher_fn,
+        factors_by_pid=factors_by_pid,
+        lineups_hist_fn=lineups_hist_fn,
+        pitcher_hist_fn=pitcher_hist_fn,
+    )
     payload = {
         "date": date_str,
         "updated": dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -612,10 +641,8 @@ def main(date_str: str, max_games: int | None = None, include_started: bool = Fa
         "rbi": rbi_rows,
         "hrr": hrr_rows,
         "games": build_games(slate, weather_fn),
-        "boards": build_boards_payload(slate, lineups_fn, pitcher_fn,
-                                       factors_by_pid=factors_by_pid,
-                                       lineups_hist_fn=lineups_hist_fn,
-                                       pitcher_hist_fn=pitcher_hist_fn),
+        "boards": boards,
+        "oracle_by_pid": _build_oracle_by_pid(boards),
     }
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     (DATA_DIR / f"{date_str}.json").write_text(json.dumps(payload, indent=2))
