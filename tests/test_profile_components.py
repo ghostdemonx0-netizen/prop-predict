@@ -156,3 +156,35 @@ def test_batter_profile_has_zone_dmg_pitcher_has_zone_freq():
              "description": "ball", "zone": 5}]
     p = pitcher_profile_from_events(evs2, as_of="2026-06-01", player_id=9)
     assert "zone_freq" in p and isinstance(p["zone_freq"], dict)
+
+
+# ---------------------------------------------------------------------------
+# Barrel-blend rate tests (Task 2)
+# ---------------------------------------------------------------------------
+
+def test_pitcher_profile_hr_uses_barrel_blend():
+    """hr_allowed_rate is barrel-blended: thin sample with high barrel_rate_allowed
+    pulls hr_allowed_rate ABOVE the raw hr/pa (which is 0 here)."""
+    # 10 field_outs (no HRs), all barrels (lsa=6, bb=fly_ball) → barrel_rate_allowed = 1.0
+    evs = [_brow(f"2026-04-{i+1:02d}", "field_out", ls=103.0, la=25.0, lsa=6, bb="fly_ball", gp=i+1)
+           for i in range(10)]
+    p = pitcher_profile_from_events(evs, as_of="2026-06-01", player_id=99)
+    assert p["barrel_rate_allowed"] == 1.0      # 10 barrels / 10 BBE
+    # raw hr/pa = 0/10 = 0.0; barrel-blend must pull it UP toward the barrel-implied rate
+    assert p["hr_allowed_rate"] > 0.0
+
+
+def test_pitcher_profile_k_uses_barrel_blend():
+    """k_per_bf is barrel-blended: a high-swstr pitcher gets k_per_bf
+    above what regress(ks, pa, LEAGUE_K, _K_R) alone would give."""
+    # 5 Ks in 20 PA (5 strikeouts + 15 field_outs); 20 swinging-strike pitches → swstr = 1.0
+    pa_evs = [_brow(f"2026-04-{i+1:02d}", "strikeout", ls=None, bb=None, gp=i+1)
+              for i in range(5)]
+    pa_evs += [_brow(f"2026-04-{i+6:02d}", "field_out", ls=90.0, la=10.0, lsa=4, bb="ground_ball", gp=i+6)
+               for i in range(15)]
+    swstr_evs = [{"game_date": f"2026-04-{i+1:02d}", "events": None,
+                  "description": "swinging_strike", "game_pk": i+1}
+                 for i in range(20)]
+    p = pitcher_profile_from_events(pa_evs + swstr_evs, as_of="2026-06-01", player_id=99)
+    # swstr = 1.0 >> league 0.11 → barrel-blend pulls k_per_bf above plain regress value
+    assert p["k_per_bf"] > regress(5, 20, LEAGUE_K, _K_R)

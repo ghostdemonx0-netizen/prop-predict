@@ -13,6 +13,9 @@ from model.run_props import RECENT_GAMES_WINDOW
 from model.barrel import barrel_metrics
 from model.pitch_metrics import pitch_rates, zone_damage, zone_freq
 from model.xstats import iso, xwoba
+from model.pitcher_engine import (barrel_blended_rate,
+                                   _LG_SWSTR, _LG_HARDHIT, _LG_BARREL,
+                                   _VOTES_K, _VOTES_HIT, _VOTES_HR)
 
 _HR_R, _K_R, _HIT_R = 300.0, 200.0, 200.0
 
@@ -163,20 +166,25 @@ def pitcher_profile_from_events(events: list[dict], *, as_of: str, player_id: in
         expected_bf = (pa / games) if games else 24.0
         line = k_line_from_starts(list(ks_by_game.values()), fallback=k_line)
 
+    bm = barrel_metrics(events, as_of=as_of, allowed=True)
+    pr = pitch_rates(events, as_of=as_of)
     return {
         "player_id": player_id,
         "name": name or str(player_id),
         "team": team,
         "throws": throws,
-        "k_per_bf": regress(ks, pa, LEAGUE_K, _K_R),
+        "k_per_bf": barrel_blended_rate(ks, pa, signal=pr.get("swstr"),
+                        league_rate=LEAGUE_K, league_signal=_LG_SWSTR, votes=_VOTES_K),
         "expected_bf": expected_bf,
         "opponent_k_mult": 1.0,
         "k_line": line,
-        "hit_allowed_rate": regress(hits, pa, LEAGUE_HIT, _HIT_R),
-        "hr_allowed_rate": (hr / pa) if pa else 0.0,
+        "hit_allowed_rate": barrel_blended_rate(hits, pa, signal=bm.get("hardhit_rate_allowed"),
+                        league_rate=LEAGUE_HIT, league_signal=_LG_HARDHIT, votes=_VOTES_HIT),
+        "hr_allowed_rate": barrel_blended_rate(hr, pa, signal=bm.get("barrel_rate_allowed"),
+                        league_rate=LEAGUE_HR_RATE, league_signal=_LG_BARREL, votes=_VOTES_HR),
         "bf": pa,
-        **barrel_metrics(events, as_of=as_of, allowed=True),
-        **pitch_rates(events, as_of=as_of),
+        **bm,
+        **pr,
         **xwoba(events, as_of=as_of, allowed=True),
         "zone_freq": zone_freq(events, as_of=as_of),
     }

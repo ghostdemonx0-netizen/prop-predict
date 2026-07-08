@@ -179,6 +179,6 @@ def pitcher_hr_mult(
     average with ``regression_bf`` phantom batters faced, then expressed as
     a multiplier vs league (1.0 = average), clamped to [0.75, 1.3].
     """
-    bf = max(0.0, bf)
-    reg = (hr_allowed_rate * bf + league_hr_rate * regression_bf) / (bf + regression_bf)
+    bf = max(0.0, bf)   # kept for caller compatibility; no longer used in computation
+    reg = hr_allowed_rate   # already barrel-blended in the profile; do not double-regress
     return max(0.75, min(reg / league_hr_rate, 1.3))

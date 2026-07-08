@@ -101,12 +101,22 @@ def test_lineup_expected_ks_nonpositive_bf_returns_none():
     assert lineup_expected_ks([0.25], 0) is None
 
 
+def test_pitcher_hr_mult_no_internal_regression():
+    """Profile already barrel-blends hr_allowed_rate, so pitcher_hr_mult must NOT
+    re-regress internally. A thin-sample 2x-league rate must clamp to 1.3, not be diluted."""
+    # old code: (0.066*50 + 0.033*200) / 250 = 9.9/250 ≈ 0.0396 → 0.0396/0.033 ≈ 1.2
+    # new code: 0.066 / 0.033 = 2.0 → clamped to 1.3
+    assert pitcher_hr_mult(0.066, 50) == pytest.approx(1.3)
+
+
 def test_pitcher_hr_mult_league_average_is_neutral():
     assert pitcher_hr_mult(0.033, 500) == pytest.approx(1.0)
 
 
-def test_pitcher_hr_mult_no_data_is_neutral():
-    assert pitcher_hr_mult(0.0, 0) == pytest.approx(1.0)
+def test_pitcher_hr_mult_no_data_clamps_to_floor():
+    # With no internal regression, 0.0/league = 0.0 → clamped to floor 0.75.
+    # (In practice, the barrel-blended profile never produces 0.0; this covers the edge.)
+    assert pitcher_hr_mult(0.0, 0) == pytest.approx(0.75)
 
 
 def test_pitcher_hr_mult_gopher_ball_pitcher_clamped():
@@ -118,8 +128,10 @@ def test_pitcher_hr_mult_hr_suppressor_below_one():
     assert pitcher_hr_mult(0.015, 500) < 1.0
 
 
-def test_pitcher_hr_mult_negative_bf_is_neutral():
-    assert pitcher_hr_mult(0.05, -50) == pytest.approx(1.0)
+def test_pitcher_hr_mult_negative_bf_uses_rate_directly():
+    # bf is clamped to 0 but no longer controls computation; rate passes through.
+    # 0.05 / 0.033 = 1.515 → clamped to 1.3
+    assert pitcher_hr_mult(0.05, -50) == pytest.approx(1.3)
 
 
 def test_expected_pa_for_slot_declines_through_order():
