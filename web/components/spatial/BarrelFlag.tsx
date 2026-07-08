@@ -1,6 +1,6 @@
 /**
  * BarrelFlag.tsx — small grayed Aperture logo badge shown next to standout-barrel hitters.
- * Rendered when a hitter's Prop Score (trueScore) >= BARREL_FLAG_MIN (see BoardsView.tsx).
+ * Rendered when a hitter's `stats.oracle === 1` (the Oracle qualifier; see model/oracle.py).
  */
 import React from "react";
 import { LogoMark } from "./LogoMark";
