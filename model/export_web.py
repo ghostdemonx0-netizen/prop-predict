@@ -227,6 +227,7 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
             continue
         r["probability_hist"] = h["probability"]
         r["probability_hist_beff"] = h.get("probability_beff")
+        r["probability_bweight_hist"] = h.get("probability_bweight")
         r["barrel_mult_hist"] = h.get("barrel_mult")
         r["baseline_prob_hist"] = h.get("baseline_prob")
         r["pace_hist"] = h.get("pace")
@@ -271,6 +272,9 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
         for field in _hits_thresholds:
             if f"{field}_beff" in h:
                 r[f"{field}_beff_hist"] = h[f"{field}_beff"]
+        for field in _hits_thresholds:
+            if f"{field}_bweight" in h:
+                r[f"{field}_bweight_hist"] = h[f"{field}_bweight"]
         if r.get("vs") and h.get("vs"):
             _copy_vs(r["vs"], h["vs"])
     for r in tb:
@@ -288,6 +292,9 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
         for field in _tb_thresholds:
             if f"{field}_beff" in h:
                 r[f"{field}_beff_hist"] = h[f"{field}_beff"]
+        for field in _tb_thresholds:
+            if f"{field}_bweight" in h:
+                r[f"{field}_bweight_hist"] = h[f"{field}_bweight"]
         if r.get("vs") and h.get("vs"):
             _copy_vs(r["vs"], h["vs"])
 
@@ -321,6 +328,9 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
             for field in thresholds:
                 if f"{field}_beff" in h:
                     r[f"{field}_beff_hist"] = h[f"{field}_beff"]
+            for field in thresholds:
+                if f"{field}_bweight" in h:
+                    r[f"{field}_bweight_hist"] = h[f"{field}_bweight"]
             if r.get("vs") and h.get("vs"):
                 _copy_vs(r["vs"], h["vs"])
 

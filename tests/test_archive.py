@@ -1185,3 +1185,108 @@ def test_threshold_without_beff_produces_no_barreled_triple():
     row = {k: v for k, v in HITS_BEFF_ROW.items() if "_beff" not in k}
     rec = record_from_row(row, "hits")
     assert not any("barreled" in k for k in rec["probs"])
+
+
+# ===========================================================================
+# Task 4 — barrel-weight archive triples (HR + threshold props)
+# ===========================================================================
+
+def test_hr_barrel_weight_triple_recorded():
+    """HR row with probability_bweight records a '1+ barrel-weight' triple in probs."""
+    row = {
+        "prop": "HR", "game_id": 1, "player_id": 5, "player": "X", "team": "BOS",
+        "probability": 0.15, "probability_hist": 0.18,
+        "probability_bweight": 0.17, "probability_bweight_hist": 0.19,
+    }
+    rec = record_from_row(row, "hr")
+    assert "1+ barrel-weight" in rec["probs"]
+
+
+def test_hr_barrel_weight_triple_current_value():
+    row = {
+        "game_id": 1, "player_id": 5, "player": "X", "team": "BOS",
+        "probability": 0.15, "probability_bweight": 0.17, "probability_bweight_hist": 0.19,
+    }
+    rec = record_from_row(row, "hr")
+    assert math.isclose(rec["probs"]["1+ barrel-weight"]["current"], 0.17)
+
+
+def test_hr_barrel_weight_triple_history_value():
+    row = {
+        "game_id": 1, "player_id": 5, "player": "X", "team": "BOS",
+        "probability": 0.15, "probability_bweight": 0.17, "probability_bweight_hist": 0.19,
+    }
+    rec = record_from_row(row, "hr")
+    assert math.isclose(rec["probs"]["1+ barrel-weight"]["history"], 0.19)
+
+
+def test_hr_barrel_weight_triple_blend():
+    row = {
+        "game_id": 1, "player_id": 5, "player": "X", "team": "BOS",
+        "probability": 0.15, "probability_bweight": 0.17, "probability_bweight_hist": 0.19,
+    }
+    rec = record_from_row(row, "hr")
+    assert math.isclose(rec["probs"]["1+ barrel-weight"]["blend"], 0.18)
+
+
+def test_hr_no_barrel_weight_when_absent():
+    """HR row without bweight fields produces no '1+ barrel-weight' in probs."""
+    rec = record_from_row(HR_ROW_SOON, "hr")
+    assert "1+ barrel-weight" not in rec["probs"]
+
+
+HITS_BWEIGHT_ROW = {
+    "prop": "HITS",
+    "game_id": GAME_ID_SOON,
+    "game_time": GAME_TIME_SOON,
+    "player_id": 102,
+    "player": "Barrel Weight Hitter",
+    "team": "AAA",
+    "p_ge1": 0.70, "p_ge1_hist": 0.65,
+    "p_ge2": 0.40, "p_ge2_hist": 0.38,
+    "p_ge1_bweight": 0.68, "p_ge1_bweight_hist": 0.63,
+    "p_ge2_bweight": 0.38, "p_ge2_bweight_hist": 0.36,
+}
+
+
+def test_hits_barrel_weight_triple_recorded():
+    """Hits row with p_ge1_bweight records a '1+ barrel-weight' triple in probs."""
+    rec = record_from_row(HITS_BWEIGHT_ROW, "hits")
+    assert "1+ barrel-weight" in rec["probs"]
+
+
+def test_hits_barrel_weight_triple_current_value():
+    rec = record_from_row(HITS_BWEIGHT_ROW, "hits")
+    assert math.isclose(rec["probs"]["1+ barrel-weight"]["current"], 0.68)
+
+
+def test_hits_barrel_weight_triple_history_value():
+    rec = record_from_row(HITS_BWEIGHT_ROW, "hits")
+    assert math.isclose(rec["probs"]["1+ barrel-weight"]["history"], 0.63)
+
+
+def test_hits_barrel_weight_triple_blend():
+    rec = record_from_row(HITS_BWEIGHT_ROW, "hits")
+    # blend of 0.68 and 0.63 = 0.655
+    assert math.isclose(rec["probs"]["1+ barrel-weight"]["blend"], 0.655)
+
+
+def test_hits_all_bweight_thresholds_recorded():
+    """All threshold levels with bweight data produce barrel-weight triples."""
+    rec = record_from_row(HITS_BWEIGHT_ROW, "hits")
+    assert "1+ barrel-weight" in rec["probs"]
+    assert "2+ barrel-weight" in rec["probs"]
+
+
+def test_hits_bweight_hist_none_when_absent():
+    """When bweight_hist is absent the history in the triple is None."""
+    row = {k: v for k, v in HITS_BWEIGHT_ROW.items() if k != "p_ge1_bweight_hist"}
+    rec = record_from_row(row, "hits")
+    assert rec["probs"]["1+ barrel-weight"]["history"] is None
+
+
+def test_threshold_without_bweight_produces_no_barrel_weight_triple():
+    """A hits row without any bweight fields produces no barrel-weight keys in probs."""
+    row = {k: v for k, v in HITS_BWEIGHT_ROW.items() if "_bweight" not in k}
+    rec = record_from_row(row, "hits")
+    assert not any("barrel-weight" in k for k in rec["probs"])

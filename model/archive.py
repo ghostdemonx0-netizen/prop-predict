@@ -209,6 +209,9 @@ def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:
         cur_b, hist_b = row.get("probability_beff"), row.get("probability_hist_beff")
         if cur_b is not None or hist_b is not None:
             probs["1+ barreled"] = {"current": cur_b, "blend": _blend(cur_b, hist_b), "history": hist_b}
+        cur_bw, hist_bw = row.get("probability_bweight"), row.get("probability_bweight_hist")
+        if cur_bw is not None or hist_bw is not None:
+            probs["1+ barrel-weight"] = {"current": cur_bw, "blend": _blend(cur_bw, hist_bw), "history": hist_bw}
 
     else:
         # p_geN threshold family
@@ -230,6 +233,16 @@ def record_from_row(row: dict[str, Any], prop: str) -> dict[str, Any]:
                     "current": cur_b,
                     "blend":   _blend(cur_b, hist_b),
                     "history": hist_b,
+                }
+        # Barrel-weight triples — one per threshold field that carries a bweight value
+        for field, label in THRESHOLDS.get(prop_lower, []):
+            cur_bw = row.get(f"{field}_bweight")
+            if cur_bw is not None:
+                hist_bw = row.get(f"{field}_bweight_hist")
+                probs[f"{label} barrel-weight"] = {
+                    "current": cur_bw,
+                    "blend":   _blend(cur_bw, hist_bw),
+                    "history": hist_bw,
                 }
 
     rec["probs"] = probs
