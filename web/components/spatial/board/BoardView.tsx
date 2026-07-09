@@ -240,13 +240,15 @@ function PropCard({
             <span className="sp-pname">{r.player}</span>
             {pHand && <HandChip hand={pHand} adv={adv} />}
             {r.status && <TagChip status={tagStatus(r.status)} order={r.bat_order} />}
+          </div>
+          <div className="sp-psub">
             {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
-              <span style={{ marginLeft: 6 }}>
+              <span style={{ marginRight: 6, verticalAlign: "middle" }}>
                 <BarrelFlag />
               </span>
             )}
+            {nameMatchup(r)}
           </div>
-          <div className="sp-psub">{nameMatchup(r)}</div>
         </div>
         <div className="sp-orb-live">
           <ProbabilityOrb prob={r.prob} kind={prop} size={72} />
@@ -362,14 +364,12 @@ function BoardTable({
                   <span className="sp-pl-name">
                     <span className="sp-tp">{r.player}</span>
                     {pHand && <HandChip hand={pHand} adv={adv} />}
-                    {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
-                      <span style={{ marginLeft: 6 }}>
-                        <BarrelFlag />
-                      </span>
-                    )}
                   </span>
-                  {(r.status || (!isK && r.form)) && (
+                  {(r.status || (!isK && r.form) || (!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1)) && (
                     <span className="sp-pl-chips">
+                      {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
+                        <span style={{ display: "inline-flex", marginRight: 2 }}><BarrelFlag /></span>
+                      )}
                       {r.status && (
                         <TagChip status={tagStatus(r.status)} order={r.bat_order} />
                       )}
@@ -507,15 +507,13 @@ function BoardRowLine({
         <span className="sp-mrow-nmrow">
           <span className="sp-mrow-nm">{r.player}</span>
           {pHand && <HandChip hand={pHand} adv={adv} />}
-          {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
-            <span style={{ marginLeft: 6 }}>
-              <BarrelFlag />
-            </span>
-          )}
         </span>
-        {!isK && r.form && (
+        {!isK && (r.form || oraclePidMap?.[String(r.player_id)]?.oracle === 1) && (
           <span className="sp-mrow-sub">
-            <FormChip kind={r.form} />
+            {oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
+              <span style={{ display: "inline-flex", marginRight: 4 }}><BarrelFlag /></span>
+            )}
+            {r.form && <FormChip kind={r.form} />}
           </span>
         )}
       </span>

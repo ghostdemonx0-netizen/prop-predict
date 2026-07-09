@@ -228,14 +228,12 @@ function BatterRow({
         <span className="sp-bn-nmrow">
           <span className="sp-bn-nm">{hrRow.player}</span>
           {pHand && <HandChip hand={pHand} adv={adv} />}
-          {oraclePidMap?.[String(hrRow.player_id)]?.oracle === 1 && (
-            <span style={{ marginLeft: 4 }}>
-              <BarrelFlag />
-            </span>
-          )}
         </span>
-        {(form || hrRow.status) && (
+        {(form || hrRow.status || oraclePidMap?.[String(hrRow.player_id)]?.oracle === 1) && (
           <span className="sp-bn-chips">
+            {oraclePidMap?.[String(hrRow.player_id)]?.oracle === 1 && (
+              <span style={{ display: "inline-flex", marginRight: 2 }}><BarrelFlag /></span>
+            )}
             {form && <FormChip kind={form} />}
             {hrRow.status && <TagChip status={tagStatus(hrRow.status)} order={hrRow.bat_order} />}
           </span>

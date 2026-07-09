@@ -200,15 +200,13 @@ function TopPlayRow({
           <span>{r.player}</span>
           {pHand && <HandChip hand={pHand} adv={adv} />}
           {showForm && r.form && <FormChip kind={r.form} />}
-          {oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
-            <span style={{ marginLeft: 6 }}>
-              <BarrelFlag />
-            </span>
-          )}
         </div>
         <div className="sp-lsub">
-          {(showPitcher && r.opponent) || r.matchup ? (
+          {(showPitcher && r.opponent) || r.matchup || oraclePidMap?.[String(r.player_id)]?.oracle === 1 ? (
             <span className="sp-lsub-line">
+              {oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
+                <span style={{ display: "inline-flex", marginRight: 4 }}><BarrelFlag /></span>
+              )}
               {showPitcher && r.opponent && (
                 <span className="sp-lsub-vs">
                   vs {r.opponent.name}
