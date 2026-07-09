@@ -1664,8 +1664,7 @@
 }
 .sp-root .sp-pl-chips {
   display:   flex;
-  flex-wrap: nowrap;   /* CONF + form + Oracle badge stay on one line (fits the 200px cell) */
-  align-items: center;
+  flex-wrap: wrap;
   gap:       5px;
   margin-top: 5px;
 }

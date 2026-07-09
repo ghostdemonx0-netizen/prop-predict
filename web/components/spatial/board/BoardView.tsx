@@ -361,11 +361,8 @@ function BoardTable({
                     <span className="sp-tp">{r.player}</span>
                     {pHand && <HandChip hand={pHand} adv={adv} />}
                   </span>
-                  {(r.status || (!isK && r.form) || (!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1)) && (
+                  {(r.status || (!isK && r.form)) && (
                     <span className="sp-pl-chips">
-                      {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
-                        <span style={{ display: "inline-flex", marginRight: 2 }}><BarrelFlag /></span>
-                      )}
                       {r.status && (
                         <TagChip status={tagStatus(r.status)} order={r.bat_order} />
                       )}
@@ -375,6 +372,9 @@ function BoardTable({
                 </td>
                 <td className="sp-mu-cell">
                   <span className="sp-mu-line">
+                    {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
+                      <span style={{ display: "inline-flex", marginRight: 5, verticalAlign: "middle" }}><BarrelFlag /></span>
+                    )}
                     <span className="sp-mu-mu">{nameMatchup(r)}</span>
                     {!isK && r.opponent && (
                       <>
