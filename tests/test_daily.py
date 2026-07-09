@@ -270,38 +270,32 @@ def test_should_skip_and_record_run_survive_corrupt_signature_file(tmp_path):
 # Part A — Boards: started games are built fresh (full-slate); never vanish
 # ===========================================================================
 
-def test_refresh_today_boards_include_started_games(tmp_path, monkeypatch):
-    """Started games must appear in boards['games'] because build_boards_payload now
-    receives the FULL slate.  This is true even on the very first run with no prior
-    record (no freeze-from-existing merge source), and the game must appear exactly
-    once — no freeze-merge duplication on subsequent runs."""
+def test_refresh_today_boards_freeze_started_games(tmp_path, monkeypatch):
+    """A started game's board is FROZEN from the pre-start record — not rebuilt — so an
+    in-game lineup change (pinch hitter) can't rewrite it or drop a flagged bat."""
     from model import export_web
     monkeypatch.setattr(export_web, "DATA_DIR", tmp_path)
 
-    # Game is ALREADY started on the very first run — there is no existing record to
-    # freeze from.  Old code: fresh_slate empty → boards empty.
-    # New code: build_boards_payload(full_slate) builds the game despite started=True.
-    sched = lambda d: [dict(SAMPLE_SLATE[0], started=True)]
-    daily.refresh_today("2026-06-10", schedule_fn=sched, **_kw())
-    data = json.loads((tmp_path / "2026-06-10.json").read_text())
+    # Run 1: game NOT started → board built fresh; capture its board entry.
+    sched1 = lambda d: [dict(SAMPLE_SLATE[0])]
+    daily.refresh_today("2026-06-10", schedule_fn=sched1, **_kw())
+    data1 = json.loads((tmp_path / "2026-06-10.json").read_text())
+    ids1 = [g.get("game_id") for g in data1["boards"]["games"]]
+    assert 1 in ids1, f"game must be built pre-start, got {ids1}"
+    frozen_game = next(g for g in data1["boards"]["games"] if g.get("game_id") == 1)
 
-    board_game_ids = [g.get("game_id") for g in data["boards"]["games"]]
-    assert 1 in board_game_ids, (
-        f"started game 1 must appear in boards['games'] via fresh build, got {board_game_ids}"
-    )
-    assert board_game_ids.count(1) == 1, (
-        f"game 1 must appear exactly once (no freeze-merge dup), got {board_game_ids}"
-    )
-    assert data["boards"]["games"][0].get("game_id") is not None, "game_id must be set"
-    assert data["boards"]["pitchers"], "boards['pitchers'] must be populated"
-
-    # Second run: game still started → still present, still exactly once (no dup)
-    daily.refresh_today("2026-06-10", schedule_fn=sched, **_kw())
+    # Run 2: game STARTED, and profile fns ERROR if invoked → the started game must be
+    # FROZEN from the existing record (fns never called for it), present exactly once,
+    # identical to the pre-start capture.
+    sched2 = lambda d: [dict(SAMPLE_SLATE[0], started=True)]
+    kw = _kw()
+    kw["profile_fns"] = (lambda g: 1 / 0, lambda pid: 1 / 0, lambda g: 1 / 0, lambda pid: 1 / 0)
+    daily.refresh_today("2026-06-10", schedule_fn=sched2, **kw)  # must NOT raise
     data2 = json.loads((tmp_path / "2026-06-10.json").read_text())
-    board_game_ids2 = [g.get("game_id") for g in data2["boards"]["games"]]
-    assert board_game_ids2.count(1) == 1, (
-        f"no duplicate on second run, got {board_game_ids2}"
-    )
+    ids2 = [g.get("game_id") for g in data2["boards"]["games"]]
+    assert ids2.count(1) == 1, f"frozen game present exactly once, got {ids2}"
+    frozen2 = next(g for g in data2["boards"]["games"] if g.get("game_id") == 1)
+    assert frozen2["awayHitters"] == frozen_game["awayHitters"], "board frozen, not rebuilt"
 
 
 def test_refresh_today_payload_carries_oracle_by_pid(tmp_path, monkeypatch):

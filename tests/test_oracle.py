@@ -22,8 +22,16 @@ def test_elite_bat_with_stacked_edges_flags():
     assert r["oracle"] is True
     assert 0.0 <= r["oracle_score"] <= 1.0
 
-def test_gated_bat_with_poor_edges_does_not_flag():
-    # elite barrel but a bad matchup + bad platoon + cold form -> edges too low to clear premium bar
+def test_elite_barrel_flags_even_with_poor_edges():
+    # 75/25 barrel-weighted score: an ELITE-barrel bat surfaces even in a meh matchup
+    # + cold form (the Okamoto case) — barrel-first, closer to Barrel Lab.
     cold = dict(_ELITE); cold["recent_form_mult"] = 0.9
     r = oracle(cold, barrel_mult=0.90, platoon_mult=0.95)
+    assert r["oracle"] is True
+
+def test_moderate_barrel_with_poor_edges_does_not_flag():
+    # a bat that only just clears the gate (not elite) with poor edges stays under the bar
+    mod = {"bbe": 300, "barrel_rate": 0.105, "pulled_barrel_rate": 0.05, "hardhit_rate": 0.42,
+           "xwobacon": 0.385, "sweetspot_rate": 0.36, "recent_form_mult": 0.95}
+    r = oracle(mod, barrel_mult=0.95, platoon_mult=0.97)
     assert r["oracle"] is False
