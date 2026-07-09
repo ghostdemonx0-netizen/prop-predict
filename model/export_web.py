@@ -549,12 +549,20 @@ def build_boards_payload(slate: list[dict], lineups_fn, pitcher_fn,
                     for k, v in h_hist["stats"].items():
                         h["stats"][f"{k}_hist"] = v
 
+        # Summary meta: first-pitch time + the park×weather env sphere (same for
+        # the whole game — read from any hitter's factor map).
+        _lineup = (lns.get("away") or []) + (lns.get("home") or [])
+        _ff = (factors_by_pid or {}).get(_lineup[0].get("player_id")) if _lineup else None
+        _env = (round(_ff["park_mult"] * _ff["weather_mult"], 3)
+                if _ff and _ff.get("park_mult") and _ff.get("weather_mult") else None)
         games.append({
             "game_id": game.get("game_id"),
             "id": f"{away}-{home}",
             "away": away, "home": home,
             "venue": game.get("park_name", ""),
             "note": "",
+            "game_time": game.get("game_time"),
+            "env": _env,
             "awayPitcher": home_p.get("name", "") if home_p else "",
             "homePitcher": away_p.get("name", "") if away_p else "",
             "awayHitters": away_hitters,

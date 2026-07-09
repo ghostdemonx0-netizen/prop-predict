@@ -223,7 +223,7 @@ export type HrrRow = Omit<HitsRow, "p_ge1" | "p_ge2" | "p_ge3" | "p_ge1_hist" | 
 
 export type BoardHitter = { id: number; name: string; hand: "R" | "L" | "SW"; team: string; order: number; stats: Record<string, number> };
 export type BoardPitcher = { name: string; team: string; throws: string; opp: string; stats: Record<string, number> };
-export type BoardsGame = { id: string; away: string; home: string; venue: string; note: string; awayPitcher: string; homePitcher: string; awayHitters: BoardHitter[]; homeHitters: BoardHitter[] };
+export type BoardsGame = { id: string; away: string; home: string; venue: string; note: string; game_time?: string; env?: number; awayPitcher: string; homePitcher: string; awayHitters: BoardHitter[]; homeHitters: BoardHitter[] };
 export type BoardsData = { games: BoardsGame[]; pitchers: BoardPitcher[] };
 
 export type Projections = {

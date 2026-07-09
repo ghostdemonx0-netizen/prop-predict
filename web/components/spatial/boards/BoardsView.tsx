@@ -16,6 +16,8 @@ import type { Source } from "../../../lib/weighting";
 import { GlassCard } from "../GlassCard";
 import { HandChip } from "../chips";
 import { BarrelFlag } from "../BarrelFlag";
+import { EnvDot } from "../GlassDot";
+import { gameTimeLabel } from "../../../lib/format";
 
 export interface BoardsViewProps {
   lens: BoardsLens;
@@ -335,11 +337,21 @@ export function BoardsView({ lens, boards, source = "current" }: BoardsViewProps
 
       {games.map((g) => (
         <details key={g.id} className="sp-boardsec" style={{ marginBottom: 24 }}>
-          <summary className="sp-boardsec-head">
-            {g.away} @ {g.home}
-            <span style={{ opacity: 0.55, fontSize: 13, fontWeight: 400, marginLeft: 10 }}>
-              {g.venue} · {g.note}
+          <summary className="sp-boardsec-head" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>
+              {g.away} @ {g.home}
+              {g.game_time && (
+                <span style={{ opacity: 0.7, fontWeight: 400 }}> · {gameTimeLabel(g.game_time)}</span>
+              )}
             </span>
+            <span style={{ opacity: 0.55, fontSize: 13, fontWeight: 400 }}>
+              {g.venue}{g.note ? ` · ${g.note}` : ""}
+            </span>
+            {typeof g.env === "number" && (
+              <span style={{ marginLeft: "auto", display: "inline-flex" }} title="park + weather">
+                <EnvDot pct={g.env} size={26} />
+              </span>
+            )}
           </summary>
           <div style={{ marginTop: 12 }}>
             {/* awayPitcher = the pitcher the AWAY team FACES (the opponent);
