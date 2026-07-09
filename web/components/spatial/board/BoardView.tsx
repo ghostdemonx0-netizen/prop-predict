@@ -241,14 +241,7 @@ function PropCard({
             {pHand && <HandChip hand={pHand} adv={adv} />}
             {r.status && <TagChip status={tagStatus(r.status)} order={r.bat_order} />}
           </div>
-          <div className="sp-psub">
-            {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
-              <span style={{ marginRight: 6, verticalAlign: "middle" }}>
-                <BarrelFlag />
-              </span>
-            )}
-            {nameMatchup(r)}
-          </div>
+          <div className="sp-psub">{nameMatchup(r)}</div>
         </div>
         <div className="sp-orb-live">
           <ProbabilityOrb prob={r.prob} kind={prop} size={72} />
@@ -269,6 +262,9 @@ function PropCard({
         <div className="sp-prow">
           <Badge kind={tier}>{strengthLabel(r.prob, prop)}</Badge>
           {!isK && r.form && <FormChip kind={r.form} />}
+          {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
+            <span style={{ display: "inline-flex", marginLeft: 2 }}><BarrelFlag /></span>
+          )}
         </div>
 
         <div className="sp-prow">
