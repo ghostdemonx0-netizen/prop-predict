@@ -238,13 +238,13 @@ function PropCard({
         <div className="sp-topr-l">
           <div className="sp-pname-row">
             <span className="sp-pname">{r.player}</span>
+            {pHand && <HandChip hand={pHand} adv={adv} />}
+            {r.status && <TagChip status={tagStatus(r.status)} order={r.bat_order} />}
             {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
               <span style={{ marginLeft: 6 }}>
                 <BarrelFlag />
               </span>
             )}
-            {pHand && <HandChip hand={pHand} adv={adv} />}
-            {r.status && <TagChip status={tagStatus(r.status)} order={r.bat_order} />}
           </div>
           <div className="sp-psub">{nameMatchup(r)}</div>
         </div>
@@ -361,12 +361,12 @@ function BoardTable({
                 <td className="sp-pl-cell">
                   <span className="sp-pl-name">
                     <span className="sp-tp">{r.player}</span>
+                    {pHand && <HandChip hand={pHand} adv={adv} />}
                     {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
                       <span style={{ marginLeft: 6 }}>
                         <BarrelFlag />
                       </span>
                     )}
-                    {pHand && <HandChip hand={pHand} adv={adv} />}
                   </span>
                   {(r.status || (!isK && r.form)) && (
                     <span className="sp-pl-chips">
@@ -506,12 +506,12 @@ function BoardRowLine({
       <span className="sp-mrow-name">
         <span className="sp-mrow-nmrow">
           <span className="sp-mrow-nm">{r.player}</span>
+          {pHand && <HandChip hand={pHand} adv={adv} />}
           {!isK && oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
             <span style={{ marginLeft: 6 }}>
               <BarrelFlag />
             </span>
           )}
-          {pHand && <HandChip hand={pHand} adv={adv} />}
         </span>
         {!isK && r.form && (
           <span className="sp-mrow-sub">

@@ -198,13 +198,13 @@ function TopPlayRow({
       <div className="sp-linfo">
         <div className="sp-lname">
           <span>{r.player}</span>
+          {pHand && <HandChip hand={pHand} adv={adv} />}
+          {showForm && r.form && <FormChip kind={r.form} />}
           {oraclePidMap?.[String(r.player_id)]?.oracle === 1 && (
             <span style={{ marginLeft: 6 }}>
               <BarrelFlag />
             </span>
           )}
-          {pHand && <HandChip hand={pHand} adv={adv} />}
-          {showForm && r.form && <FormChip kind={r.form} />}
         </div>
         <div className="sp-lsub">
           {(showPitcher && r.opponent) || r.matchup ? (

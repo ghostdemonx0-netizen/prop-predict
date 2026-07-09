@@ -227,12 +227,12 @@ function BatterRow({
       <span className="sp-bn">
         <span className="sp-bn-nmrow">
           <span className="sp-bn-nm">{hrRow.player}</span>
+          {pHand && <HandChip hand={pHand} adv={adv} />}
           {oraclePidMap?.[String(hrRow.player_id)]?.oracle === 1 && (
             <span style={{ marginLeft: 4 }}>
               <BarrelFlag />
             </span>
           )}
-          {pHand && <HandChip hand={pHand} adv={adv} />}
         </span>
         {(form || hrRow.status) && (
           <span className="sp-bn-chips">
