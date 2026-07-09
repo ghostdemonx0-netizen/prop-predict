@@ -19,9 +19,14 @@ _PLATOON_LO, _PLATOON_HI = 0.97, 1.06   # hr_platoon_mult favorable range; SEED
 _MATCHUP_LO, _MATCHUP_HI = 1.00, 1.20   # barrel_mult positive tilt (HR cap); SEED
 _FORM_LO, _FORM_HI = 1.00, 1.20         # recent_form_mult hot range; SEED
 
-_FLAG_BAR = 0.73     # premium: blended score to flag (~10% rate; raised from 0.68 after the
-                     # PullBrl fix lifted pulled-barrel rates → gate → ~13%). Rate varies by
-                     # slate; grader tunes this from real flagged-vs-unflagged hit rates. SEED
+# quality (barrel) vs edges (matchup/platoon/form) split of the final score.
+# Leans barrel-heavy so elite-barrel bats surface even in a meh matchup (closer
+# to Barrel Lab's "barrel-first" flag); SEED.
+_W_QUALITY = 0.75
+
+_FLAG_BAR = 0.76     # ~15% flag rate at the 0.75 barrel weight ("a bit more people",
+                     # less premium). Rate varies by slate; grader tunes it from real
+                     # flagged-vs-unflagged hit rates. SEED
 
 
 def _clamp01(x: float) -> float:
@@ -49,5 +54,5 @@ def oracle(hitter: dict, *, barrel_mult: float, platoon_mult: float) -> dict:
     form_edge = _norm(hitter.get("recent_form_mult", 1.0), _FORM_LO, _FORM_HI)
     edges = _W_PLATOON * platoon_edge + _W_MATCHUP * matchup_edge + _W_FORM * form_edge
 
-    score = 0.5 * q + 0.5 * edges
+    score = _W_QUALITY * q + (1.0 - _W_QUALITY) * edges
     return {"oracle": bool(gate and score >= _FLAG_BAR), "oracle_score": round(score, 3)}
