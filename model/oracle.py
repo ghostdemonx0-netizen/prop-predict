@@ -24,8 +24,9 @@ _FORM_LO, _FORM_HI = 1.00, 1.20         # recent_form_mult hot range; SEED
 # to Barrel Lab's "barrel-first" flag); SEED.
 _W_QUALITY = 0.75
 
-_FLAG_BAR = 0.76     # ~15% flag rate at the 0.75 barrel weight ("a bit more people",
-                     # less premium). Rate varies by slate; grader tunes it from real
+_FLAG_BAR = 0.72     # ~18% flag rate at the 0.75 barrel weight — nudged down to catch
+                     # near-miss elite-barrel bats (e.g. Okamoto @ 0.725) even in a meh
+                     # matchup. Rate varies by slate; grader tunes it from real
                      # flagged-vs-unflagged hit rates. SEED
 
 
