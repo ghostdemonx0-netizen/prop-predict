@@ -2210,6 +2210,17 @@
 /* inline threshold pillbar — never let a pill-tap toggle the accordion */
 .sp-root .sp-lb-thr { display: inline-flex; }
 
+/* Oracle Plays sort bar — full-width row under the summary; wraps on mobile */
+.sp-root .sp-lb-sortbar {
+  display:       flex;
+  align-items:   center;
+  gap:           10px;
+  flex-wrap:     wrap;
+  padding:       11px 16px;
+  border-bottom: 1px solid var(--line);
+  background:    rgba(255, 255, 255, 0.02);
+}
+
 /* empty per-section state */
 .sp-root .sp-lb-empty {
   font-family: var(--f-mono);

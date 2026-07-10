@@ -71,6 +71,16 @@ interface ProbabilityOrbProps {
   size?: number;
   /** Optional secondary label shown below the number (e.g. "K" / "C"). */
   label?: string;
+  /**
+   * Generic-metric mode. When provided (0..1, already normalized on its own
+   * min→max scale), `t` drives BOTH the ring fill and the colour — via the
+   * blue→red heat ramp — instead of the per-kind HR/hits/… tables. Used by the
+   * Oracle Plays sort-spheres so a 0–100 score (Prop Score / Matchup / HR Form)
+   * renders in the same orb as a true probability. `prob`/`kind` are ignored.
+   */
+  t?: number;
+  /** Overrides the centered number (e.g. "72" for a score). Default: `${prob%}`. */
+  display?: string;
 }
 
 export function ProbabilityOrb({
@@ -78,14 +88,21 @@ export function ProbabilityOrb({
   kind,
   size = 64,
   label,
+  t,
+  display,
 }: ProbabilityOrbProps) {
-  const heat = heatT(prob, kind);
-  const p    = orbParams(prob, heat);
+  const metric = typeof t === "number";
+  const fill = metric ? Math.max(0, Math.min(1, t as number)) : prob;
+  const heat = metric ? fill : heatT(prob, kind);
+  const p    = orbParams(fill, heat);
 
   const numFsPx = (size * 0.27).toFixed(1);
 
   // ── colour strings (hue/sat/light from heatColor) ──────────────────────────
-  const base   = parseHsl(heatColor(prob, kind));
+  // metric mode → generic blue(210)→red(0) ramp on t; else the per-kind heat hue.
+  const base   = metric
+    ? parseHsl(`hsl(${Math.round(210 - fill * 210)}, 52%, 40%)`)
+    : parseHsl(heatColor(prob, kind));
   const H = Math.round(base.h);
   // Lift saturation a touch so the neon rim stays vivid at heatColor's ~52%.
   const S = Math.min(Math.round(base.s) + 16, 92);
@@ -146,7 +163,7 @@ export function ProbabilityOrb({
 
       {/* Numeric label — IBM Plex Mono (white with a dark halo on the deep glass) */}
       <span className="orbNum" style={{ fontSize: `${numFsPx}px`, fontFamily: orbMono.style.fontFamily }}>
-        {Math.round(prob * 100)}<i>%</i>
+        {display != null ? display : <>{Math.round((metric ? fill : prob) * 100)}<i>%</i></>}
         {label && <b>{label}</b>}
       </span>
 

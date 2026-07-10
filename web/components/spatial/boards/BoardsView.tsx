@@ -6,7 +6,7 @@
  */
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import "../spatial.css";
 import type { BoardsLens } from "../../../lib/barrelLens";
 import { boardsColumnsFor, heatColor, PITCHER_COLUMNS, type ColumnDef } from "../../../lib/barrelColumns";
@@ -14,10 +14,43 @@ import { MOCK_GAMES, MOCK_PITCHER_BOARD } from "../../../lib/barrelMock";
 import type { BoardsData, BoardHitter, BoardPitcher, BoardsGame } from "../../../lib/types";
 import type { Source } from "../../../lib/weighting";
 import { GlassCard } from "../GlassCard";
+import { Chevron } from "../Chevron";
 import { HandChip } from "../chips";
 import { BarrelFlag } from "../BarrelFlag";
 import { EnvDot } from "../GlassDot";
 import { gameTimeLabel } from "../../../lib/format";
+
+/**
+ * Glassy collapsible section — same look as the Top Plays leaderboards
+ * (GlassCard `.sp-lb` + `.sp-lb-summary` + rotating Chevron) so every dropdown
+ * on the site reads identically. `right` holds an optional trailing node (the
+ * env sphere on a game) that sits just left of the chevron.
+ */
+function BoardSection({
+  title, sub, right, defaultOpen = false, children,
+}: {
+  title: ReactNode;
+  sub?: ReactNode;
+  right?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <GlassCard className="sp-lb" style={{ marginBottom: 14 }}>
+      <details open={defaultOpen}>
+        <summary className="sp-lb-summary">
+          <span className="sp-lb-ttl">{title}</span>
+          {sub != null && <span className="sp-lb-sub">· {sub}</span>}
+          <span className="sp-lb-right">
+            {right}
+            <Chevron />
+          </span>
+        </summary>
+        <div style={{ padding: "14px 16px 16px" }}>{children}</div>
+      </details>
+    </GlassCard>
+  );
+}
 
 export interface BoardsViewProps {
   lens: BoardsLens;
@@ -180,9 +213,8 @@ function PitcherBoard({ pitchers, source }: { pitchers: BoardPitcher[]; source: 
       : cmpStat(statVal(a.stats, sort.sortKey, source), statVal(b.stats, sort.sortKey, source), sort.sortDir),
   );
   return (
-    <details className="sp-boardsec" style={{ marginBottom: 24 }}>
-      <summary className="sp-boardsec-head">Slate Pitchers</summary>
-      <div style={{ overflowX: "auto", marginTop: 10 }} className="sp-float">
+    <BoardSection title="Slate Pitchers" sub={`${pitchers.length} starters`}>
+      <div style={{ overflowX: "auto" }} className="sp-float">
         <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 12 }}>
           <thead>
             <tr>
@@ -214,7 +246,7 @@ function PitcherBoard({ pitchers, source }: { pitchers: BoardPitcher[]; source: 
         </table>
       </div>
       {PITCHER_COLUMNS.some((c) => c.context) && <ColumnLegend />}
-    </details>
+    </BoardSection>
   );
 }
 
@@ -336,34 +368,27 @@ export function BoardsView({ lens, boards, source = "current" }: BoardsViewProps
       <TopReads games={games} lens={lens} source={source} />
 
       {games.map((g) => (
-        <details key={g.id} className="sp-boardsec" style={{ marginBottom: 24 }}>
-          <summary className="sp-boardsec-head" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span>
-              {g.away} @ {g.home}
-              {g.game_time && (
-                <span style={{ opacity: 0.7, fontWeight: 400 }}> · {gameTimeLabel(g.game_time)}</span>
-              )}
-            </span>
-            <span style={{ opacity: 0.55, fontSize: 13, fontWeight: 400 }}>
-              {g.venue}{g.note ? ` · ${g.note}` : ""}
-            </span>
-            {typeof g.env === "number" && (
-              <span style={{ marginLeft: "auto", display: "inline-flex" }} title="park + weather">
+        <BoardSection
+          key={g.id}
+          title={`${g.away} @ ${g.home}`}
+          sub={`${g.game_time ? gameTimeLabel(g.game_time) + " · " : ""}${g.venue}${g.note ? ` · ${g.note}` : ""}`}
+          right={
+            typeof g.env === "number" ? (
+              <span style={{ display: "inline-flex" }} title="park + weather">
                 <EnvDot pct={g.env} size={26} />
               </span>
-            )}
-          </summary>
-          <div style={{ marginTop: 12 }}>
-            {/* awayPitcher = the pitcher the AWAY team FACES (the opponent);
-                homePitcher = the pitcher the HOME team faces. Each lineup sits
-                under the pitcher it BATS AGAINST — do NOT swap these. */}
-            <PitcherStatRow name={g.awayPitcher} pitchers={slatePitchers} source={source} />
-            <HeatTable title={`${g.away} hitters vs ${g.awayPitcher}`} hitters={g.awayHitters} columns={columns} source={source} defaultSortKey={defaultSortKey} />
-            <div style={{ height: 16 }} />
-            <PitcherStatRow name={g.homePitcher} pitchers={slatePitchers} source={source} />
-            <HeatTable title={`${g.home} hitters vs ${g.homePitcher}`} hitters={g.homeHitters} columns={columns} source={source} defaultSortKey={defaultSortKey} />
-          </div>
-        </details>
+            ) : null
+          }
+        >
+          {/* awayPitcher = the pitcher the AWAY team FACES (the opponent);
+              homePitcher = the pitcher the HOME team faces. Each lineup sits
+              under the pitcher it BATS AGAINST — do NOT swap these. */}
+          <PitcherStatRow name={g.awayPitcher} pitchers={slatePitchers} source={source} />
+          <HeatTable title={`${g.away} hitters vs ${g.awayPitcher}`} hitters={g.awayHitters} columns={columns} source={source} defaultSortKey={defaultSortKey} />
+          <div style={{ height: 16 }} />
+          <PitcherStatRow name={g.homePitcher} pitchers={slatePitchers} source={source} />
+          <HeatTable title={`${g.home} hitters vs ${g.homePitcher}`} hitters={g.homeHitters} columns={columns} source={source} defaultSortKey={defaultSortKey} />
+        </BoardSection>
       ))}
     </div>
   );

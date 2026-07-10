@@ -46,6 +46,7 @@ import { HandChip, FormChip } from "./chips";
 import { LiveChip } from "./LiveChipSpatial";
 import { SegmentedControl } from "./SegmentedControl";
 import { BarrelFlag } from "./BarrelFlag";
+import { Chevron } from "./Chevron";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Public types
@@ -99,27 +100,44 @@ const THR_VALUES: Record<ThresholdProp, number[]> = {
   hrr: [2, 3, 4],
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Downward chevron (rotates on open via CSS)
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Oracle Plays sort keys ───────────────────────────────────────────────────
+// Each chip re-ranks the flagged bats AND swaps the row sphere to that metric.
+// "oracle" + "hr" are true probabilities (shown as %); "prop"/"matchup"/"form"
+// are 0–100 board scores (shown as a bare number) rendered in the same orb.
+type OracleSort = "oracle" | "hr" | "prop" | "matchup" | "form";
+type OracleScoreSort = "prop" | "matchup" | "form";
 
-function Chevron() {
-  return (
-    <svg
-      className="sp-lb-chev"
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
+const ORACLE_SORTS: { value: OracleSort; label: string }[] = [
+  { value: "oracle",  label: "Oracle" },
+  { value: "hr",      label: "HR%" },
+  { value: "prop",    label: "Prop" },
+  { value: "matchup", label: "Matchup" },
+  { value: "form",    label: "Form" },
+];
+
+/** Board-stat key + min→max (from barrelColumns) for each score-based sort. */
+const ORACLE_SCORE_META: Record<OracleScoreSort, { key: string; min: number; max: number }> = {
+  prop:    { key: "trueScore", min: 20, max: 90 },
+  matchup: { key: "matchup",   min: 30, max: 90 },
+  form:    { key: "hrform",    min: 20, max: 90 },
+};
+
+/** Stats that only exist for the current season (a 3-yr baseline has no HR form). */
+const ORACLE_CURRENT_ONLY = new Set(["hrform"]);
+
+/** Timeframe-aware read of a board stat (mirrors BoardsView.statVal). */
+function boardStat(
+  stats: Record<string, number> | undefined, key: string, source: Source,
+): number | undefined {
+  if (!stats) return undefined;
+  if (source === "hist" && ORACLE_CURRENT_ONLY.has(key)) return undefined;
+  const cur = stats[key];
+  if (source === "current") return cur;
+  const hist = stats[`${key}_hist`];
+  if (hist === undefined || hist === null) return cur;
+  if (source === "hist") return hist;
+  if (cur === undefined || cur === null) return hist;
+  return (cur + hist) / 2;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -244,6 +262,8 @@ function LeaderSection({
   count,
   defaultOpen = false,
   controls,
+  subBar,
+  emptyMsg = "Nothing to show yet — lineups may not be posted.",
   render,
 }: {
   title: string;
@@ -252,6 +272,9 @@ function LeaderSection({
   count: string;
   defaultOpen?: boolean;
   controls?: ReactNode;
+  /** Full-width control row rendered under the summary, above the rows. */
+  subBar?: ReactNode;
+  emptyMsg?: string;
   render: (r: SpatialRow, rank: number) => ReactNode;
 }) {
   const shown = count === "All" ? rows : rows.slice(0, Number(count));
@@ -269,8 +292,9 @@ function LeaderSection({
             <Chevron />
           </span>
         </summary>
+        {subBar}
         {rows.length === 0 ? (
-          <p className="sp-lb-empty">Nothing to show yet — lineups may not be posted.</p>
+          <p className="sp-lb-empty">{emptyMsg}</p>
         ) : (
           <div className="sp-lead">{shown.map((r, i) => render(r, i + 1))}</div>
         )}
@@ -285,8 +309,18 @@ function LeaderSection({
 
 export function TopPlays({ projections, source, barrelEffect = false, barrelWeight = false, threshold, onThreshold, onOpenPlayer }: TopPlaysProps) {
   const [count, setCount] = useState<string>("10");
+  const [oracleSort, setOracleSort] = useState<OracleSort>("oracle");
   const liveFor = useLiveFor();
   const oracleMap = projections.oracle_by_pid;
+
+  // pid → board hitter stats, for the Prop/Matchup/Form sort spheres.
+  const boardStatsByPid = useMemo(() => {
+    const m: Record<string, Record<string, number>> = {};
+    for (const g of projections.boards?.games ?? []) {
+      for (const h of [...g.awayHitters, ...g.homeHitters]) m[String(h.id)] = h.stats;
+    }
+    return m;
+  }, [projections.boards]);
 
   // Prop kinds derived from the shared per-prop thresholds.
   const hitsKind = `hits${threshold.hits}` as PropKind;
@@ -326,6 +360,50 @@ export function TopPlays({ projections, source, barrelEffect = false, barrelWeig
     return lv ? <LiveChip state={lv.state} have={lv.have} need={lv.need} /> : null;
   };
 
+  // Value used to rank a flagged bat under the active Oracle sort.
+  const oracleValue = (r: SpatialRow): number => {
+    const pid = String(r.player_id);
+    if (oracleSort === "oracle") return oracleMap?.[pid]?.oracle_score ?? 0;
+    if (oracleSort === "hr") return r.prob;
+    const meta = ORACLE_SCORE_META[oracleSort];
+    return boardStat(boardStatsByPid[pid], meta.key, source) ?? -Infinity;
+  };
+
+  // The flagged bats (oracle === 1), re-ranked by the active sort. Built from
+  // the HR rows so trackers / player-modal wiring match the other leaderboards.
+  const oracleRows = useMemo(() => {
+    const flagged = rows.hr.filter((r) => oracleMap?.[String(r.player_id)]?.oracle === 1);
+    return flagged.sort((a, b) => oracleValue(b) - oracleValue(a));
+    // oracleValue closes over oracleSort/source/maps — all in deps below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows.hr, oracleMap, oracleSort, boardStatsByPid, source]);
+
+  // Row sphere reflecting the active sort: % for oracle/HR, bare score otherwise.
+  const oracleSphere = (r: SpatialRow): ReactNode => {
+    const pid = String(r.player_id);
+    if (oracleSort === "oracle") {
+      const os = oracleMap?.[pid]?.oracle_score ?? 0;
+      return <ProbabilityOrb prob={os} kind="hr" t={os} size={52} />;
+    }
+    if (oracleSort === "hr") return <ProbabilityOrb prob={r.prob} kind="hr" size={52} />;
+    const meta = ORACLE_SCORE_META[oracleSort];
+    const v = boardStat(boardStatsByPid[pid], meta.key, source);
+    const t = v == null ? 0 : Math.max(0, Math.min(1, (v - meta.min) / (meta.max - meta.min)));
+    return <ProbabilityOrb prob={t} kind="hr" t={t} size={52} display={v == null ? "—" : String(Math.round(v))} />;
+  };
+
+  const oracleBar = (
+    <div className="sp-lb-sortbar" onClick={(e) => e.stopPropagation()}>
+      <span className="sp-eyebrow">Sort</span>
+      <SegmentedControl
+        options={ORACLE_SORTS.map((o) => ({ value: o.value, label: o.label }))}
+        value={oracleSort}
+        onChange={(v) => setOracleSort(v as OracleSort)}
+        variant="sm"
+      />
+    </div>
+  );
+
   return (
     <div>
       <div className="sp-shead">
@@ -340,6 +418,29 @@ export function TopPlays({ projections, source, barrelEffect = false, barrelWeig
       </div>
 
       <div className="sp-lb-stack">
+        <LeaderSection
+          title="Oracle Plays"
+          sub={`ranked by ${ORACLE_SORTS.find((o) => o.value === oracleSort)!.label}`}
+          rows={oracleRows}
+          count={count}
+          defaultOpen
+          subBar={oracleBar}
+          emptyMsg="No Oracle flags on this slate yet — check back once lineups fill in."
+          render={(r, rank) => (
+            <TopPlayRow
+              key={r.id}
+              r={r}
+              rank={rank}
+              prop="hr"
+              showForm
+              live={chip(r, "hr")}
+              sphere={oracleSphere(r)}
+              onOpenPlayer={onOpenPlayer}
+              oraclePidMap={oracleMap}
+            />
+          )}
+        />
+
         <LeaderSection
           title="Top Home Runs"
           sub="chance at 1+ HR this game"
