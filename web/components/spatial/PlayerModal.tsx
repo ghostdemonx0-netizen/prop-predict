@@ -90,6 +90,8 @@ export interface PlayerModalProps {
   source: Source;
   /** When true the 🛢️ Barrel row is shown in each factor component. */
   barrelEffect?: boolean;
+  /** Barrel Weight mode: number is barrel-dominant, sauce (park/wx/pitcher) is off. */
+  barrelWeight?: boolean;
   onClose: () => void;
   /** Cross-navigation: clicking a linked player opens their modal. */
   onOpenPlayer?: (playerId: string, prop: ModalProp) => void;
@@ -356,6 +358,23 @@ function ModalTop({
 // ─────────────────────────────────────────────────────────────────────────────
 //  Per-prop factor rows (reproduce the current player page exactly)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Barrel Weight "what's driving it": barrel-dominant, sauce (park/wx/pitcher/BvP/form) off. */
+function BweightFactors({ r }: { r: { barrel_mult?: number } }) {
+  return (
+    <>
+      <div style={{ opacity: 0.75, fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
+        <b>Barrel Weight mode.</b> This number is driven by the <b>barrel matchup</b> on a long
+        (±60%) leash. Park, weather, pitcher, BvP and recent form are intentionally <b>set aside</b>{" "}
+        in this mode — flip to Normal to see those. The base production still anchors it.
+      </div>
+      {typeof r.barrel_mult === "number" && (
+        <FactorBar icon={<BarrelIcon size={FI} />} label="🛢️ Barrel matchup" mult={r.barrel_mult}
+                   note="The barrel signal driving Barrel Weight (displayed on the ±20% scale)." />
+      )}
+    </>
+  );
+}
 
 function HrFactors({ r, barrelEffect }: { r: HrRow; source: Source; barrelEffect: boolean }) {
   const parkFriendly = r.park_mult >= 1;
@@ -627,6 +646,7 @@ function BatterBody({
   threshold,
   source,
   barrelEffect,
+  barrelWeight,
   onOpenPlayer,
   onClose,
 }: {
@@ -636,10 +656,16 @@ function BatterBody({
   threshold: number;
   source: Source;
   barrelEffect: boolean;
+  barrelWeight: boolean;
   onOpenPlayer?: (playerId: string, prop: ModalProp) => void;
   onClose: () => void;
 }) {
   const pick = makePick(source);
+  // Mode-aware headline prob: Barrel Weight → _bweight, Barrel Effect → _beff, else Normal.
+  const probOf = (cur = 0, curB?: number, curBw?: number, hist?: number, histB?: number, histBw?: number): number =>
+    barrelWeight ? pick(curBw ?? cur, histBw ?? hist)
+    : barrelEffect ? pick(curB ?? cur, histB ?? hist)
+    : pick(cur, hist);
 
   const findBy = <T extends { player_id?: number; player: string }>(arr: T[]): T | undefined =>
     arr.find((x) => String(x.player_id) === id) ?? arr.find((x) => x.player === decodeURIComponent(id));
@@ -659,13 +685,13 @@ function BatterBody({
     const row = findBy(data.hr);
     r = row;
     if (row) {
-      const p = pick(row.probability, row.probability_hist);
+      const p = probOf(row.probability, row.probability_beff, row.probability_bweight, row.probability_hist, row.probability_hist_beff, row.probability_bweight_hist);
       headlineProb = p;
       kind = "hr";
       vs = row.vs;
       stats = [{ value: pct(p), label: "1+ HR probability", glow: true }, { value: strengthLabel(p), label: "our read", glow: false }];
       baseline = <BaselineBlock baseline={row.baseline_prob} baselineHist={row.baseline_prob_hist} pace={row.pace} paceHist={row.pace_hist} kind="hr" source={source} />;
-      factors = <HrFactors r={row} source={source} barrelEffect={barrelEffect} />;
+      factors = barrelWeight ? <BweightFactors r={row} /> : <HrFactors r={row} source={source} barrelEffect={barrelEffect} />;
     }
   } else if (prop === "hits") {
     const row = findBy(data.hits ?? []);
@@ -674,9 +700,9 @@ function BatterBody({
       const n = (threshold === 2 ? 2 : threshold === 3 ? 3 : 1) as 1 | 2 | 3;
       kind = `hits${n}` as PropKind;
       vs = row.vs;
-      const p1 = pick(row.p_ge1, row.p_ge1_hist);
-      const p2 = pick(row.p_ge2, row.p_ge2_hist);
-      const p3 = pick(row.p_ge3, row.p_ge3_hist);
+      const p1 = probOf(row.p_ge1, row.p_ge1_beff, row.p_ge1_bweight, row.p_ge1_hist, row.p_ge1_beff_hist, row.p_ge1_bweight_hist);
+      const p2 = probOf(row.p_ge2, row.p_ge2_beff, row.p_ge2_bweight, row.p_ge2_hist, row.p_ge2_beff_hist, row.p_ge2_bweight_hist);
+      const p3 = probOf(row.p_ge3, row.p_ge3_beff, row.p_ge3_bweight, row.p_ge3_hist, row.p_ge3_beff_hist, row.p_ge3_bweight_hist);
       headlineProb = n === 1 ? p1 : n === 2 ? p2 : p3;
       stats = [
         { value: pct(p1), label: "1+ hit", glow: n === 1 },
@@ -685,7 +711,7 @@ function BatterBody({
       ];
       read = <ReadCopy n={n} prob={headlineProb} kind={kind} />;
       baseline = <BaselineBlock baseline={baselineKey(row, n)} baselineHist={baselineKey(row, n, true)} pace={row.pace} paceHist={row.pace_hist} kind={kind} source={source} />;
-      factors = <HitsFactors r={row} source={source} barrelEffect={barrelEffect} />;
+      factors = barrelWeight ? <BweightFactors r={row} /> : <HitsFactors r={row} source={source} barrelEffect={barrelEffect} />;
     }
   } else if (prop === "tb") {
     const row = findBy(data.total_bases ?? []);
@@ -694,9 +720,9 @@ function BatterBody({
       const n = (threshold === 3 ? 3 : threshold === 4 ? 4 : 2) as 2 | 3 | 4;
       kind = `tb${n}` as PropKind;
       vs = row.vs;
-      const p2 = pick(row.p_ge2, row.p_ge2_hist);
-      const p3 = pick(row.p_ge3, row.p_ge3_hist);
-      const p4 = pick(row.p_ge4, row.p_ge4_hist);
+      const p2 = probOf(row.p_ge2, row.p_ge2_beff, row.p_ge2_bweight, row.p_ge2_hist, row.p_ge2_beff_hist, row.p_ge2_bweight_hist);
+      const p3 = probOf(row.p_ge3, row.p_ge3_beff, row.p_ge3_bweight, row.p_ge3_hist, row.p_ge3_beff_hist, row.p_ge3_bweight_hist);
+      const p4 = probOf(row.p_ge4, row.p_ge4_beff, row.p_ge4_bweight, row.p_ge4_hist, row.p_ge4_beff_hist, row.p_ge4_bweight_hist);
       headlineProb = n === 2 ? p2 : n === 3 ? p3 : p4;
       stats = [
         { value: pct(p2), label: "2+ bases", glow: n === 2 },
@@ -705,7 +731,7 @@ function BatterBody({
       ];
       read = <ReadCopy n={n} prob={headlineProb} kind={kind} />;
       baseline = <BaselineBlock baseline={baselineKey(row, n)} baselineHist={baselineKey(row, n, true)} pace={row.pace} paceHist={row.pace_hist} kind={kind} source={source} />;
-      factors = <TbFactors r={row} source={source} barrelEffect={barrelEffect} />;
+      factors = barrelWeight ? <BweightFactors r={row} /> : <TbFactors r={row} source={source} barrelEffect={barrelEffect} />;
     }
   } else if (prop === "runs" || prop === "rbi") {
     const row = findBy((prop === "runs" ? data.runs : data.rbi) ?? []);
@@ -715,8 +741,8 @@ function BatterBody({
       kind = `${prop}${n}` as PropKind;
       vs = row.vs;
       const label = prop === "runs" ? "Run" : "RBI";
-      const p1 = pick(row.p_ge1, row.p_ge1_hist);
-      const p2 = pick(row.p_ge2, row.p_ge2_hist);
+      const p1 = probOf(row.p_ge1, row.p_ge1_beff, row.p_ge1_bweight, row.p_ge1_hist, row.p_ge1_beff_hist, row.p_ge1_bweight_hist);
+      const p2 = probOf(row.p_ge2, row.p_ge2_beff, row.p_ge2_bweight, row.p_ge2_hist, row.p_ge2_beff_hist, row.p_ge2_bweight_hist);
       headlineProb = n === 1 ? p1 : p2;
       stats = [
         { value: pct(p1), label: `1+ ${label.toLowerCase()}`, glow: n === 1 },
@@ -724,7 +750,7 @@ function BatterBody({
       ];
       read = <ReadCopy n={n} prob={headlineProb} kind={kind} noisyLabel={label} />;
       baseline = <BaselineBlock baseline={baselineKey(row, n)} baselineHist={baselineKey(row, n, true)} pace={row.pace} paceHist={row.pace_hist} kind={kind} source={source} />;
-      factors = <LineupFactors r={row} source={source} prop={prop} barrelEffect={barrelEffect} />;
+      factors = barrelWeight ? <BweightFactors r={row} /> : <LineupFactors r={row} source={source} prop={prop} barrelEffect={barrelEffect} />;
     }
   } else {
     // hrr
@@ -734,9 +760,9 @@ function BatterBody({
       const n = (threshold === 3 ? 3 : threshold === 4 ? 4 : 2) as 2 | 3 | 4;
       kind = `hrr${n}` as PropKind;
       vs = row.vs;
-      const p2 = pick(row.p_ge2, row.p_ge2_hist);
-      const p3 = pick(row.p_ge3, row.p_ge3_hist);
-      const p4 = pick(row.p_ge4, row.p_ge4_hist);
+      const p2 = probOf(row.p_ge2, row.p_ge2_beff, row.p_ge2_bweight, row.p_ge2_hist, row.p_ge2_beff_hist, row.p_ge2_bweight_hist);
+      const p3 = probOf(row.p_ge3, row.p_ge3_beff, row.p_ge3_bweight, row.p_ge3_hist, row.p_ge3_beff_hist, row.p_ge3_bweight_hist);
+      const p4 = probOf(row.p_ge4, row.p_ge4_beff, row.p_ge4_bweight, row.p_ge4_hist, row.p_ge4_beff_hist, row.p_ge4_bweight_hist);
       headlineProb = n === 2 ? p2 : n === 3 ? p3 : p4;
       stats = [
         { value: pct(p2), label: "2+ combined", glow: n === 2 },
@@ -745,7 +771,7 @@ function BatterBody({
       ];
       read = <ReadCopy n={n} prob={headlineProb} kind={kind} noisyLabel="Hits+Runs+RBI" />;
       baseline = <BaselineBlock baseline={baselineKey(row, n)} baselineHist={baselineKey(row, n, true)} pace={row.pace} paceHist={row.pace_hist} kind={kind} source={source} />;
-      factors = <LineupFactors r={row} source={source} prop="hrr" barrelEffect={barrelEffect} />;
+      factors = barrelWeight ? <BweightFactors r={row} /> : <LineupFactors r={row} source={source} prop="hrr" barrelEffect={barrelEffect} />;
     }
   }
 
@@ -939,6 +965,7 @@ export function PlayerModal({
   date,
   source,
   barrelEffect = false,
+  barrelWeight = false,
   onClose,
   onOpenPlayer,
   projections,
@@ -990,6 +1017,7 @@ export function PlayerModal({
             threshold={threshold}
             source={source}
             barrelEffect={barrelEffect}
+            barrelWeight={barrelWeight}
             onOpenPlayer={onOpenPlayer}
             onClose={onClose}
           />

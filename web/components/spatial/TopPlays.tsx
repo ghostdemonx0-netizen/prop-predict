@@ -65,6 +65,8 @@ type ThresholdProp = keyof TopPlaysThresholds;
 export interface TopPlaysProps {
   projections: Projections;
   source: Source;
+  barrelEffect?: boolean;
+  barrelWeight?: boolean;
   /** Shared per-prop threshold state (drives the inline pillbars + prop kinds). */
   threshold: TopPlaysThresholds;
   /** Shared threshold setter — one prop + its new value. */
@@ -281,7 +283,7 @@ function LeaderSection({
 //  Root
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function TopPlays({ projections, source, threshold, onThreshold, onOpenPlayer }: TopPlaysProps) {
+export function TopPlays({ projections, source, barrelEffect = false, barrelWeight = false, threshold, onThreshold, onOpenPlayer }: TopPlaysProps) {
   const [count, setCount] = useState<string>("10");
   const liveFor = useLiveFor();
   const oracleMap = projections.oracle_by_pid;
@@ -295,7 +297,7 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
 
   // Source-weighted BoardRow arrays, rebuilt only when inputs change.
   const rows = useMemo(() => {
-    const hr = toBoardRows(projections, "hr", 1, source);
+    const hr = toBoardRows(projections, "hr", 1, source, barrelEffect, barrelWeight);
     // Contact / Batter-K are derived from the HR rows' vs-pitcher matchup:
     // toBoardRows sets each row's source-weighted hitProb / kProb from r.vs.
     const topContact = hr
@@ -311,13 +313,13 @@ export function TopPlays({ projections, source, threshold, onThreshold, onOpenPl
       k: toBoardRows(projections, "k", 0, source),
       contact: topContact,
       batterK: topBatterK,
-      hits: toBoardRows(projections, hitsKind, threshold.hits, source),
-      tb: toBoardRows(projections, tbKind, threshold.tb, source),
-      runs: toBoardRows(projections, runsKind, threshold.runs, source),
-      rbi: toBoardRows(projections, rbiKind, threshold.rbi, source),
-      hrr: toBoardRows(projections, hrrKind, threshold.hrr, source),
+      hits: toBoardRows(projections, hitsKind, threshold.hits, source, barrelEffect, barrelWeight),
+      tb: toBoardRows(projections, tbKind, threshold.tb, source, barrelEffect, barrelWeight),
+      runs: toBoardRows(projections, runsKind, threshold.runs, source, barrelEffect, barrelWeight),
+      rbi: toBoardRows(projections, rbiKind, threshold.rbi, source, barrelEffect, barrelWeight),
+      hrr: toBoardRows(projections, hrrKind, threshold.hrr, source, barrelEffect, barrelWeight),
     };
-  }, [projections, source, hitsKind, tbKind, runsKind, rbiKind, hrrKind, threshold]);
+  }, [projections, source, barrelEffect, barrelWeight, hitsKind, tbKind, runsKind, rbiKind, hrrKind, threshold]);
 
   const chip = (r: BoardRow, kind: LiveKind) => {
     const lv = liveFor(r, kind);

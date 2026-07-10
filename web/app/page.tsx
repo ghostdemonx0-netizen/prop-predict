@@ -431,7 +431,7 @@ export default function Home() {
     { name: string; hand?: "R" | "L" | "SW"; team?: string; adv: boolean; sum: number; n: number }
   >();
   for (const [kind, thr] of BATTER_BASES) {
-    for (const r of toBoardRows(data, kind, thr, source)) {
+    for (const r of toBoardRows(data, kind, thr, source, barrelEffect, philosophy === "barrel")) {
       if (r.player_id == null) continue;
       const e =
         batterAcc.get(r.player_id) ??
@@ -654,6 +654,8 @@ export default function Home() {
               projections={data}
               thresholds={threshold}
               source={source}
+              barrelEffect={barrelEffect}
+              barrelWeight={philosophy === "barrel"}
               onOpenPlayer={handleOpenPlayer}
             />
           )}
@@ -661,6 +663,8 @@ export default function Home() {
             <TopPlays
               projections={data}
               source={source}
+              barrelEffect={barrelEffect}
+              barrelWeight={philosophy === "barrel"}
               threshold={threshold}
               onThreshold={onThreshold}
               onOpenPlayer={handleOpenPlayer}
@@ -682,6 +686,7 @@ export default function Home() {
         date={selectedDate}
         source={source}
         barrelEffect={barrelEffect}
+        barrelWeight={philosophy === "barrel"}
         onClose={closePlayer}
         onOpenPlayer={(id, p) => openPlayer(id, p)}
         projections={data}

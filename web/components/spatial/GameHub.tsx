@@ -77,6 +77,8 @@ export interface GameHubProps {
   projections: Projections;
   thresholds: GameHubThresholds;
   source: Source;
+  barrelEffect?: boolean;
+  barrelWeight?: boolean;
   onOpenPlayer: (playerId: number, prop: PropKind) => void;
 }
 
@@ -292,7 +294,7 @@ function GameBreakdown({
 //  Root
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function GameHub({ games, projections, thresholds, source, onOpenPlayer }: GameHubProps) {
+export function GameHub({ games, projections, thresholds, source, barrelEffect = false, barrelWeight = false, onOpenPlayer }: GameHubProps) {
   // Column PropKinds derived from the per-column threshold pickers.
   const hitsKind = `hits${thresholds.hits}` as PropKind;
   const tbKind = `tb${thresholds.tb}` as PropKind;
@@ -303,15 +305,15 @@ export function GameHub({ games, projections, thresholds, source, onOpenPlayer }
   // Build source-weighted BoardRow arrays once per (projections, source, threshold).
   const rows = useMemo(
     () => ({
-      hr: toBoardRows(projections, "hr", 1, source),
+      hr: toBoardRows(projections, "hr", 1, source, barrelEffect, barrelWeight),
       k: toBoardRows(projections, "k", 0, source),
-      hits: toBoardRows(projections, hitsKind, thresholds.hits, source),
-      tb: toBoardRows(projections, tbKind, thresholds.tb, source),
-      runs: toBoardRows(projections, runsKind, thresholds.runs, source),
-      rbi: toBoardRows(projections, rbiKind, thresholds.rbi, source),
-      hrr: toBoardRows(projections, hrrKind, thresholds.hrr, source),
+      hits: toBoardRows(projections, hitsKind, thresholds.hits, source, barrelEffect, barrelWeight),
+      tb: toBoardRows(projections, tbKind, thresholds.tb, source, barrelEffect, barrelWeight),
+      runs: toBoardRows(projections, runsKind, thresholds.runs, source, barrelEffect, barrelWeight),
+      rbi: toBoardRows(projections, rbiKind, thresholds.rbi, source, barrelEffect, barrelWeight),
+      hrr: toBoardRows(projections, hrrKind, thresholds.hrr, source, barrelEffect, barrelWeight),
     }),
-    [projections, source, hitsKind, tbKind, runsKind, rbiKind, hrrKind, thresholds],
+    [projections, source, barrelEffect, barrelWeight, hitsKind, tbKind, runsKind, rbiKind, hrrKind, thresholds],
   );
 
   // Games in first-pitch order (matches ParksBoard expandable).
