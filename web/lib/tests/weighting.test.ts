@@ -120,4 +120,36 @@ describe("toBoardRows", () => {
     const beff = toBoardRows(data, "hits2", 2, "current", true, false)[0].prob;
     expect(beff).toBeCloseTo(0.50);
   });
+
+  // ── Pitcher-K projected-line ────────────────────────────────────────────
+
+  it("surfaces projLine and projProb on K rows (current source)", () => {
+    const data = {
+      strikeouts: [{
+        player: "Zebby Matthews", player_id: 1, team: "MIN", throws: "R",
+        line: 5.5, over_prob: 0.79, expected_ks: 6.7,
+        proj_line: 7, proj_over_prob: 0.44,
+        proj_line_hist: 6, proj_over_prob_hist: 0.51,
+        over_prob_hist: 0.7, expected_ks_hist: 5.9,
+      }],
+    } as unknown as Projections;
+    const [r] = toBoardRows(data, "k", 0, "current");
+    expect(r.projLine).toBe(7);
+    expect(r.projProb).toBeCloseTo(0.44, 5);
+  });
+
+  it("surfaces projLine and projProb on K rows (hist source, falls back)", () => {
+    const data = {
+      strikeouts: [{
+        player: "Zebby Matthews", player_id: 1, team: "MIN", throws: "R",
+        line: 5.5, over_prob: 0.79, expected_ks: 6.7,
+        proj_line: 7, proj_over_prob: 0.44,
+        proj_line_hist: 6, proj_over_prob_hist: 0.51,
+        over_prob_hist: 0.7, expected_ks_hist: 5.9,
+      }],
+    } as unknown as Projections;
+    const [r] = toBoardRows(data, "k", 0, "hist");
+    expect(r.projLine).toBe(6);
+    expect(r.projProb).toBeCloseTo(0.51, 5);
+  });
 });

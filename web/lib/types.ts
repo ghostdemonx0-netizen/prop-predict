@@ -81,6 +81,10 @@ export type KRow = {
   baseline_over_prob_hist?: number;
   pace?: number; // neutral Ks/start
   pace_hist?: number;
+  proj_line?: number; // projected-K line (whole-number "reach" target, e.g. 7)
+  proj_over_prob?: number; // probability of clearing proj_line
+  proj_line_hist?: number;
+  proj_over_prob_hist?: number;
 };
 
 export type Game = {

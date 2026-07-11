@@ -20,8 +20,16 @@ export type Source = "current" | "blend" | "hist";
  * derived recent-form indicator the mock-7 cards render as a FormChip.
  * Batter props carry it (from recent_form_mult); pitcher (K) rows leave it
  * undefined so no chip renders.
+ *
+ * projLine/projProb: pitcher-K projected-line "reach" pair (whole-number
+ * target + the probability of clearing it), timeframe-aware via pickN/pN.
+ * K rows only; other props leave them undefined.
  */
-export type SpatialRow = BoardRow & { form?: "hot" | "cold" | "steady" };
+export type SpatialRow = BoardRow & {
+  form?: "hot" | "cold" | "steady";
+  projLine?: number;
+  projProb?: number;
+};
 
 /**
  * Map a recent-form multiplier to a hot/cold/steady tier.
@@ -177,6 +185,8 @@ export function toBoardRows(
       detail: `line ${r.line.toFixed(1)}`,
       projection: (pickN(r.expected_ks, r.expected_ks_hist, source) ?? r.expected_ks).toFixed(1),
       line: r.line.toFixed(1),
+      projLine: pickN(r.proj_line, r.proj_line_hist, source) ?? r.proj_line,
+      projProb: pN(r.proj_over_prob, r.proj_over_prob_hist),
       href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}`,
       player_id: r.player_id,
       time: gameTimeLabel(r.game_time),
