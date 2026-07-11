@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeTB, parseBoxscore, buildPayload } from "../live";
+import { computeTB, parseBoxscore, buildPayload, propNeed } from "../live";
 
 const BOX = {
   teams: {
@@ -34,5 +34,16 @@ describe("buildPayload", () => {
     expect(pay.games).toEqual({ "900": "Live", "901": "Preview" });
     expect(pay.players["111"].h).toBe(2);
     expect(pay.updated).toBe("2026-07-01T23:00:00Z");
+  });
+});
+describe("propNeed", () => {
+  // Top Pitchers box feeds `String(projLine - 0.5)` as the tracker line so the
+  // K need lands on the rounded projection itself, not floor(raw proj)+1.
+  it("proj-line half-line yields tracker need === round(proj)", () => {
+    const projLine = 6; // e.g. proj 6.4 -> round 6
+    const lineStr = String(projLine - 0.5); // "5.5"
+    expect(propNeed("k", lineStr)).toBe(6); // NOT 7
+    const projLine2 = 7; // proj 6.7 -> 7
+    expect(propNeed("k", String(projLine2 - 0.5))).toBe(7);
   });
 });

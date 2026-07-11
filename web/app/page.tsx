@@ -454,36 +454,44 @@ export default function Home() {
     .slice(0, 10)
     .map((e) => ({ name: e.name, hand: e.hand, team: e.team, adv: e.adv }));
 
-  // ── Box 4 — Top pitchers: TWO-STEP rank (top-6-proj pool, ordered by over %) ──
+  // ── Box 4 — Top pitchers: TWO-STEP rank (top-6-proj pool, ordered by proj-line %) ──
   // STEP 1 — candidate pool: take the top 6 pitchers by PROJECTED strikeouts
   //   (KRow.expected_ks, source-weighted → the board row's `projection`, the same
   //   "proj X.X K" the Game Hub shows), highest proj K first.
-  // STEP 2 — within that 6-pitcher pool, ORDER by the K over-line probability
-  //   (`prob`, i.e. over_prob) DESCENDING — so the pitcher most likely to hit
-  //   their (already-high) projection lands at #1.
-  // Display is unchanged: proj K is the HEADLINE value ("X.X K"); the over-line
-  // probability rides along as a smaller secondary %. Only the ORDER changed.
+  // STEP 2 — within that 6-pitcher pool, ORDER by the PROJ-LINE probability
+  //   (`projProb`, i.e. the chance of reaching the rounded projection itself,
+  //   falling back to the book-line `prob` if a row has no proj-line data) —
+  //   so the pitcher most likely to reach their (already-high) projection
+  //   lands at #1.
+  // Display: proj K is still the HEADLINE value ("X.X K"); the secondary %
+  // (`sub`) is now the PROJ-LINE probability (pct(projProb ?? prob)), matching
+  // the proj K shown instead of the book-line probability.
   // playerId/gameId/line are threaded through so each row can render the SAME
   // live K tracker the board uses (LiveChip fed by useLiveFor(row, "k")), shown
-  // to the LEFT of the proj-K value.
+  // to the LEFT of the proj-K value. No twin orb here — this box stays the
+  // compact single-value leaderboard (twin spheres land on other surfaces in
+  // a later task).
   // TRACKER TARGET: the header box HEADLINES the PROJECTED strikeouts ("X.X K"),
-  // so the tracker's `need` must derive from that PROJ — not the book line. We
-  // feed `r.projection` (the same value shown) into the `line` slot useLiveFor
-  // reads; propNeed("k", …) → floor(proj)+1 (e.g. 5.7 → 6). Only the HEADER
-  // tracker changes; the board / Top Plays / Game Hub still track the book line.
+  // so the tracker's `need` must land on that rounded PROJ, not floor(proj)+1
+  // of the raw projection. We feed `String(projLine - 0.5)` into the `line`
+  // slot useLiveFor reads (falling back to the raw projection/book line when
+  // there's no proj-line data); propNeed("k", …) → floor(projLine-0.5)+1 ===
+  // projLine (e.g. proj 6.4 → projLine 6 → need 6; proj 6.7 → projLine 7 →
+  // need 7). Only the HEADER tracker changes; the board / Top Plays / Game
+  // Hub still track the book line.
   const topPitchers: DashRow[] = toBoardRows(data, "k", 0, source)
-    .sort((a, b) => Number(b.projection ?? 0) - Number(a.projection ?? 0)) // step 1
+    .sort((a, b) => Number(b.projection ?? 0) - Number(a.projection ?? 0)) // step 1: top proj
     .slice(0, 6)
-    .sort((a, b) => Number(b.prob) - Number(a.prob)) // step 2: order pool by over %
+    .sort((a, b) => Number(b.projProb ?? 0) - Number(a.projProb ?? 0)) // step 2: order by PROJ-line prob
     .map((r) => ({
       name: r.player,
-      value: r.projection ? `${r.projection} K` : pct(r.prob),
-      sub: pct(r.prob),
+      value: r.projection ? `${r.projection} K` : pct(r.projProb ?? r.prob),
+      sub: pct(r.projProb ?? r.prob), // proj-line %, matches the proj K shown
       hand: handGlyph(r.playerHand),
       team: r.team,
       playerId: r.player_id,
       gameId: r.gameId,
-      line: r.projection ?? r.line,
+      line: r.projLine != null ? String(r.projLine - 0.5) : (r.projection ?? r.line), // tracker need === round(proj)
     }));
 
   return (
