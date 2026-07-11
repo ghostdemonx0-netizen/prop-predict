@@ -13,8 +13,7 @@ Fetcher contracts:
   weather_fn(game) -> {wind_speed_mph, wind_from_deg, temp_f, precip_pct}
 """
 
-import math
-from math import sqrt
+from math import floor, sqrt
 
 from model.parks import get_park, hr_park_factor, hit_park_factor
 from model.weather import wind_out_to_cf, weather_hr_multiplier, wind_dir_rel_cf, wind_out_directional
@@ -186,7 +185,7 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn, 
             line = p.get("k_line", 5.5)
             baseline_ks = p["k_per_bf"] * p["expected_bf"]  # neutral: no opposing-lineup adjustment
             baseline_over = poisson_over_prob(baseline_ks, line)
-            proj_line = int(math.floor(lam + 0.5))  # half-up round of expected Ks
+            proj_line = int(floor(lam + 0.5))  # half-up round of expected Ks
             rows.append({
                 "prop": "K", "game_id": game["game_id"],
                 "game_time": game.get("game_time"),

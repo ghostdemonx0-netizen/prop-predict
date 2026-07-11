@@ -185,7 +185,10 @@ export function toBoardRows(
       detail: `line ${r.line.toFixed(1)}`,
       projection: (pickN(r.expected_ks, r.expected_ks_hist, source) ?? r.expected_ks).toFixed(1),
       line: r.line.toFixed(1),
-      projLine: pickN(r.proj_line, r.proj_line_hist, source) ?? r.proj_line,
+      projLine: (() => {
+        const v = pickN(r.proj_line, r.proj_line_hist, source);
+        return v == null ? r.proj_line : Math.round(v);
+      })(),
       projProb: pN(r.proj_over_prob, r.proj_over_prob_hist),
       href: `/player/k/${r.player_id ?? encodeURIComponent(r.player)}`,
       player_id: r.player_id,

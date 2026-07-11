@@ -231,7 +231,10 @@ function PropCard({
   const pHand = handGlyph(r.playerHand);
   const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
   const isK = prop === "k";
-  const trackLabel = propTrackLabel(prop, r);
+  // K's static book-line label ("O {line}K") is redundant once KSpherePair
+  // renders its own "O {line}K (model)" caption below the orb — suppress it
+  // here so K rows don't show the book line twice.
+  const trackLabel = isK ? null : propTrackLabel(prop, r);
 
   return (
     <ClickableCard onOpen={() => r.player_id != null && onOpenPlayer(r.player_id, prop)}>
@@ -355,7 +358,9 @@ function BoardTable({
             const pHand = handGlyph(r.playerHand);
             const adv = platoonAdvantage(r.playerHand, r.opponent?.hand);
             const oppHand = handGlyph(r.opponent?.hand);
-            const trackLabel = propTrackLabel(prop, r);
+            // Same suppression as PropCard: KSpherePair already captions the
+            // model book line for K, so drop the duplicate static label.
+            const trackLabel = isK ? null : propTrackLabel(prop, r);
             return (
               <tr
                 key={r.id}
