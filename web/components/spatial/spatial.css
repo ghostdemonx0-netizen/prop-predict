@@ -1443,8 +1443,12 @@
   .sp-root .sp-dval small         { font-size: .5rem; }
 
   /* Top Pitchers (half-width cell on portrait): collapse the two columns into
-     ONE tight column so all 6 pitchers stack (ranks 1–3 then 4–6). */
-  .sp-root .sp-dbox--mstack .sp-dcols  { grid-template-columns: 1fr; gap: 3px; }
+     ONE tight column so all 6 pitchers stack (ranks 1–3 then 4–6). The seam
+     between the two stacked <ol>s (row-gap here) MUST match .sp-dlist's
+     inter-row gap below, else ranks 3→4 sit closer together than every other
+     row pair (3px vs 4px was the "glued" seam) — kept equal at 4px so all six
+     rows read with identical vertical rhythm. */
+  .sp-root .sp-dbox--mstack .sp-dcols  { grid-template-columns: 1fr; gap: 4px; }
   .sp-root .sp-dbox--mstack .sp-dlist  { gap: 4px; }
   /* Portrait ONLY: put the stats (tracker · K · %) INLINE next to the name — one
      line per pitcher — so the pitcher box height matches the batter box (no gap
