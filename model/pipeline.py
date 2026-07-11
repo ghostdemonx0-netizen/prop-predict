@@ -13,6 +13,7 @@ Fetcher contracts:
   weather_fn(game) -> {wind_speed_mph, wind_from_deg, temp_f, precip_pct}
 """
 
+import math
 from math import sqrt
 
 from model.parks import get_park, hr_park_factor, hit_park_factor
@@ -185,6 +186,7 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn, 
             line = p.get("k_line", 5.5)
             baseline_ks = p["k_per_bf"] * p["expected_bf"]  # neutral: no opposing-lineup adjustment
             baseline_over = poisson_over_prob(baseline_ks, line)
+            proj_line = int(math.floor(lam + 0.5))  # half-up round of expected Ks
             rows.append({
                 "prop": "K", "game_id": game["game_id"],
                 "game_time": game.get("game_time"),
@@ -192,6 +194,8 @@ def build_strikeout_rows(slate: list[dict], pitcher_fn, lineups_fn, weather_fn, 
                 "matchup": f'{game.get("away", "?")} @ {game.get("home", "?")}',
                 "player": p["name"], "team": team,
                 "expected_ks": lam, "line": line, "over_prob": poisson_over_prob(lam, line),
+                "proj_line": proj_line,
+                "proj_over_prob": poisson_over_prob(lam, proj_line - 0.5),
                 "baseline_over_prob": baseline_over, "pace": baseline_ks,
                 "wind_out_mph": w["wind_out_mph"], "wind_mph": w["wind_mph"],
                 "wind_dir": w["wind_dir"], "temp_f": w["temp_f"], "precip_pct": w["precip_pct"],

@@ -326,6 +326,31 @@ def test_k_rows_carry_baseline_and_pace():
     assert 0.0 <= r["baseline_over_prob"] <= 1.0
 
 
+# --- proj_line / proj_over_prob (half-up round of expected_ks) ---
+
+def test_proj_line_is_half_up_round_of_expected_ks():
+    # half-up: 6.4->6, 6.5->7, 6.7->7, 6.0->6 (documents the rounding rule)
+    for lam, expected_n in [(6.4, 6), (6.5, 7), (6.7, 7), (6.0, 6)]:
+        assert int(math.floor(lam + 0.5)) == expected_n
+
+
+def test_proj_over_prob_matches_poisson_at_N_minus_half():
+    from model.projections import poisson_over_prob
+    lam = 6.7
+    n = int(math.floor(lam + 0.5))  # 7
+    assert n == 7
+    assert abs(poisson_over_prob(lam, n - 0.5) - poisson_over_prob(lam, 6.5)) < 1e-12
+
+
+def test_build_strikeout_rows_emits_proj_fields():
+    from model.projections import poisson_over_prob
+    rows = build_strikeout_rows(SAMPLE_SLATE, fake_pitcher_fn, fake_lineups_fn, fake_weather_fn)
+    r = rows[0]
+    assert "proj_line" in r and "proj_over_prob" in r
+    assert r["proj_line"] == int(math.floor(r["expected_ks"] + 0.5))
+    assert abs(r["proj_over_prob"] - poisson_over_prob(r["expected_ks"], r["proj_line"] - 0.5)) < 1e-9
+
+
 # --- Barrel nudge wired into Hits + TB threshold rows ---
 
 def test_hits_rows_have_barrel_beff_twins():

@@ -250,6 +250,8 @@ def build_board_with_history(slate, lineups_fn, pitcher_fn, lineups_hist_fn, pit
         r["over_prob_hist"] = h["over_prob"]
         r["expected_ks_hist"] = h["expected_ks"]
         r["baseline_over_prob_hist"] = h.get("baseline_over_prob")
+        r["proj_line_hist"] = h["proj_line"]
+        r["proj_over_prob_hist"] = h["proj_over_prob"]
         r["pace_hist"] = h.get("pace")
         h_m_by_pid = {hm.get("player_id"): hm for hm in h.get("matchups", [])}
         for m in r.get("matchups", []):

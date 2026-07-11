@@ -115,6 +115,28 @@ def test_vs_twins_contain_hist_fields():
         assert field in vs, f"vs dict missing '{field}'"
 
 
+def test_k_proj_line_hist_twins_attached():
+    """K rows carry proj_line_hist/proj_over_prob_hist, matching a standalone
+    history-mode build for the same (player_id, game_id)."""
+    from model.pipeline import build_strikeout_rows
+    slate = [{"game_id": 1, "home": "AAA", "away": "BBB", "park_team": "AAA",
+              "home_pitcher_id": 100, "away_pitcher_id": 200, "started": False}]
+    cur_l = lambda g: {"home": [_bat(1, 5)], "away": [_bat(2, 5)]}
+    hist_l = lambda g: {"home": [_bat(1, 9)], "away": [_bat(2, 9)]}
+    cur_p = lambda pid: _pit(pid)
+    hist_p = lambda pid: {**_pit(pid), "k_per_bf": 0.30}
+    hr, ks, hits, tb, *_ = build_board_with_history(slate, cur_l, cur_p, hist_l, hist_p, _w, None)
+    assert all("proj_line_hist" in r and "proj_over_prob_hist" in r for r in ks)
+
+    hist_standalone = build_strikeout_rows(slate, hist_p, hist_l, _w)
+    hist_by_key = {(r["player_id"], r["game_id"]): (r["proj_line"], r["proj_over_prob"]) for r in hist_standalone}
+    for r in ks:
+        key = (r["player_id"], r["game_id"])
+        exp_line, exp_prob = hist_by_key[key]
+        assert r["proj_line_hist"] == exp_line
+        assert abs(r["proj_over_prob_hist"] - exp_prob) < 1e-9
+
+
 def test_missing_history_twin_is_graceful():
     """A current HR row whose (player_id, game_id) has no history twin must
     not crash and must NOT have 'probability_hist' attached."""
