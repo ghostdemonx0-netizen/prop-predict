@@ -101,6 +101,11 @@ def grade_prediction(pred: dict, outcome: dict | None, *,
             rec["results"] = {label: None}
         else:
             rec["results"] = {label: actual_k > line}
+        # proj-line reach: did the pitcher reach his rounded PROJECTION (N)?
+        # Independent of the book-line push case above — always graded when present.
+        proj_line = pred.get("factors", {}).get("proj_line")
+        if proj_line is not None:
+            rec["results"][f"reach {int(proj_line)}"] = actual_k >= int(proj_line)
         return rec
 
     bat = pstats["bat"]

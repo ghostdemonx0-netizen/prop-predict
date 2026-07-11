@@ -47,11 +47,13 @@ def test_parse_boxscore_status_normalization():
     assert fetch._parse_boxscore({"home": {"players": {}}, "away": {"players": {}}}, "Postponed")["status"] == "postponed"
     assert fetch._parse_boxscore({"home": {"players": {}}, "away": {"players": {}}}, "In Progress")["status"] == "live"
 
-def _pred(prop, player_id=12345, game_id=776543, line=None):
+def _pred(prop, player_id=12345, game_id=776543, line=None, proj_line=None):
     p = {"date": "2026-06-27", "game_id": game_id, "player_id": player_id,
          "player": "Aaron Judge", "team": "NYY", "prop": prop, "probs": {}, "factors": {}}
     if line is not None:
         p["factors"]["line"] = line
+    if proj_line is not None:
+        p["factors"]["proj_line"] = proj_line
     return p
 
 def _outcome(bat=None, pit=None, player_id=12345, status="final", game_id=776543):
@@ -88,6 +90,19 @@ def test_grade_strikeouts_over_under_push():
     push = grader.grade_prediction(_pred("strikeouts", player_id=67890, line=6),
              _outcome(pit={"k": 6}, player_id=67890), final_retry=False, now_iso="x")
     assert push["push"] is True and push["results"] == {"over 6": None}
+
+def test_grade_strikeouts_scores_proj_line_reach():
+    pred = _pred("strikeouts", player_id=67890, line=5.5, proj_line=7)
+
+    hit = grader.grade_prediction(pred, _outcome(pit={"k": 7}, player_id=67890),
+             final_retry=False, now_iso="x")
+    assert hit["results"]["over 5.5"] is True   # existing book-line grade untouched
+    assert hit["results"]["reach 7"] is True    # NEW: actual 7 >= proj_line 7
+
+    miss = grader.grade_prediction(pred, _outcome(pit={"k": 6}, player_id=67890),
+             final_retry=False, now_iso="x")
+    assert miss["results"]["reach 7"] is False  # 6 < 7
+
 
 def test_void_when_player_absent_in_final_game():
     g = grader.grade_prediction(_pred("hits"),
