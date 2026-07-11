@@ -2851,3 +2851,34 @@
   padding-left: 4px;
   letter-spacing: .01em;
 }
+
+/* ── KSpherePair: pitcher-K model + proj orbs, side by side ──
+   Each orb's caption sits BESIDE it (not stacked underneath), so a row
+   reads as [orb  O 5.5K (model)]  [orb  O 7K (proj)] on one line — matches
+   the compact horizontal rows this drops into (Game Hub pitcher row,
+   Props table). `tracker` (optional, from the caller) renders to the LEFT
+   of the whole pair. */
+.sp-root .sp-ksphere-pair {
+  display:     inline-flex;
+  align-items: center;
+  gap:         14px;
+}
+.sp-root .sp-ksphere {
+  display:     inline-flex;
+  align-items: center;
+  gap:         6px;
+}
+.sp-root .sp-ksphere-cap {
+  display:        flex;
+  flex-direction: column;
+  gap:            1px;
+  font-size:      .66rem;
+  line-height:    1.2;
+  color:          var(--ink-dim);
+  white-space:    nowrap;
+}
+.sp-root .sp-ksphere-cap em {
+  font-style: normal;
+  font-size:  .58rem;
+  color:      var(--ink-faint);
+}
