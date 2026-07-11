@@ -63,6 +63,10 @@ K_ROW_SOON = {
     "over_prob_hist": 0.65,
     "expected_ks": 5.1,
     "expected_ks_hist": 4.8,
+    "proj_line": 5,
+    "proj_over_prob": 0.55,
+    "proj_line_hist": 4,
+    "proj_over_prob_hist": 0.60,
 }
 
 # --- Runs row (threshold prop with hard_hit/production/hist twins) ---
@@ -247,6 +251,13 @@ def test_k_factors_include_expected_ks():
 def test_k_factors_include_line():
     f = record_from_row(K_ROW_SOON, "strikeouts")["factors"]
     assert math.isclose(f["line"], 4.5)
+
+def test_k_factors_include_proj_line_fields():
+    f = record_from_row(K_ROW_SOON, "strikeouts")["factors"]
+    assert f["proj_line"] == K_ROW_SOON["proj_line"]
+    assert math.isclose(f["proj_over_prob"], K_ROW_SOON["proj_over_prob"])
+    assert f["proj_line_hist"] == K_ROW_SOON["proj_line_hist"]
+    assert math.isclose(f["proj_over_prob_hist"], K_ROW_SOON["proj_over_prob_hist"])
 
 def test_k_no_opp_pitcher_when_no_vs():
     rec = record_from_row(K_ROW_SOON, "strikeouts")
