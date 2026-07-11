@@ -25,7 +25,7 @@ import { useMemo, useState } from "react";
 import type { Game, Projections } from "../../lib/types";
 import type { PropKind } from "../../lib/format";
 import { gameTimeLabel, windText, arrowColor } from "../../lib/format";
-import { toBoardRows, type Source } from "../../lib/weighting";
+import { toBoardRows, type Source, type SpatialRow } from "../../lib/weighting";
 import type { BoardRow } from "../PropBoard";
 import { useLiveFor } from "../LiveProvider";
 import { WindIcon, TempIcon, RainIcon, ClockIcon, ParkIcon, ParkWeatherIcon } from "../Icons";
@@ -33,9 +33,9 @@ import { WindIcon, TempIcon, RainIcon, ClockIcon, ParkIcon, ParkWeatherIcon } fr
 import { GlassCard } from "./GlassCard";
 import { EnvDot } from "./GlassDot";
 import { HandChip, TagChip, FBox, envImpactColor, tempColor } from "./chips";
-import { ProbabilityOrb } from "./ProbabilityOrb";
 import { LiveChip } from "./LiveChipSpatial";
 import { BatterGrid } from "./BatterGrid";
+import { KSpherePair } from "./KSpherePair";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Small helpers
@@ -153,7 +153,7 @@ function PitcherRow({
   r,
   onOpenPlayer,
 }: {
-  r: BoardRow;
+  r: SpatialRow;
   onOpenPlayer: (id: number, prop: PropKind) => void;
 }) {
   const liveFor = useLiveFor();
@@ -191,7 +191,7 @@ function PitcherRow({
       </span>
       <span className="sp-pit-right">
         {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} />}
-        <ProbabilityOrb prob={r.prob} kind="k" size={44} />
+        <KSpherePair row={r} size={44} />
       </span>
     </div>
   );
@@ -216,7 +216,7 @@ function GameBreakdown({
   g: Game;
   rows: {
     hr: BoardRow[];
-    k: BoardRow[];
+    k: SpatialRow[];
     hits: BoardRow[];
     tb: BoardRow[];
     runs: BoardRow[];

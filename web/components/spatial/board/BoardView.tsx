@@ -34,6 +34,7 @@ import { GlassCard } from "../GlassCard";
 import { ProbabilityOrb } from "../ProbabilityOrb";
 import { Badge, TagChip, HandChip, FormChip, FBox, Bvp, tempColor } from "../chips";
 import { LiveChip } from "../LiveChipSpatial";
+import { KSpherePair } from "../KSpherePair";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Types
@@ -244,7 +245,11 @@ function PropCard({
           <div className="sp-psub">{nameMatchup(r)}</div>
         </div>
         <div className="sp-orb-live">
-          <ProbabilityOrb prob={r.prob} kind={prop} size={72} />
+          {prop === "k" ? (
+            <KSpherePair row={r} size={72} />
+          ) : (
+            <ProbabilityOrb prob={r.prob} kind={prop} size={72} />
+          )}
           {(trackLabel || lv) && (
             <div className="sp-track-row">
               {trackLabel && (
@@ -405,15 +410,23 @@ function BoardTable({
                 <td>
                   <div className="sp-prob-cell">
                     <div className="sp-orb-stack">
-                      <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
-                      {(trackLabel || lv) && (
+                      {isK ? (
+                        <KSpherePair
+                          row={r}
+                          size={46}
+                          tracker={lv ? <LiveChip state={lv.state} have={lv.have} need={lv.need} sm /> : null}
+                        />
+                      ) : (
+                        <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
+                      )}
+                      {(trackLabel || (!isK && lv)) && (
                         <div className="sp-track-row">
                           {trackLabel && (
                             <span className={`sp-track-lbl${prop === "k" ? " sp-track-lbl--k" : ""}`}>
                               {trackLabel}
                             </span>
                           )}
-                          {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
+                          {!isK && lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
                         </div>
                       )}
                     </div>
@@ -515,7 +528,11 @@ function BoardRowLine({
       </span>
       <span className="sp-mrow-right">
         {lv && <LiveChip state={lv.state} have={lv.have} need={lv.need} sm />}
-        <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
+        {isK ? (
+          <KSpherePair row={r} size={46} />
+        ) : (
+          <ProbabilityOrb prob={r.prob} kind={prop} size={46} />
+        )}
       </span>
     </div>
   );
