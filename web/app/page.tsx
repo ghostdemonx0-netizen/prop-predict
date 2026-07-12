@@ -209,6 +209,10 @@ export default function Home() {
   const [section, setSection] = useState<NavSection>("board");
   const [prop, setProp] = useState<BoardProp>("hr");
   const [view, setView] = useState<BoardViewMode>("split");
+  // Top Pitchers box: which line the box's %/ordering/tracker reflect.
+  //   "proj"  = chance of reaching the rounded PROJECTION (+ proj tracker)
+  //   "model" = chance of clearing the BOOK line (+ book-line tracker)
+  const [pitcherLine, setPitcherLine] = useState<"proj" | "model">("proj");
   const [threshold, setThreshold] = useState<Thresholds>({
     hits: 1,
     tb: 2,
@@ -479,19 +483,37 @@ export default function Home() {
   // projLine (e.g. proj 6.4 → projLine 6 → need 6; proj 6.7 → projLine 7 →
   // need 7). Only the HEADER tracker changes; the board / Top Plays / Game
   // Hub still track the book line.
+  // The `pitcherLine` selector (Proj | Model) picks which line the box shows:
+  //   proj  → sub = proj-line %, order by projProb, tracker need === round(proj)
+  //   model → sub = book-line %, order by prob,    tracker tracks the BOOK line
+  // The headline proj K value ("X.X K") stays the same in both — only the %,
+  // ordering, and tracker target switch. Display-only (both probs already exist).
+  const projMode = pitcherLine === "proj";
   const topPitchers: DashRow[] = toBoardRows(data, "k", 0, source)
     .sort((a, b) => Number(b.projection ?? 0) - Number(a.projection ?? 0)) // step 1: top proj
     .slice(0, 6)
-    .sort((a, b) => Number(b.projProb ?? 0) - Number(a.projProb ?? 0)) // step 2: order by PROJ-line prob
+    .sort((a, b) =>
+      projMode
+        ? Number(b.projProb ?? 0) - Number(a.projProb ?? 0) // proj-line prob
+        : Number(b.prob ?? 0) - Number(a.prob ?? 0), // book-line prob
+    ) // step 2: order by the SELECTED line's probability
     .map((r) => ({
       name: r.player,
-      value: r.projection ? `${r.projection} K` : pct(r.projProb ?? r.prob),
-      sub: pct(r.projProb ?? r.prob), // proj-line %, matches the proj K shown
+      // proj: the RAW projection ("4.5 K"/"6.7 K" — the decimal shows the lean; the
+      //   tracker rounds it up/down). model: the BOOK line ("O 3.5K" — always a .5
+      //   line; the tracker is the rounded-up whole number, e.g. /4).
+      value: r.projection
+        ? (projMode ? `${r.projection} K` : `O ${r.line}K`)
+        : pct((projMode ? r.projProb : r.prob) ?? r.prob),
+      sub: pct((projMode ? r.projProb : r.prob) ?? r.prob), // selected line's %
       hand: handGlyph(r.playerHand),
       team: r.team,
       playerId: r.player_id,
       gameId: r.gameId,
-      line: r.projLine != null ? String(r.projLine - 0.5) : (r.projection ?? r.line), // tracker need === round(proj)
+      // proj: tracker need === round(proj) via floor(projLine-0.5)+1; model: the book line
+      line: projMode
+        ? (r.projLine != null ? String(r.projLine - 0.5) : (r.projection ?? r.line))
+        : r.line,
     }));
 
   return (
@@ -513,6 +535,8 @@ export default function Home() {
           games={topGames}
           batters={topBatters}
           pitchers={topPitchers}
+          pitcherLine={pitcherLine}
+          onPitcherLine={setPitcherLine}
         />
 
         {/* ── Weighting controls row ──

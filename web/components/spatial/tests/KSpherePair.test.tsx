@@ -23,11 +23,13 @@ vi.mock("next/font/google", () => ({
 
 describe("KSpherePair", () => {
   it("renders two orbs with model + proj captions", () => {
-    const row = { prob: 0.79, line: "5.5", projProb: 0.44, projLine: 7 } as SpatialRow;
+    const row = { prob: 0.79, line: "5.5", projection: "6.7", projProb: 0.44, projLine: 7 } as SpatialRow;
     const { container, getByText } = render(<KSpherePair row={row} size={44} />);
+    // model sphere shows the book line ("O 5.5K"); proj sphere shows the RAW
+    // projection ("6.7 K"), not the rounded reach line.
     expect(getByText(/O 5.5K/)).toBeTruthy();
     expect(getByText(/\(model\)/)).toBeTruthy();
-    expect(getByText(/O 7K/)).toBeTruthy();
+    expect(getByText(/6.7 K/)).toBeTruthy();
     expect(getByText(/\(proj\)/)).toBeTruthy();
     // two orb SVGs
     expect(container.querySelectorAll("svg").length).toBe(2);

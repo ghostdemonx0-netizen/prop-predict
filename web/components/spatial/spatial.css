@@ -2864,21 +2864,51 @@
   gap:         14px;
 }
 .sp-root .sp-ksphere {
-  display:     inline-flex;
-  align-items: center;
-  gap:         6px;
+  display:        inline-flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            4px;
 }
 .sp-root .sp-ksphere-cap {
-  display:        flex;
-  flex-direction: column;
-  gap:            1px;
-  font-size:      .66rem;
-  line-height:    1.2;
-  color:          var(--ink-dim);
-  white-space:    nowrap;
+  font-size:   .66rem;
+  line-height: 1.2;
+  color:       var(--ink-dim);
+  white-space: nowrap;
 }
 .sp-root .sp-ksphere-cap em {
   font-style: normal;
   font-size:  .58rem;
   color:      var(--ink-faint);
+}
+
+/* Top Pitchers box header: label row + Proj|Model line selector */
+.sp-root .sp-dlabel--row {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             8px;
+}
+.sp-root .sp-pitline-seg {
+  display:       inline-flex;
+  gap:           2px;
+  padding:       2px;
+  border-radius: 8px;
+  background:    rgba(255, 255, 255, 0.04);
+  border:        1px solid var(--line);
+}
+.sp-root .sp-pitline-btn {
+  font-size:      0.56rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding:        2px 7px;
+  border-radius:  6px;
+  border:         0;
+  background:     transparent;
+  color:          var(--ink-dim);
+  cursor:         pointer;
+  transition:     background 0.15s, color 0.15s;
+}
+.sp-root .sp-pitline-btn--on {
+  color:      var(--ink);
+  background: rgba(120, 160, 255, 0.18);
 }

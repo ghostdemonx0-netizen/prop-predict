@@ -34,7 +34,7 @@ export function KSpherePair({
         <span className="sp-ksphere">
           <ProbabilityOrb prob={row.projProb as number} kind="k" size={size} />
           <small className="sp-ksphere-cap">
-            O {row.projLine}K <em>(proj)</em>
+            {row.projection ?? row.projLine} K <em>(proj)</em>
           </small>
         </span>
       )}

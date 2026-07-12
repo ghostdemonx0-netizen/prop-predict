@@ -40,6 +40,7 @@ import { GlassCard } from "./GlassCard";
 import { HandChip, TeamChip } from "./chips";
 import { LiveChip } from "./LiveChipSpatial";
 import { useLiveFor } from "../LiveProvider";
+import type { ReactNode } from "react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -95,6 +96,10 @@ export interface HeaderDashProps {
   batters: DashRow[];
   /** Top pitchers by projected strikeouts (most Ks first). */
   pitchers: DashRow[];
+  /** Top Pitchers box line selector — which line the box's %/ordering/tracker
+   *  reflect ("proj" = reach the projection; "model" = clear the book line). */
+  pitcherLine?: "proj" | "model";
+  onPitcherLine?: (v: "proj" | "model") => void;
 }
 
 // ── Sub-components ───────────────────────────────────────────────────────────
@@ -171,6 +176,7 @@ function LeaderBox({
   mobileStack,
   cols = 2,
   stackTeam,
+  headerRight,
 }: {
   label: string;
   rows: DashRow[];
@@ -181,6 +187,9 @@ function LeaderBox({
   cols?: 2 | 3;
   /** Drop each row's team chip onto its own line UNDER the name (Top Batters). */
   stackTeam?: boolean;
+  /** Optional control rendered at the RIGHT of the box header label row
+   *  (e.g. the Top Pitchers Proj|Model line selector). */
+  headerRight?: ReactNode;
 }) {
   // Top Batters (stackTeam): render ONE flat, ranked list and let CSS grid lay
   // it out column-major — 3 cols × 3 (top 9) on desktop/landscape, 2 cols × 5
@@ -215,7 +224,10 @@ function LeaderBox({
     <GlassCard
       className={`sp-dbox sp-dbox--lead${mobileStack ? " sp-dbox--mstack" : ""}`}
     >
-      <div className="sp-dlabel">{label}</div>
+      <div className={`sp-dlabel${headerRight ? " sp-dlabel--row" : ""}`}>
+        <span>{label}</span>
+        {headerRight}
+      </div>
       {rows.length === 0 ? (
         <div className="sp-drow-empty">—</div>
       ) : (
@@ -243,7 +255,7 @@ function LeaderBox({
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function HeaderDash({ stats, games, batters, pitchers }: HeaderDashProps) {
+export function HeaderDash({ stats, games, batters, pitchers, pitcherLine = "proj", onPitcherLine }: HeaderDashProps) {
   return (
     <section className="sp-hero">
       <div className="sp-dash">
@@ -281,9 +293,34 @@ export function HeaderDash({ stats, games, batters, pitchers }: HeaderDashProps)
             3 cols × 3 (top 9) on desktop/landscape, 2 cols × 5 (top 10) portrait. */}
         <LeaderBox label="Top batters" rows={batters} stackTeam />
 
-        {/* Box 4 — top pitchers (top-6-proj pool, ordered by over %); single
-            tight column on mobile (5–6 rows), two columns on desktop */}
-        <LeaderBox label="Top pitchers" rows={pitchers} mobileStack />
+        {/* Box 4 — top pitchers (top-6-proj pool); the Proj|Model selector picks
+            which line the %/ordering/tracker reflect. Single tight column on
+            mobile (5–6 rows), two columns on desktop */}
+        <LeaderBox
+          label="Top pitchers"
+          rows={pitchers}
+          mobileStack
+          headerRight={
+            onPitcherLine ? (
+              <div className="sp-pitline-seg" role="group" aria-label="Top pitchers line">
+                <button
+                  type="button"
+                  className={`sp-pitline-btn${pitcherLine === "proj" ? " sp-pitline-btn--on" : ""}`}
+                  onClick={() => onPitcherLine("proj")}
+                >
+                  Proj
+                </button>
+                <button
+                  type="button"
+                  className={`sp-pitline-btn${pitcherLine === "model" ? " sp-pitline-btn--on" : ""}`}
+                  onClick={() => onPitcherLine("model")}
+                >
+                  Model
+                </button>
+              </div>
+            ) : undefined
+          }
+        />
       </div>
     </section>
   );
