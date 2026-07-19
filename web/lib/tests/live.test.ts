@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeTB, parseBoxscore, buildPayload, propNeed } from "../live";
+import { computeTB, parseBoxscore, buildPayload, statFor, propNeed } from "../live";
 
 const BOX = {
   teams: {
@@ -32,8 +32,31 @@ describe("buildPayload", () => {
   it("maps statuses + merges players", () => {
     const pay = buildPayload(SCHED, { "900": BOX }, "2026-07-01T23:00:00Z");
     expect(pay.games).toEqual({ "900": "Live", "901": "Preview" });
-    expect(pay.players["111"].h).toBe(2);
+    expect(statFor(pay, "111", "900")?.h).toBe(2);
     expect(pay.updated).toBe("2026-07-01T23:00:00Z");
+  });
+
+  it("keeps each game's stats SEPARATE for a doubleheader player", () => {
+    // Same player id (42) in two games of a doubleheader: homered in game 1
+    // (111), did NOT in game 2 (222). The tracker must not bleed game 1's HR
+    // onto the game-2 row.
+    const g1 = { teams: {
+      away: { players: { ID42: { person: { id: 42 }, stats: { batting: { hits: 1, homeRuns: 1, atBats: 3 } } } } },
+      home: { players: {} },
+    } };
+    const g2 = { teams: {
+      away: { players: { ID42: { person: { id: 42 }, stats: { batting: { hits: 0, homeRuns: 0, atBats: 2 } } } } },
+      home: { players: {} },
+    } };
+    const sched = { dates: [{ games: [
+      { gamePk: 111, status: { abstractGameState: "Final" } },
+      { gamePk: 222, status: { abstractGameState: "Live" } },
+    ] }] };
+    const pay = buildPayload(sched, { "111": g1, "222": g2 }, "t");
+    expect(statFor(pay, "42", "111")?.hr).toBe(1); // homered in game 1
+    expect(statFor(pay, "42", "222")?.hr).toBe(0); // NOT in game 2
+    // no gameId → no stat (row falls back to pregame, unchanged behavior)
+    expect(statFor(pay, "42")).toBeUndefined();
   });
 });
 describe("propNeed", () => {

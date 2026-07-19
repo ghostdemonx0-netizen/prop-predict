@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { deriveLive, isActiveWindow, type LivePayload, type LiveKind, type LiveGame } from "../lib/live";
+import { deriveLive, statFor, isActiveWindow, type LivePayload, type LiveKind, type LiveGame } from "../lib/live";
 
 const EMPTY: LivePayload = { updated: "", games: {}, players: {} };
 const Ctx = createContext<LivePayload>(EMPTY);
@@ -54,6 +54,8 @@ export function useLiveFor() {
     const pid = row.player_id != null ? String(row.player_id) : undefined;
     if (!pid) return null;
     const status = row.gameId ? payload.games[row.gameId] : undefined;
-    return deriveLive(payload.players[pid], kind, status, row.line);
+    // Doubleheader-safe: resolve the stat for THIS row's game, not any game the
+    // player appeared in (statFor keys by pid:gameId).
+    return deriveLive(statFor(payload, pid, row.gameId), kind, status, row.line);
   };
 }

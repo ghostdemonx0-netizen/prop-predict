@@ -47,9 +47,24 @@ export function buildPayload(schedule: any, boxes: Record<string, any>, updated:
       games[String(g.gamePk)] = g?.status?.abstractGameState ?? "Preview";
     }
   }
+  // Key each stat by `${pid}:${gamePk}` — NOT by pid alone. On a doubleheader
+  // the same player id appears in both games' boxscores; a pid-only key would
+  // collapse them (Object.assign → last game wins) and bleed one game's stats
+  // onto the other game's row. The composite key keeps each game separate.
   const players: Record<string, LiveStat> = {};
-  for (const pk of Object.keys(boxes)) Object.assign(players, parseBoxscore(pk, boxes[pk]));
+  for (const pk of Object.keys(boxes)) {
+    const perGame = parseBoxscore(pk, boxes[pk]);
+    for (const pid of Object.keys(perGame)) players[`${pid}:${pk}`] = perGame[pid];
+  }
   return { updated, games, players };
+}
+
+/** Look up a player's live stat for a SPECIFIC game (doubleheader-safe). Stats
+ *  are keyed `${pid}:${gameId}`; without a gameId there's no game to resolve, so
+ *  the row falls back to pregame (unchanged behavior for rows lacking a game). */
+export function statFor(payload: LivePayload, pid: string, gameId?: string): LiveStat | undefined {
+  if (!gameId) return undefined;
+  return payload.players[`${pid}:${gameId}`];
 }
 
 // ── Deriving a chip's state from a live line + the prop's line ──────────────
