@@ -31,6 +31,7 @@ import { WindIcon, TempIcon, RainIcon, ClockIcon } from "../../Icons";
 import { BarrelFlag } from "../BarrelFlag";
 
 import { GlassCard } from "../GlassCard";
+import { Chevron } from "../Chevron";
 import { ProbabilityOrb } from "../ProbabilityOrb";
 import { Badge, TagChip, HandChip, FormChip, FBox, Bvp, tempColor } from "../chips";
 import { LiveChip } from "../LiveChipSpatial";
@@ -675,14 +676,26 @@ function MatchupsView({
           ? "confirmed"
           : undefined;
         return (
-          <details key={g.key} className="sp-mdetails">
-            <summary>
-              <GroupHead label={g.label} time={g.rows[0].time} />
-              {groupStatus && <TagChip status={tagStatus(groupStatus)} />}
-              <span className="sp-mcount">{g.rows.length} hitters</span>
-            </summary>
-            <TeamSplit matchup={g.label} rows={g.rows} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />
-          </details>
+          <GlassCard key={g.key} className="sp-lb" style={{ marginBottom: 14 }}>
+            <details>
+              <summary className="sp-lb-summary">
+                <span className="sp-lb-ttl">{g.label}</span>
+                {g.rows[0].time && (
+                  <span className="sp-lb-sub" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <ClockIcon size={12} /> {g.rows[0].time}
+                  </span>
+                )}
+                <span className="sp-lb-right">
+                  {groupStatus && <TagChip status={tagStatus(groupStatus)} />}
+                  <span className="sp-mcount">{g.rows.length} hitters</span>
+                  <Chevron />
+                </span>
+              </summary>
+              <div style={{ padding: "14px 16px 16px" }}>
+                <TeamSplit matchup={g.label} rows={g.rows} prop={prop} onOpenPlayer={onOpenPlayer} oraclePidMap={oraclePidMap} />
+              </div>
+            </details>
+          </GlassCard>
         );
       })}
     </div>

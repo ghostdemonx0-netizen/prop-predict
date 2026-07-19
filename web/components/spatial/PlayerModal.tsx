@@ -47,9 +47,10 @@ import type { PropKind } from "../../lib/format";
 import { paceText } from "../../lib/pace";
 import { platoonEdge } from "../../lib/platoon";
 import { pickN, leanFor } from "../../lib/weighting";
-import type { Source } from "../../lib/weighting";
+import type { Source, SpatialRow } from "../../lib/weighting";
 
 import { ProbabilityOrb } from "./ProbabilityOrb";
+import KSpherePair from "./KSpherePair";
 import { FactorBar } from "./FactorBar";
 import { LeanPair } from "./GlassDot";
 import { FBox } from "./chips";
@@ -179,16 +180,20 @@ function HeadlinePanel({
   children,
   prob,
   kind,
+  sphere,
 }: {
   children: React.ReactNode;
   prob: number;
   kind: PropKind;
+  /** Optional custom sphere replacing the single headline orb (K uses the
+   *  model+proj twin pair). */
+  sphere?: React.ReactNode;
 }) {
   return (
     <div className="sp-mpanel">
       <div className="sp-mhead-row">
         <div className="sp-mstats">{children}</div>
-        <ProbabilityOrb prob={prob} kind={kind} size={96} />
+        {sphere ?? <ProbabilityOrb prob={prob} kind={kind} size={96} />}
       </div>
     </div>
   );
@@ -858,6 +863,18 @@ function PitcherBody({
   const over = displayKs > r.line;
   const time = gameTimeLabel(r.game_time);
 
+  // Source-aware twin-sphere row: model line (book line) + projected line
+  // (raw projection shown, tracker-rounded reach line for its %). Same shape
+  // KSpherePair reads on the board surfaces.
+  const projLineDisp = pick(r.proj_line, r.proj_line_hist);
+  const kPairRow = {
+    prob: displayOverProb,
+    line: r.line.toFixed(1),
+    projection: displayKs.toFixed(1),
+    projProb: pick(r.proj_over_prob, r.proj_over_prob_hist),
+    projLine: projLineDisp == null ? undefined : Math.round(projLineDisp),
+  } as SpatialRow;
+
   return (
     <>
       <ModalTop
@@ -871,7 +888,7 @@ function PitcherBody({
         }
       />
       <div className="sp-mbody">
-        <HeadlinePanel prob={displayOverProb} kind="k">
+        <HeadlinePanel prob={displayOverProb} kind="k" sphere={<KSpherePair row={kPairRow} size={72} />}>
           <MStat value={pct(displayOverProb)} label={`over ${r.line} Ks`} glow />
           <MStat value={displayKs.toFixed(1)} label="projected Ks" />
         </HeadlinePanel>

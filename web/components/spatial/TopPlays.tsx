@@ -41,6 +41,7 @@ import { ClockIcon } from "../Icons";
 
 import { GlassCard } from "./GlassCard";
 import { ProbabilityOrb } from "./ProbabilityOrb";
+import KSpherePair from "./KSpherePair";
 import { CatDot } from "./GlassDot";
 import { HandChip, FormChip } from "./chips";
 import { LiveChip } from "./LiveChipSpatial";
@@ -464,7 +465,7 @@ export function TopPlays({ projections, source, barrelEffect = false, barrelWeig
 
         <LeaderSection
           title="Top Pitcher Strikeouts"
-          sub="chance to clear the model K line"
+          sub="model K line vs the projected line"
           rows={rows.k}
           count={count}
           render={(r, rank) => (
@@ -475,7 +476,7 @@ export function TopPlays({ projections, source, barrelEffect = false, barrelWeig
               prop="k"
               showPitcher={false}
               live={chip(r, "k")}
-              sphere={<ProbabilityOrb prob={r.prob} kind="k" size={52} />}
+              sphere={<KSpherePair row={r} size={52} />}
               onOpenPlayer={onOpenPlayer}
             />
           )}
