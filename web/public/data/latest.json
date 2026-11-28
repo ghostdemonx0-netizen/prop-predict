@@ -1,0 +1,18 @@
+{
+  "date": "2026-11-28",
+  "updated": "2026-11-28T06:00:53.128881+00:00",
+  "started_ids": [],
+  "hr": [],
+  "strikeouts": [],
+  "hits": [],
+  "total_bases": [],
+  "runs": [],
+  "rbi": [],
+  "hrr": [],
+  "games": [],
+  "boards": {
+    "games": [],
+    "pitchers": []
+  },
+  "oracle_by_pid": {}
+}
